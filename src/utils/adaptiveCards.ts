@@ -340,6 +340,10 @@ function isUnsupportedRendererType(type: string): boolean {
     "macro",
     "ui_macro",
     "macro_with_label",
+    // ServiceNow's catalog API reports "Macro with Label" variables with the
+    // literal friendly_type "macro_with_abel" (observed on the demo instance);
+    // treat it the same as macro_with_label so it never renders an empty input.
+    "macro_with_abel",
     "custom",
     "break"
   ].includes(type);

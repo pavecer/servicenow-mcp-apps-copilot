@@ -39,7 +39,10 @@ function toWidgetFieldType(rawType: string): string {
       "formatted_text",
       "html",
       "rich_text_label",
-      "macro_with_label"
+      "macro_with_label",
+      // ServiceNow's catalog API reports "Macro with Label" variables with the
+      // literal friendly_type "macro_with_abel" on the demo instance.
+      "macro_with_abel"
     ].includes(rawType)
   ) {
     return "label";
