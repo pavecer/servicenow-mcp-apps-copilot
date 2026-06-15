@@ -1,0 +1,10 @@
+# Name: ServiceNow Selected Item SysId
+# Stores the sys_id of the catalog item the user selected from search results.
+# Used by form retrieval and order submission topics.
+name: ServiceNowSelectedItemSysId
+aIVisibility: UseInAIContext
+scope: Conversation
+description: The ServiceNow sys_id of the catalog item selected by the user.
+schemaName: msdyn_essservicenowcatalog.globalvariable.ServiceNowSelectedItemSysId
+kind: GlobalVariableComponent
+defaultValue: DEFAULT

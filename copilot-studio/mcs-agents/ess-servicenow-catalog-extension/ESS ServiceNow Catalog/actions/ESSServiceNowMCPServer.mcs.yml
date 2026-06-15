@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: ESS ServiceNow MCP Server
+  description: MCP action connecting to the ServiceNow MCP server (Azure Function endpoint).
+kind: TaskDialog
+modelDisplayName: ESS ServiceNow MCP Server
+mcs.metadata:
+  componentName: ESS ServiceNow MCP Server

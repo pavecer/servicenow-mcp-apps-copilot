@@ -1,0 +1,291 @@
+{
+    "tools": [
+        {
+            "name": "search_catalog_items",
+            "description": "Search the ServiceNow service catalog to find items the employee can order or request - laptops, phones, monitors, software, hardware, or access. Call this whenever the user wants to order, request, buy, get, find, or browse anything (e.g. \"I need a new laptop\", \"order VPN access\"). Pass the user request as a natural-language query. Renders an interactive catalog-browse widget of matching items.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "User request to search for, such as laptop or VPN access"
+                    },
+                    "catalogSysId": {
+                        "type": "string",
+                        "description": "Optional catalog sys_id filter"
+                    },
+                    "categorySysId": {
+                        "type": "string",
+                        "description": "Optional category sys_id filter"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 50,
+                        "description": "Optional maximum number of results (1-50, default 25)"
+                    }
+                },
+                "required": [
+                    "query"
+                ]
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/catalog-browse.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/catalog-browse.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/catalog-browse.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "get_catalog_item_form",
+            "description": "Get the order form for a selected ServiceNow catalog item, optionally prefilled from conversation context. Call after the user picks an item from search_catalog_items. Renders the order-form widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "itemSysId": {
+                        "type": "string",
+                        "description": "Selected catalog item sys_id"
+                    },
+                    "userContext": {
+                        "type": "string",
+                        "description": "Optional free-text summary of the conversation used to prefill the form (e.g. 'User wants a black iPhone with 256GB on Verizon')."
+                    },
+                    "prefillHints": {
+                        "type": "object",
+                        "description": "Optional structured field/value hints extracted from the conversation. Keys may be ServiceNow variable names or label keywords (color, storage, carrier, model, justification, quantity).",
+                        "additionalProperties": {
+                            "type": [
+                                "string",
+                                "number",
+                                "boolean"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "itemSysId"
+                ]
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/order-form.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/order-form.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/order-form.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "place_order",
+            "description": "Place a ServiceNow catalog order with the collected form values.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "itemSysId": {
+                        "type": "string",
+                        "description": "Catalog item sys_id"
+                    },
+                    "variables": {
+                        "type": "object",
+                        "description": "Form field values keyed by variable name. Values may be string, number, or boolean.",
+                        "additionalProperties": {
+                            "type": [
+                                "string",
+                                "number",
+                                "boolean"
+                            ]
+                        }
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Optional order quantity (default 1)"
+                    },
+                    "requestedFor": {
+                        "type": "string",
+                        "description": "Optional sys_id or email of the user the item is being ordered for"
+                    }
+                },
+                "required": [
+                    "itemSysId",
+                    "variables"
+                ]
+            }
+        },
+        {
+            "name": "validate_servicenow_config",
+            "description": "Validate ServiceNow authentication and catalog access.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search term used for validation"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Optional maximum number of validation results"
+                    },
+                    "forceConfiguredCredentials": {
+                        "type": "boolean",
+                        "description": "Use configured app credentials (password or client_credentials grant) instead of the caller's x-servicenow-access-token"
+                    },
+                    "probeOrderNow": {
+                        "type": "boolean",
+                        "description": "Optionally probe order endpoint access"
+                    },
+                    "orderProbeItemSysId": {
+                        "type": "string",
+                        "description": "Optional item sys_id for order probe"
+                    },
+                    "orderProbeVariables": {
+                        "type": "object",
+                        "description": "Optional order probe field values",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "annotations": {
+                "readOnlyHint": true
+            }
+        },
+        {
+            "name": "list_user_orders",
+            "description": "Retrieve all current (non-closed) orders for the authenticated user.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Maximum number of orders to return (default: 50)"
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Optional list of specific fields to include in the response"
+                    }
+                }
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/my-orders.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/my-orders.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/my-orders.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "update_order",
+            "description": "Update a service catalog order from the requestor's perspective. Allowed fields: short_description, description, comments, urgency, priority.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "orderSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the order (sc_request) to update"
+                    },
+                    "updates": {
+                        "type": "object",
+                        "description": "Allowed fields: short_description, description, comments, urgency, priority",
+                        "additionalProperties": false,
+                        "properties": {
+                            "short_description": {
+                                "type": "string"
+                            },
+                            "description": {
+                                "type": "string"
+                            },
+                            "comments": {
+                                "type": "string"
+                            },
+                            "urgency": {
+                                "type": [
+                                    "string",
+                                    "number"
+                                ]
+                            },
+                            "priority": {
+                                "type": [
+                                    "string",
+                                    "number"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "orderSysId",
+                    "updates"
+                ]
+            }
+        },
+        {
+            "name": "get_order_detail",
+            "description": "Retrieve a single ServiceNow service catalog request (sc_request) by sys_id, including its items and approval records.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "orderSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the order (sc_request) to retrieve"
+                    },
+                    "includeApprovals": {
+                        "type": "boolean",
+                        "description": "When true (default), also fetches sysapproval_approver rows for this request"
+                    }
+                },
+                "required": [
+                    "orderSysId"
+                ]
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/order-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/order-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        }
+    ]
+}

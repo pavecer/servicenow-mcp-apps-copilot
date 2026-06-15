@@ -1,0 +1,13 @@
+# Name: ServiceNow Order Values JSON
+# Stores the collected form field values as a serialized JSON object.
+# Keys are ServiceNow variable names; values are user-provided answers.
+# Built up progressively as the conversation collects fields (AI-inferred + explicitly asked).
+name: ServiceNowOrderValuesJson
+aIVisibility: HideFromAIContext
+scope: Conversation
+description: >-
+  JSON string of collected order field values. Keys are ServiceNow variable names,
+  values are the answers provided by (or inferred from) the user.
+schemaName: msdyn_essservicenowcatalog.globalvariable.ServiceNowOrderValuesJson
+kind: GlobalVariableComponent
+defaultValue: DEFAULT

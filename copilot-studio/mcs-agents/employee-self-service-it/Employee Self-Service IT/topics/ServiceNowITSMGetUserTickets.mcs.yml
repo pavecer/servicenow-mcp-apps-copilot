@@ -1,0 +1,120 @@
+mcs.metadata:
+  componentName: ESS IT ServiceNow ITSM Get User Tickets
+  description: ESS IT ServiceNow ITSM Get User Tickets
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: TicketState
+    description: |-
+      TicketState indicates the state of the tickets the user wants to fetch. For active, open and **resolved** tickets, TicketState value will be 'active'. Only for closed tickets, TicketState value will be 'inactive'. If not sure of the state or if user is requesting all the tickets, TicketState will be 'all'.
+      Examples 
+      query - "List of my new tickets"; TicketState value - "active"
+      query - "List of my resolved tickets"; TicketState value - "active"
+      query - "List of my tickets"; TicketState - "all"
+      query - "List of my closed tickets"; TicketState value - "inactive"
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+modelDescription: |-
+  This tool retrieves the list of IT support or helpdesk tickets for the user, with details including SysId. These are the tickets reported by user or on behalf of user.
+
+  Example queries handled by this tool include:
+
+  * "List of my support tickets"
+  * "My open/active tickets"
+  * "Get ticket related to a particular issue"
+  * "Get closed tickets related to an issue"
+  * "Fetch my tickets"
+
+  Use below instructions to respond back:
+
+  1. Use the 'ServiceNowData' variable to provide the user with relevant information about their tickets.
+  2. If no tickets are found in 'ServiceNowData', inform the user of the same.
+  3. If tickets are found, inform the user that the tickets are sorted according to most recently updated. 
+  4. Display them in a numbered list in the format: 
+  `**[{Number}]({ServiceNowPortalBaseURI}?id=ticket&table=incident&sys_id={SysId})**: {Short Description} ({Status})` .
+  5. Let the user know you can assist with updating a ticket or providing more details
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: ConditionGroup
+      id: conditionGroup_YsYEcq
+      conditions:
+        - id: conditionItem_L6VKux
+          condition: =!IsBlank(Global.ESS_ServiceNow_AllTickets) && !IsBlank(Global.ESS_ServiceNow_NextAllTicketsRefresh) && Global.ESS_ServiceNow_NextAllTicketsRefresh > Now()
+          displayName: Condition - Tickets List is Cached?
+          actions:
+            - kind: SetVariable
+              id: setVariable_Spgwqz
+              variable: Topic.ServiceNowData
+              value: =Global.ESS_ServiceNow_AllTickets
+
+        - id: conditionItem_5HLaZH
+          condition: =Topic.TicketState = "all" || IsBlank(Topic.TicketState)
+          displayName: Condition - List of All Tickets
+          actions:
+            - kind: BeginDialog
+              id: iTTFpx
+              input:
+                binding:
+                  InputParameters: ="[]"
+                  IsActive: =Blank()
+                  UserIdentifier: =Global.ESS_UserContext_UPN
+
+              dialog: msdyn_copilotforemployeeselfserviceit.topic.ServiceNowITSMSystemGetTicketsList
+              output:
+                binding:
+                  ServiceNowData: Topic.ServiceNowData
+
+      elseActions:
+        - kind: SetVariable
+          id: setVariable_6yiOni
+          variable: Topic.IsActive
+          value: =If(Topic.TicketState = "active", true, false)
+
+        - kind: BeginDialog
+          id: gLkwe8
+          input:
+            binding:
+              InputParameters: |-
+                =JSON
+                (
+                  Table
+                  (
+                    {
+                      Name: "IsActive",
+                      Value: Text(Topic.IsActive)
+                    }
+                  )
+                )
+              IsActive: =Topic.IsActive
+              UserIdentifier: =Global.ESS_UserContext_UPN
+
+          dialog: msdyn_copilotforemployeeselfserviceit.topic.ServiceNowITSMSystemGetTicketsList
+          output:
+            binding:
+              ServiceNowData: Topic.ServiceNowData
+
+inputType:
+  properties:
+    TicketState:
+      displayName: TicketState
+      description: |-
+        TicketState indicates the state of the tickets the user wants to fetch. For active, open and **resolved** tickets, TicketState value will be 'active'. Only for closed tickets, TicketState value will be 'inactive'. If not sure of the state or if user is requesting all the tickets, TicketState will be 'all'.
+        Examples 
+        query - "List of my new tickets"; TicketState value - "active"
+        query - "List of my resolved tickets"; TicketState value - "active"
+        query - "List of my tickets"; TicketState - "all"
+        query - "List of my closed tickets"; TicketState value - "inactive"
+      type: String
+      examples:
+
+outputType:
+  properties:
+    ServiceNowData:
+      displayName: ServiceNowData
+      description: List of Tickets data returned from ServiceNow.
+      type: String
+      examples:

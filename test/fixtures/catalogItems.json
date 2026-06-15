@@ -1,0 +1,1924 @@
+{
+ "07d8173e9756cd1021983d1e6253af1d": {
+  "name": "Pixel 4a",
+  "variables": [
+   {
+    "active": true,
+    "label": "Choose the colour",
+    "dynamic_value_field": "",
+    "type": 3,
+    "mandatory": true,
+    "displayvalue": "Just Black",
+    "friendly_type": "multiple_choice",
+    "display_type": "Multiple Choice",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "colour",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "0539db3e9756cd1021983d1e6253af82",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "Just Black",
+      "value": "black",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "White",
+      "value": "white",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "black",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 10
+   },
+   {
+    "active": true,
+    "label": "Choose the storage",
+    "dynamic_value_field": "",
+    "type": 3,
+    "mandatory": true,
+    "displayvalue": "",
+    "friendly_type": "multiple_choice",
+    "display_type": "Multiple Choice",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "storage",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "813a1bbe9756cd1021983d1e6253af01",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "128 GB",
+      "value": "128",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 70.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "256 GB",
+      "value": "256",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 140.0,
+      "index": 2,
+      "recurring_price": 0.0,
+      "label": "512 GB",
+      "value": "512",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 20
+   }
+  ]
+ },
+ "04b7e94b4f7b4200086eeed18110c7fd": {
+  "name": "Standard Laptop",
+  "variables": [
+   {
+    "containerType": "checkbox_container",
+    "active": false,
+    "label": "Optional Software",
+    "dynamic_value_field": "",
+    "type": 0,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "container_start",
+    "render_label": true,
+    "read_only": false,
+    "children": [
+     {
+      "active": true,
+      "label": "Adobe Acrobat",
+      "dynamic_value_field": "",
+      "type": 7,
+      "mandatory": false,
+      "displayvalue": "false",
+      "friendly_type": "check_box",
+      "display_type": "CheckBox",
+      "render_label": true,
+      "read_only": false,
+      "conversational_label": "",
+      "pricing_implications": false,
+      "name": "acrobat",
+      "attributes": "edge_encryption_enabled=true",
+      "id": "90b72d4b4f7b4200086eeed18110c701",
+      "value": false,
+      "dynamic_value_dot_walk_path": "",
+      "help_text": "",
+      "max_length": 0,
+      "order": 20
+     },
+     {
+      "active": true,
+      "label": "Adobe Photoshop",
+      "dynamic_value_field": "",
+      "type": 7,
+      "mandatory": false,
+      "displayvalue": "false",
+      "friendly_type": "check_box",
+      "display_type": "CheckBox",
+      "render_label": true,
+      "read_only": false,
+      "conversational_label": "",
+      "pricing_implications": false,
+      "name": "photoshop",
+      "attributes": "edge_encryption_enabled=true",
+      "id": "a8b72d4b4f7b4200086eeed18110c701",
+      "value": false,
+      "dynamic_value_dot_walk_path": "",
+      "help_text": "",
+      "max_length": 0,
+      "order": 30
+     }
+    ],
+    "conversational_label": null,
+    "name": "optional_label",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "10b72d4b4f7b4200086eeed18110c700",
+    "value": null,
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 0
+   },
+   {
+    "active": true,
+    "label": "Additional software requirements",
+    "dynamic_value_field": "",
+    "type": 2,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "multi_line_text",
+    "display_type": "Multi Line Text",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "Additional_software_requirements",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "a8b72d4b4f7b4200086eeed18110c702",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 100
+   }
+  ]
+ },
+ "2ab7077237153000158bbfc8bcbe5da9": {
+  "name": "Apple MacBook Pro 15\"",
+  "variables": []
+ },
+ "e212a942c0a80165008313c59764eea1": {
+  "name": "Sales Laptop",
+  "variables": [
+   {
+    "containerType": "checkbox_container",
+    "active": false,
+    "label": "Optional Software",
+    "dynamic_value_field": "",
+    "type": 0,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "container_start",
+    "render_label": true,
+    "read_only": false,
+    "children": [
+     {
+      "active": true,
+      "label": "Microsoft Powerpoint",
+      "dynamic_value_field": "",
+      "type": 7,
+      "mandatory": false,
+      "displayvalue": "false",
+      "friendly_type": "check_box",
+      "display_type": "CheckBox",
+      "render_label": true,
+      "read_only": false,
+      "conversational_label": "",
+      "pricing_implications": false,
+      "name": "powerpoint",
+      "attributes": "edge_encryption_enabled=true",
+      "id": "3cfe1f290a0a0a6a01ee1623f4982abd",
+      "value": false,
+      "dynamic_value_dot_walk_path": "",
+      "help_text": "",
+      "max_length": 0,
+      "order": 10
+     },
+     {
+      "active": true,
+      "label": "Adobe Acrobat",
+      "dynamic_value_field": "",
+      "type": 7,
+      "mandatory": false,
+      "displayvalue": "false",
+      "friendly_type": "check_box",
+      "display_type": "CheckBox",
+      "render_label": true,
+      "read_only": false,
+      "conversational_label": "",
+      "pricing_implications": false,
+      "name": "acrobat",
+      "attributes": "edge_encryption_enabled=true",
+      "id": "3cfe5b190a0a0a6a0022478237b2ef53",
+      "value": false,
+      "dynamic_value_dot_walk_path": "",
+      "help_text": "",
+      "max_length": 0,
+      "order": 20
+     },
+     {
+      "active": true,
+      "label": "Adobe Photoshop",
+      "dynamic_value_field": "",
+      "type": 7,
+      "mandatory": false,
+      "displayvalue": "false",
+      "friendly_type": "check_box",
+      "display_type": "CheckBox",
+      "render_label": true,
+      "read_only": false,
+      "conversational_label": "",
+      "pricing_implications": false,
+      "name": "photoshop",
+      "attributes": "edge_encryption_enabled=true",
+      "id": "3cfe98700a0a0a6a00773dc2907bde89",
+      "value": false,
+      "dynamic_value_dot_walk_path": "",
+      "help_text": "",
+      "max_length": 0,
+      "order": 30
+     },
+     {
+      "active": true,
+      "label": "Siebel Client",
+      "dynamic_value_field": "",
+      "type": 7,
+      "mandatory": false,
+      "displayvalue": "false",
+      "friendly_type": "check_box",
+      "display_type": "CheckBox",
+      "render_label": true,
+      "read_only": false,
+      "conversational_label": "",
+      "pricing_implications": false,
+      "name": "siebel",
+      "attributes": "edge_encryption_enabled=true",
+      "id": "3cffe5240a0a0a6a01e72991342fde1c",
+      "value": false,
+      "dynamic_value_dot_walk_path": "",
+      "help_text": "",
+      "max_length": 0,
+      "order": 40
+     }
+    ],
+    "conversational_label": null,
+    "name": "optional_label",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "3cfda5080a0a0a6a0033827cfef2f691",
+    "value": null,
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 0
+   },
+   {
+    "active": true,
+    "label": "Additional software requirements",
+    "dynamic_value_field": "",
+    "type": 2,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "multi_line_text",
+    "display_type": "Multi Line Text",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "software_requirements",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "f3776ac9c0a8010a003825c70f35fab7",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 100
+   }
+  ]
+ },
+ "25110912372211003e7d40ed9dbe5dd6": {
+  "name": "Request Developer Project Equipment",
+  "variables": [
+   {
+    "active": true,
+    "label": "Are you developing for Android or iOS?",
+    "dynamic_value_field": "",
+    "type": 5,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "select_box",
+    "display_type": "Select Box",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "os_platform",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "15e14912372211003e7d40ed9dbe5d98",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "Android",
+      "value": "android",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "iOS",
+      "value": "ios",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 2,
+      "recurring_price": 0.0,
+      "label": "Both",
+      "value": "both",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": -1
+   },
+   {
+    "columns": [
+     {
+      "label": "Choose field",
+      "type": "",
+      "value": ""
+     },
+     {
+      "label": "Access Type",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Delegated",
+        "value": "delegated"
+       },
+       {
+        "label": "Restricted",
+        "value": "restricted"
+       }
+      ],
+      "value": "access_type"
+     },
+     {
+      "label": "Active",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "active"
+     },
+     {
+      "reference": "sys_scope",
+      "label": "Application",
+      "type": "reference",
+      "value": "sys_scope"
+     },
+     {
+      "reference": "sc_template",
+      "label": "Associated template",
+      "type": "reference",
+      "value": "sc_template"
+     },
+     {
+      "label": "Auto Created",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "auto_created"
+     },
+     {
+      "label": "Availability",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Desktop and Classic Mobile",
+        "value": "on_both"
+       },
+       {
+        "label": "Desktop Only",
+        "value": "on_desktop"
+       },
+       {
+        "label": "Classic Mobile Only",
+        "value": "on_mobile"
+       }
+      ],
+      "value": "availability"
+     },
+     {
+      "label": "Billable",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "billable"
+     },
+     {
+      "reference": "sys_ui_macro",
+      "label": "Cart",
+      "type": "reference",
+      "value": "custom_cart"
+     },
+     {
+      "label": "Catalogs",
+      "type": "glide_list",
+      "value": "sc_catalogs"
+     },
+     {
+      "reference": "sc_category",
+      "label": "Category",
+      "type": "reference",
+      "value": "category"
+     },
+     {
+      "label": "Checked out",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "checked_out"
+     },
+     {
+      "label": "Class",
+      "type": "sys_class_name",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Software Catalog",
+        "value": "pc_software_cat_item"
+       }
+      ],
+      "value": "sys_class_name"
+     },
+     {
+      "label": "Classic Mobile Picture",
+      "type": "user_image",
+      "value": "mobile_picture"
+     },
+     {
+      "label": "Classic Mobile Picture Type",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Desktop",
+        "value": "use_desktop_picture"
+       },
+       {
+        "label": "Classic Mobile",
+        "value": "use_mobile_picture"
+       },
+       {
+        "label": "None",
+        "value": "use_no_picture"
+       }
+      ],
+      "value": "mobile_picture_type"
+     },
+     {
+      "label": "Cost",
+      "type": "decimal",
+      "value": "cost"
+     },
+     {
+      "label": "Created",
+      "type": "glide_date_time",
+      "value": "sys_created_on"
+     },
+     {
+      "label": "Created by",
+      "type": "string",
+      "value": "sys_created_by"
+     },
+     {
+      "reference": "sc_ic_item_staging",
+      "label": "Created from item design",
+      "type": "reference",
+      "value": "sc_ic_item_staging"
+     },
+     {
+      "label": "Delivery plan script",
+      "type": "script_plain",
+      "value": "delivery_plan_script"
+     },
+     {
+      "label": "Delivery time",
+      "type": "glide_duration",
+      "value": "delivery_time"
+     },
+     {
+      "label": "Description",
+      "type": "translated_html",
+      "value": "description"
+     },
+     {
+      "label": "Display name",
+      "type": "string",
+      "value": "sys_name"
+     },
+     {
+      "label": "Display price property",
+      "type": "string",
+      "value": "display_price_property"
+     },
+     {
+      "label": "Entitlement script",
+      "type": "script_plain",
+      "value": "entitlement_script"
+     },
+     {
+      "reference": "sc_cat_item_delivery_plan",
+      "label": "Execution Plan",
+      "type": "reference",
+      "value": "delivery_plan"
+     },
+     {
+      "label": "Expand help for all questions",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "show_variable_help_on_load"
+     },
+     {
+      "label": "Features",
+      "type": "string",
+      "value": "features"
+     },
+     {
+      "reference": "sys_hub_flow",
+      "label": "Flow",
+      "type": "reference",
+      "value": "flow_designer_flow"
+     },
+     {
+      "label": "Fulfillment automation level",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Unspecified",
+        "value": "unspecified"
+       },
+       {
+        "label": "Manual",
+        "value": "manual"
+       },
+       {
+        "label": "Semi-automated",
+        "value": "semi_automated"
+       },
+       {
+        "label": "Fully automated",
+        "value": "fully_automated"
+       }
+      ],
+      "value": "fulfillment_automation_level"
+     },
+     {
+      "reference": "sys_user_group",
+      "label": "Fulfillment group",
+      "type": "reference",
+      "value": "group"
+     },
+     {
+      "label": "Hide 'Add to Cart'",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_cart_v2"
+     },
+     {
+      "label": "Hide 'Add to Wish List'",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_wishlist_v2"
+     },
+     {
+      "label": "Hide 'Save as Draft'",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_save_as_draft"
+     },
+     {
+      "label": "Hide Attachment",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_attachment_v2"
+     },
+     {
+      "label": "Hide Delivery time",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_delivery_time_v2"
+     },
+     {
+      "label": "Hide Quantity",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_quantity_v2"
+     },
+     {
+      "label": "Hide on Service Portal",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "hide_sp"
+     },
+     {
+      "label": "Hide price (classic mobile listings)",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "mobile_hide_price"
+     },
+     {
+      "label": "Icon",
+      "type": "user_image",
+      "value": "icon"
+     },
+     {
+      "label": "Ignore price",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "ignore_price"
+     },
+     {
+      "label": "Image",
+      "type": "image",
+      "value": "image"
+     },
+     {
+      "label": "List Price",
+      "type": "currency",
+      "value": "list_price"
+     },
+     {
+      "reference": "cmn_location",
+      "label": "Location",
+      "type": "reference",
+      "value": "location"
+     },
+     {
+      "label": "Make the item non-conversational in VA",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "make_item_non_conversational"
+     },
+     {
+      "label": "Mandatory Attachment",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "mandatory_attachment"
+     },
+     {
+      "label": "Meta",
+      "type": "string",
+      "value": "meta"
+     },
+     {
+      "reference": "cmdb_model",
+      "label": "Model",
+      "type": "reference",
+      "value": "model"
+     },
+     {
+      "label": "Name",
+      "type": "translated_text",
+      "value": "name"
+     },
+     {
+      "label": "No cart",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_cart"
+     },
+     {
+      "label": "No order",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_order"
+     },
+     {
+      "label": "No order now",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_order_now"
+     },
+     {
+      "label": "No proceed checkout",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_proceed_checkout"
+     },
+     {
+      "label": "No quantity",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_quantity"
+     },
+     {
+      "label": "No search",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "no_search"
+     },
+     {
+      "label": "Omit price in cart",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "omit_price"
+     },
+     {
+      "label": "Order",
+      "type": "integer",
+      "value": "order"
+     },
+     {
+      "reference": "sc_ordered_item_link",
+      "label": "Ordered item link",
+      "type": "reference",
+      "value": "ordered_item_link"
+     },
+     {
+      "reference": "sys_user",
+      "label": "Owner",
+      "type": "reference",
+      "value": "owner"
+     },
+     {
+      "reference": "sys_package",
+      "label": "Package",
+      "type": "reference",
+      "value": "sys_package"
+     },
+     {
+      "label": "Picture",
+      "type": "user_image",
+      "value": "picture"
+     },
+     {
+      "label": "Preview link",
+      "type": "catalog_preview",
+      "value": "preview"
+     },
+     {
+      "label": "Price",
+      "type": "price",
+      "value": "price"
+     },
+     {
+      "label": "Product ID",
+      "type": "string",
+      "value": "product_id"
+     },
+     {
+      "label": "Protection policy",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Read-only",
+        "value": "read"
+       },
+       {
+        "label": "Protected",
+        "value": "protected"
+       }
+      ],
+      "value": "sys_policy"
+     },
+     {
+      "reference": "sc_cat_item",
+      "label": "Published item",
+      "type": "reference",
+      "value": "published_ref"
+     },
+     {
+      "label": "Published version",
+      "type": "integer",
+      "value": "sc_ic_version"
+     },
+     {
+      "label": "Recurring price",
+      "type": "price",
+      "value": "recurring_price"
+     },
+     {
+      "label": "Recurring price frequency",
+      "type": "choice",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       }
+      ],
+      "value": "recurring_frequency"
+     },
+     {
+      "label": "Render Type",
+      "type": "choice",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Interactive",
+        "value": "NULL_OVERRIDE"
+       }
+      ],
+      "value": "cc_render_type"
+     },
+     {
+      "label": "Request method",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Order",
+        "value": "NULL_OVERRIDE"
+       },
+       {
+        "label": "Request",
+        "value": "request"
+       },
+       {
+        "label": "Submit",
+        "value": "submit"
+       }
+      ],
+      "value": "request_method"
+     },
+     {
+      "label": "Roles",
+      "type": "user_roles",
+      "value": "roles"
+     },
+     {
+      "label": "Short description",
+      "type": "translated_text",
+      "value": "short_description"
+     },
+     {
+      "label": "Specifications",
+      "type": "string",
+      "value": "specs"
+     },
+     {
+      "label": "Start closed",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "start_closed"
+     },
+     {
+      "label": "State",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Published",
+        "value": "published"
+       },
+       {
+        "label": "Draft",
+        "value": "draft"
+       },
+       {
+        "label": "Publishing",
+        "value": "publishing"
+       },
+       {
+        "label": "In review",
+        "value": "in_review"
+       },
+       {
+        "label": "Reviewed",
+        "value": "reviewed"
+       }
+      ],
+      "value": "state"
+     },
+     {
+      "label": "Sys ID",
+      "type": "GUID",
+      "value": "sys_id"
+     },
+     {
+      "label": "Tags",
+      "type": "related_tags",
+      "value": "sys_tags"
+     },
+     {
+      "reference": "topic",
+      "label": "Taxonomy topic",
+      "type": "reference",
+      "value": "taxonomy_topic"
+     },
+     {
+      "reference": "sys_template",
+      "label": "Template",
+      "type": "reference",
+      "value": "template"
+     },
+     {
+      "label": "Template Manager roles",
+      "type": "user_roles",
+      "value": "template_manager_roles"
+     },
+     {
+      "label": "Type",
+      "type": "string",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "Item",
+        "value": "item"
+       },
+       {
+        "label": "Task",
+        "value": "task"
+       },
+       {
+        "label": "Bundle",
+        "value": "bundle"
+       },
+       {
+        "label": "Template",
+        "value": "template"
+       },
+       {
+        "label": "Package",
+        "value": "package"
+       }
+      ],
+      "value": "type"
+     },
+     {
+      "label": "UPC",
+      "type": "string",
+      "value": "upc"
+     },
+     {
+      "label": "Update name",
+      "type": "string",
+      "value": "sys_update_name"
+     },
+     {
+      "label": "Updated",
+      "type": "glide_date_time",
+      "value": "sys_updated_on"
+     },
+     {
+      "label": "Updated by",
+      "type": "string",
+      "value": "sys_updated_by"
+     },
+     {
+      "label": "Updates",
+      "type": "integer",
+      "value": "sys_mod_count"
+     },
+     {
+      "label": "Use cart layout",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "use_sc_layout"
+     },
+     {
+      "reference": "core_company",
+      "label": "Vendor",
+      "type": "reference",
+      "value": "vendor"
+     },
+     {
+      "reference": "pc_vendor_cat_item",
+      "label": "Vendor Catalog Item",
+      "type": "reference",
+      "value": "vendor_catalog_item"
+     },
+     {
+      "label": "Version",
+      "type": "integer",
+      "value": "version"
+     },
+     {
+      "label": "Visible elsewhere",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "visible_standalone"
+     },
+     {
+      "label": "Visible on Bundles",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "visible_bundle"
+     },
+     {
+      "label": "Visible on Guides",
+      "type": "boolean",
+      "choices": [
+       {
+        "label": "Choose value",
+        "value": ""
+       },
+       {
+        "label": "true",
+        "value": "true"
+       },
+       {
+        "label": "false",
+        "value": "false"
+       }
+      ],
+      "value": "visible_guide"
+     },
+     {
+      "reference": "wf_workflow",
+      "label": "Workflow",
+      "type": "reference",
+      "value": "workflow"
+     }
+    ],
+    "selected_filter": "sys_idIN",
+    "active": true,
+    "display_field": "name",
+    "label": "What software do you require?",
+    "dynamic_value_field": "",
+    "type": 21,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "list_collector",
+    "display_type": "List Collector",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "required_software",
+    "attributes": "edge_encryption_enabled=true,no_filter=true",
+    "id": "c6714912372211003e7d40ed9dbe5d5f",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "table": "pc_software_cat_item",
+    "help_text": "",
+    "max_length": 0,
+    "order": -1
+   }
+  ]
+ },
+ "0e046da64fc3c2c0960f95bd0210c706": {
+  "name": "Adobe Acrobat Pro",
+  "variables": []
+ },
+ "10d69689c611227600ffeba41c664824": {
+  "name": "Install Software",
+  "variables": [
+   {
+    "active": true,
+    "label": "What software do you need installed ?",
+    "dynamic_value_field": "",
+    "type": 6,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "single_line_text",
+    "display_type": "Single Line Text",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "software",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "f3776a8bc0a8010a003825c7bcb187dd",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 100
+   },
+   {
+    "active": true,
+    "label": "Do you have the software media disks ?",
+    "dynamic_value_field": "",
+    "type": 5,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "select_box",
+    "display_type": "Select Box",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "do_you_have_software_media_disks",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "f3776a7bc0a8010a003825c739df9322",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "No",
+      "value": "No",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "Yes",
+      "value": "Yes",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 200
+   }
+  ]
+ },
+ "0317ba9d47120510f53d37d2846d43bb": {
+  "name": "Request email alias",
+  "variables": [
+   {
+    "active": true,
+    "label": "Preferred email alias",
+    "dynamic_value_field": "",
+    "type": 26,
+    "mandatory": true,
+    "displayvalue": "",
+    "friendly_type": "email",
+    "display_type": "Email",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "please_provide_the_preferred_email_alias",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "c149729147520510f53d37d2846d43c6",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 10
+   },
+   {
+    "active": true,
+    "label": "Business justification",
+    "dynamic_value_field": "",
+    "type": 2,
+    "mandatory": true,
+    "displayvalue": "",
+    "friendly_type": "multi_line_text",
+    "display_type": "Multi Line Text",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "business_justification",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "d3e50ac7979e8d10ad627e0e6253af82",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 20
+   }
+  ]
+ },
+ "10a99b62c6112276010cdf59bc6d2bd2": {
+  "name": "Conference Room Reservations",
+  "variables": []
+ },
+ "186d917a6fab7980575967ddbb3ee4f2": {
+  "name": "New Email Account",
+  "variables": [
+   {
+    "active": true,
+    "label": "Preferred Email address",
+    "dynamic_value_field": "",
+    "type": 26,
+    "mandatory": true,
+    "displayvalue": "",
+    "friendly_type": "email",
+    "display_type": "Email",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "new_email",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "65865e474fbb4200086eeed18110c7dd",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": -1
+   }
+  ]
+ },
+ "10f110aec611227601fbe1841e7e417c": {
+  "name": "Loaner Laptop",
+  "variables": [
+   {
+    "active": true,
+    "label": "When do you need it ?",
+    "dynamic_value_field": "",
+    "type": 6,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "single_line_text",
+    "display_type": "Single Line Text",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "when_do_need_it",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "f3776a9ac0a8010a003825c7b49b6068",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 100
+   },
+   {
+    "active": true,
+    "label": "How long do you need it for ?",
+    "dynamic_value_field": "",
+    "type": 5,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "select_box",
+    "display_type": "Select Box",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "how_long_do_you_need_it_for",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "f3776a9ac0a8010a003825c7b4d9066d",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "1 day",
+      "value": "1 day",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "1 month",
+      "value": "1 month",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 2,
+      "recurring_price": 0.0,
+      "label": "1 week",
+      "value": "1 week",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 3,
+      "recurring_price": 0.0,
+      "label": "2 weeks",
+      "value": "2 weeks",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 4,
+      "recurring_price": 0.0,
+      "label": "3 days",
+      "value": "3 days",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 200
+   }
+  ]
+ },
+ "26c5d7b29756cd1021983d1e6253af9e": {
+  "name": "Galaxy Note 20",
+  "variables": [
+   {
+    "active": true,
+    "label": "Choose the colour",
+    "dynamic_value_field": "",
+    "type": 3,
+    "mandatory": true,
+    "displayvalue": "Mystic Green",
+    "friendly_type": "multiple_choice",
+    "display_type": "Multiple Choice",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "colour",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "7e06dff69756cd1021983d1e6253af44",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "Mystic Green",
+      "value": "green",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "Mystic Blue",
+      "value": "blue",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 2,
+      "recurring_price": 0.0,
+      "label": "Mystic Bronze",
+      "value": "bronze",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "green",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 10
+   },
+   {
+    "active": true,
+    "label": "Choose the storage",
+    "dynamic_value_field": "",
+    "type": 3,
+    "mandatory": true,
+    "displayvalue": "128 GB",
+    "friendly_type": "multiple_choice",
+    "display_type": "Multiple Choice",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "storage",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "0df6977a9756cd1021983d1e6253af8b",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "128 GB",
+      "value": "128",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 100.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "256 GB",
+      "value": "256",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "128",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 20
+   }
+  ]
+ },
+ "1d7e0b51186a1d001017ed13c02bccd6": {
+  "name": "Standard 24\" Monitor",
+  "variables": []
+ },
+ "29a39e830a0a0b27007d1e200ad52253": {
+  "name": "Password Reset",
+  "variables": [
+   {
+    "active": true,
+    "label": "Whose password needs to be reset?",
+    "dynamic_value_field": "",
+    "type": 8,
+    "mandatory": false,
+    "displayvalue": "System Administrator",
+    "friendly_type": "reference",
+    "display_type": "Reference",
+    "reference": "sys_user",
+    "render_label": true,
+    "ref_qualifier": "",
+    "read_only": false,
+    "conversational_label": "",
+    "name": "caller_id",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "2a3947a10a0a020e007f12648f8790c0",
+    "value": "javascript:gs.getUserID()",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 0
+   },
+   {
+    "active": true,
+    "label": "What application password do you need reset?",
+    "dynamic_value_field": "",
+    "type": 8,
+    "mandatory": true,
+    "displayvalue": "",
+    "friendly_type": "reference",
+    "display_type": "Reference",
+    "reference": "cmdb_ci_service",
+    "render_label": true,
+    "ref_qualifier": "",
+    "read_only": false,
+    "conversational_label": "",
+    "name": "cmdb_ci",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "2a2be6520a0a020e00d111208c9c6391",
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "",
+    "max_length": 0,
+    "order": 100
+   },
+   {
+    "active": true,
+    "label": "How would you like to be contacted with your new password?",
+    "dynamic_value_field": "",
+    "type": 3,
+    "mandatory": false,
+    "displayvalue": "",
+    "friendly_type": "multiple_choice",
+    "display_type": "Multiple Choice",
+    "render_label": true,
+    "read_only": false,
+    "conversational_label": "",
+    "name": "contact_me",
+    "attributes": "edge_encryption_enabled=true",
+    "id": "2a2d651a0a0a020e00d40dc62454d73f",
+    "choices": [
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 0,
+      "recurring_price": 0.0,
+      "label": "Email",
+      "value": "email",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 1,
+      "recurring_price": 0.0,
+      "label": "Telephone",
+      "value": "phone",
+      "price_currency": "USD"
+     },
+     {
+      "recurring_price_currency": "USD",
+      "price": 0.0,
+      "index": 2,
+      "recurring_price": 0.0,
+      "label": "SMS",
+      "value": "sms",
+      "price_currency": "USD"
+     }
+    ],
+    "value": "",
+    "dynamic_value_dot_walk_path": "",
+    "help_text": "If you do not have a secure email account or are working remotely, new passwords will be sent out by mail.",
+    "max_length": 0,
+    "order": 200
+   }
+  ]
+ }
+}

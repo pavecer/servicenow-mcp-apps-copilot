@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My ServiceNow Orders</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b;
+    --border: #e0e0e0; --accent: #0078d4; --accent-fg: #ffffff;
+    --row-hover: #f5f5f5; --chip-bg: #eef4fb; --chip-fg: #1c3c5e;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3;
+    --border: #3b3a39; --accent: #2899f5;
+    --row-hover: #2a2a2a; --chip-bg: #1c3c5e; --chip-fg: #cfe5fb;
+  }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
+  button {
+    border: 1px solid var(--border); background: var(--bg); color: var(--fg);
+    padding: 6px 12px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.row:hover { background: var(--row-hover); cursor: pointer; }
+  .chip {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    background: var(--chip-bg); color: var(--chip-fg); font-size: 12px;
+  }
+  .empty { color: var(--muted); padding: 12px 0; }
+  .desc { color: var(--muted); margin-top: 2px; font-size: 12px; }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  // --- MCP Apps host bridge (window.mcpHost from host-bridge.ts) -----------
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) {
+    var h = host();
+    if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
+    return Promise.reject(new Error("MCP Apps host bridge unavailable."));
+  }
+  function sendFollowUp(text) {
+    var h = host();
+    if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
+  }
+  function subscribe(cb) {
+    var h = host();
+    if (h && typeof h.onData === "function") { h.onData(cb); return true; }
+    return false;
+  }
+  function showLoading(el, msg) {
+    el.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty";
+    p.textContent = msg || "Loading\u2026"; el.appendChild(p);
+  }
+
+  var root = document.getElementById("root");
+  applyTheme();
+
+  function readStr(v) {
+    if (v == null) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "object") return v.display_value || v.value || "";
+    return String(v);
+  }
+
+  function render(payload) {
+    root.innerHTML = "";
+    var data = payload || getData();
+    if (!data || typeof data !== "object") {
+      var e = document.createElement("p"); e.className = "empty";
+      e.textContent = "No orders to display.";
+      root.appendChild(e); return;
+    }
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var orders = Array.isArray(data.orders) ? data.orders : [];
+
+    var h1 = document.createElement("h1"); h1.textContent = "My open ServiceNow orders"; root.appendChild(h1);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = orders.length + " open order" + (orders.length === 1 ? "" : "s");
+    root.appendChild(meta);
+
+    var toolbar = document.createElement("div"); toolbar.className = "toolbar";
+    var refresh = document.createElement("button"); refresh.textContent = "Refresh";
+    refresh.addEventListener("click", function () {
+      refresh.disabled = true; refresh.textContent = "Refreshing\u2026";
+      callTool("list_user_orders", {}).then(function (res) {
+        var next = (res && res.structuredContent) || null;
+        if (next) { render(next); }
+        else { sendFollowUp("Refresh my open orders."); }
+        refresh.disabled = false; refresh.textContent = "Refresh";
+      }).catch(function () {
+        sendFollowUp("Refresh my open orders.");
+        refresh.disabled = false; refresh.textContent = "Refresh";
+      });
+    });
+    toolbar.appendChild(refresh);
+    root.appendChild(toolbar);
+
+    if (orders.length === 0) {
+      var empty = document.createElement("p"); empty.className = "empty"; empty.textContent = "You don't have any open orders.";
+      root.appendChild(empty); return;
+    }
+
+    var table = document.createElement("table");
+    var thead = document.createElement("thead");
+    thead.innerHTML = "<tr><th>Number</th><th>Description</th><th>State</th><th>Updated</th></tr>";
+    table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    orders.forEach(function (order) {
+      var tr = document.createElement("tr"); tr.className = "row";
+      var number = readStr(order.number) || readStr(order.sys_id).slice(0, 8);
+      var sd = readStr(order.short_description);
+      var desc = readStr(order.description);
+      var state = readStr(order.state) || readStr(order.request_status) || "";
+      var updated = readStr(order.updated_on) || readStr(order.sys_updated_on) || "";
+      tr.innerHTML =
+        "<td><strong></strong></td>" +
+        "<td><div class=\"sd\"></div><div class=\"desc\"></div></td>" +
+        "<td><span class=\"chip\"></span></td>" +
+        "<td></td>";
+      tr.children[0].firstChild.textContent = number;
+      tr.children[1].firstChild.textContent = sd;
+      tr.children[1].lastChild.textContent = desc;
+      tr.children[2].firstChild.textContent = state || "open";
+      tr.children[3].textContent = updated;
+      tr.addEventListener("click", function () {
+        var sysId = readStr(order.sys_id);
+        // Mounting the order-detail widget requires the agent to call
+        // get_order_detail as a tool — drive it via a follow-up message rather
+        // than a widget-initiated callTool (which only returns data here).
+        sendFollowUp("Show the details for order " + (number || sysId) + (sysId ? " (sys_id " + sysId + ")" : "") + ".");
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    root.appendChild(table);
+  }
+
+  showLoading(root, "Loading your orders\u2026");
+  if (!subscribe(render)) { render(getData()); }
+})();
+</script>
+</body>
+</html>

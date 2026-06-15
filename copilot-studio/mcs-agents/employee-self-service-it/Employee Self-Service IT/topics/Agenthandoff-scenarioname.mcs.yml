@@ -1,0 +1,53 @@
+mcs.metadata:
+  componentName: Agent handoff - [scenario name]
+  description: |-
+    Connect users with other agents that specialize in certain tasks. Make a copy of this topic and edit the content in the brackets to start creating a custom handoff experience.
+    Note to editors: Use a variety of keywords and phrases to help the agent identify when this topic should be triggered.
+kind: AdaptiveDialog
+modelDescription: You will respond only to requests about [add keywords, phrases, and synonyms here. Please add some valid example queries].
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: SetVariable
+      id: setVariable_7l2dng
+      variable: Topic.HandoffAgentId
+      value: ="AgentIdentifier"
+
+    - kind: SetVariable
+      id: setVariable_qFsWaf
+      variable: Topic.UserPrompt
+      value: =System.Activity.Text
+
+    - kind: SetVariable
+      id: setVariable_phjZdC
+      variable: Topic.AgentHandoffPrompt
+      value: =Concatenate("@mention:", Topic.HandoffAgentId, ":", Topic.UserPrompt)
+
+    - kind: SetVariable
+      id: setVariable_T4Do6n
+      variable: Topic.SuggestedAgentHandoffList
+      value: =[Text(Topic.AgentHandoffPrompt),"Skip"]
+
+    - kind: Question
+      id: question_nmFHN3
+      interruptionPolicy:
+        allowInterruption: true
+
+      repeatCount: 0
+      variable: init:Topic.Var1
+      prompt: Your organization set up the [Name of the handoff agent] Agent to help with requests about [scenario(s)]. Simply select [Name of the handoff agent] Agent below to get the most accurate guidance, or choose Skip to move on.
+      defaultValue: =Blank()
+      entity:
+        kind: DynamicClosedListEntity
+        items: =Topic.SuggestedAgentHandoffList
+
+    - kind: EndDialog
+      id: 0fSpqJ
+
+    - kind: CancelAllDialogs
+      id: gaZWK2
+
+inputType: {}
+outputType: {}

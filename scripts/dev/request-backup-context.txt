@@ -1,0 +1,1 @@
+We just migrated our customer master records into a new SQL Server database last week and I want it added to the nightly backup rotation. No file shares or anything else needs to change. Retention should be 30 days and please encrypt the backups at rest.

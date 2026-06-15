@@ -1,0 +1,10 @@
+# Name: ServiceNow Order Request Number
+# Stores the confirmation request number returned after a successful order submission.
+# Used for displaying the confirmation and for follow-up reference within the session.
+name: ServiceNowOrderRequestNumber
+aIVisibility: UseInAIContext
+scope: Conversation
+description: The ServiceNow request number confirming the successfully submitted catalog order.
+schemaName: msdyn_essservicenowcatalog.globalvariable.ServiceNowOrderRequestNumber
+kind: GlobalVariableComponent
+defaultValue: DEFAULT

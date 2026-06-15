@@ -1,0 +1,21 @@
+mcs.metadata:
+  componentName: ESS ServiceNow Catalog On Error
+  description: >-
+    Error handling topic for the ESS ServiceNow Catalog agent.
+    Catches unhandled errors, logs them, and provides a graceful recovery path.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnError
+  id: main
+  actions:
+    - kind: SendActivity
+      id: sendActivity_Err01
+      activity: |-
+        I encountered an unexpected issue while processing your catalog request.
+
+        **Error details:** {System.Error.Message}
+
+        Please try again. If the problem persists, you can also access the ServiceNow Service Portal directly to submit your request.
+
+inputType: {}
+outputType: {}

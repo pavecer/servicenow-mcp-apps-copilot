@@ -1,0 +1,14 @@
+mcs.metadata:
+  componentName: Microsoft MCP Servers - Microsoft 365 Copilot (Search) MCP
+kind: TaskDialog
+modelDisplayName: M365CopilotMCP
+modelDescription: Use this MCP server to for Microsoft 365 Copilot and search operations.
+action:
+  kind: InvokeExternalAgentTaskAction
+  connectionReference: copilots_header_pve_agent_snow.shared_a365mcpservers.933f1d40d2084dec94f672dfe7cd0e1b
+  connectionProperties:
+    mode: Invoker
+
+  operationDetails:
+    kind: ModelContextProtocolMetadata
+    operationId: mcp_m365copilot

@@ -1,0 +1,107 @@
+mcs.metadata:
+  componentName: "[System] - User Context - Validate"
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnActivity
+  id: main
+  condition: =IsBlank(Global.ESS_UserContext_Conversation_Initialized) || Global.ESS_UserContext_Conversation_Initialized = false
+  priority: 0
+  actions:
+    - kind: ConditionGroup
+      id: conditionGroup_8caO2J
+      conditions:
+        - id: conditionItem_7hrdvO
+          condition: =IsBlank(Global.ESS_Message_Disclaimer)
+          actions:
+            - kind: SetVariable
+              id: setVariable_VoNWQt
+              variable: Global.ESS_Message_Disclaimer
+              value: "**Note**: please review the materials cited and in [**Portal Placeholder**](https://PortalWebsitePlaceHolder.com). This response does not alter any **Company Name Placeholder** policy, program, or contractual commitment."
+
+    - kind: BeginDialog
+      id: ZFdm7P
+      dialog: msdyn_copilotforemployeeselfserviceit.topic.System-UserContext-Createglobalvariables
+
+    - kind: SetVariable
+      id: setVariable_DRabdP
+      variable: Global.ESS_UserContext_RefreshInterval_Hours
+      value: 12
+
+    - kind: BeginDialog
+      id: zl96br
+      input:
+        binding:
+          EventName: =Global.ESS_EventLoggers_UserContext
+          Message: "=\"User context validation start\""
+
+      dialog: msdyn_copilotforemployeeselfserviceit.topic.System-Logger
+
+    - kind: ConditionGroup
+      id: conditionGroup_2WRRtH
+      conditions:
+        - id: conditionItem_IA3OzL
+          condition: =IsBlank(Global.ESS_UserContext_Next_Update_Time) || Global.ESS_UserContext_Next_Update_Time <= Now() || System.Conversation.InTestMode = true
+          actions:
+            - kind: ConditionGroup
+              id: conditionGroup_6xEf2T
+              conditions:
+                - id: conditionItem_IcCMYz
+                  condition: =System.Conversation.InTestMode = true
+                  actions:
+                    - kind: BeginDialog
+                      id: YLSGpp
+                      input:
+                        binding:
+                          EventName: =Global.ESS_EventLoggers_UserContext
+                          Message: "=\"Conversation is running in test mode. User context refresh triggered\""
+
+                      dialog: msdyn_copilotforemployeeselfserviceit.topic.System-Logger
+
+            - kind: BeginDialog
+              id: gSQ4DK
+              dialog: msdyn_copilotforemployeeselfserviceit.topic.Setusercontext
+
+            - kind: SetVariable
+              id: OD60GV
+              variable: Global.ESS_UserContext_Next_Update_Time
+              value: |-
+                =DateAdd(
+                    Now(),
+                    Global.ESS_UserContext_RefreshInterval_Hours,
+                    TimeUnit.Hours
+                )
+
+            - kind: BeginDialog
+              id: nSMvWa
+              input:
+                binding:
+                  EventName: =Global.ESS_EventLoggers_UserContext
+                  Message: |-
+                    =Concatenate(
+                        "User context update done. Next refresh set to ",
+                        Text(
+                            Global.ESS_UserContext_Next_Update_Time,
+                            DateTimeFormat.UTC
+                        ),
+                        " UTC"
+                    )
+
+              dialog: msdyn_copilotforemployeeselfserviceit.topic.System-Logger
+
+    - kind: SetVariable
+      id: setVariable_SwtESU
+      variable: Global.ESS_UserContext_Conversation_Initialized
+      value: true
+
+    - kind: BeginDialog
+      id: 7yHZhV
+      input:
+        binding:
+          EventName: =Global.ESS_EventLoggers_UserContext
+          Message: User Context initialized successfully
+
+      dialog: msdyn_copilotforemployeeselfserviceit.topic.System-Logger
+
+    - kind: EndDialog
+      id: Ie2j2c
+      clearTopicQueue: false

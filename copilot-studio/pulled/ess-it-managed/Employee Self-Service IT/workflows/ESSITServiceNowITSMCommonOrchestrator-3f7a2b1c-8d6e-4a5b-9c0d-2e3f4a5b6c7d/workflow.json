@@ -1,0 +1,1188 @@
+﻿{
+  "properties": {
+    "connectionReferences": {
+      "shared_service-now": {
+        "api": {
+          "name": "shared_service-now"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "msdyn_copilotforemployeeselfserviceit.cr.w2LCWZTZ"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_41c83"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "Unique name to identify the scenario.",
+                  "title": "ScenarioName",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "Identifier of the current logged in user.",
+                  "title": "UserIdentifier",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "System Identifier used to identify the particular ticket.",
+                  "title": "SysId",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_3": {
+                  "description": "Array of Input variable names and their respective values",
+                  "title": "InputParameters",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "b8f61c18-7224-4f8a-9c5f-72fbce5df764"
+          }
+        }
+      },
+      "actions": {
+        "Respond_to_Copilot": {
+          "type": "Response",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "servicenowdata": {
+                  "title": "ServiceNowData",
+                  "x-ms-dynamically-added": true,
+                  "type": "string",
+                  "description": "Data returned from ServiceNow."
+                },
+                "issuccessful": {
+                  "title": "IsSuccessful",
+                  "x-ms-dynamically-added": true,
+                  "type": "boolean",
+                  "description": "Boolean to indicate whether the flow succeeded or not."
+                },
+                "errormessage": {
+                  "title": "ErrorMessage",
+                  "x-ms-dynamically-added": true,
+                  "type": "string",
+                  "description": "Error message in case of a failure."
+                },
+                "statuscode": {
+                  "title": "StatusCode",
+                  "x-ms-dynamically-added": true,
+                  "type": "number",
+                  "description": "Integer value to indicate the request status code."
+                },
+                "servicenowsessionid": {
+                  "title": "ServiceNowSessionID",
+                  "description": "The \u0022glide_session_store\u0022 cookie - used for correlating the REST call with copilot conversation ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "servicenowtransactionid": {
+                  "title": "ServiceNowTransactionID",
+                  "description": "The \u0022X-Transaction-ID\u0022 header - used for correlating the REST call with copilot conversation ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "servicenowdata": "@{variables(\u0027ResponseBody\u0027)?[\u0027ServiceNowData\u0027]}",
+              "issuccessful": "@variables(\u0027ResponseBody\u0027)?[\u0027IsSuccessful\u0027]",
+              "errormessage": "@{variables(\u0027ResponseBody\u0027)?[\u0027ErrorMessage\u0027]}",
+              "statuscode": "@variables(\u0027ResponseBody\u0027)?[\u0027StatusCode\u0027]",
+              "servicenowsessionid": "@{variables(\u0027ResponseBody\u0027)?[\u0027ServiceNowSessionID\u0027]}",
+              "servicenowtransactionid": "@{variables(\u0027ResponseBody\u0027)?[\u0027ServiceNowTransactionID\u0027]}"
+            }
+          },
+          "runAfter": {
+            "Condition_-_Response_from_child_flows_is_successful_or_not": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "81c94f73-dd52-465c-ad3b-a4686da63cc3"
+          }
+        },
+        "Switch_-_ScenarioName": {
+          "type": "Switch",
+          "expression": "@triggerBody()?[\u0027text\u0027]",
+          "default": {
+            "actions": {
+              "Set_variable_-_ResponseBody_for_Invalid_case": {
+                "type": "SetVariable",
+                "inputs": {
+                  "name": "ResponseBody",
+                  "value": {
+                    "ServiceNowData": {},
+                    "ErrorMessage": "ScenarioName is invalid",
+                    "StatusCode": 400,
+                    "IsSuccessful": "@false",
+                    "ServiceNowSessionID": "",
+                    "ServiceNowTransactionID": "",
+                    "OutputFieldMapping": ""
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "eb250571-1afd-4164-b487-7844a6f0bb7b"
+                }
+              }
+            }
+          },
+          "cases": {
+            "Case_-_GetUserTickets": {
+              "actions": {
+                "Run_a_Child_Flow_-_GetTicketList": {
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "4b2c3d1e-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
+                    },
+                    "body": {
+                      "text": "@string(variables(\u0027TemplateConfig\u0027))",
+                      "text_1": "@string(variables(\u0027InputParams\u0027))"
+                    }
+                  },
+                  "runAfter": {
+                    "Append_UserIdentifier_to_InputParams_for_GetUserTickets": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "288019ce-dadc-41c8-ac4a-9fd640418229"
+                  }
+                },
+                "Append_UserIdentifier_to_InputParams_for_GetUserTickets": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "InputParams",
+                    "value": {
+                      "Name": "UserIdentifier",
+                      "Value": "@triggerBody()?[\u0027text_1\u0027]"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0a9354f0-fb7a-4cb3-b429-2e1cd13a7482"
+                  }
+                },
+                "GetTicketList_-_Is_Successful": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027issuccessful\u0027]",
+                          "@true"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "ServiceNow_List_Records": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "tableType": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027tablename\u0027]",
+                          "sysparm_display_value": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027displaysystemreferences\u0027]",
+                          "sysparm_exclude_reference_link": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027excludereferencelinks\u0027]",
+                          "sysparm_query": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027query\u0027]",
+                          "sysparm_limit": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027limit\u0027]",
+                          "sysparm_offset": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027offset\u0027]",
+                          "sysparm_fields": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027fields\u0027]"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_service-now",
+                          "operationId": "GetRecords",
+                          "connectionName": "shared_service-now"
+                        }
+                      }
+                    },
+                    "Condition_-_Records_Found": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "greater": [
+                              "@length(outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027body/result\u0027])",
+                              0
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "Set_Response_Body_-_List_Records_-_Success": {
+                          "type": "SetVariable",
+                          "inputs": {
+                            "name": "ResponseBody",
+                            "value": {
+                              "ServiceNowData": "@body(\u0027ServiceNow_List_Records\u0027)?[\u0027result\u0027]",
+                              "ErrorMessage": "",
+                              "StatusCode": "@outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027statusCode\u0027]",
+                              "IsSuccessful": "@true",
+                              "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                              "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                              "OutputFieldMapping": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027outputfieldmapping\u0027]"
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Set_Response_Body_-_List_Records_-_No_Records": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "ResponseBody",
+                              "value": {
+                                "ServiceNowData": "",
+                                "ErrorMessage": "No records were found.",
+                                "StatusCode": 404,
+                                "IsSuccessful": "@false",
+                                "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                                "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                                "OutputFieldMapping": ""
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_List_Records": [
+                          "Succeeded"
+                        ]
+                      }
+                    },
+                    "Set_Response_Body_-_List_Records_-_Failure": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": "",
+                          "ErrorMessage": "@body(\u0027ServiceNow_List_Records\u0027)?[\u0027error\u0027]?[\u0027message\u0027]",
+                          "StatusCode": "@outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027statusCode\u0027]",
+                          "IsSuccessful": "@false",
+                          "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                          "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_List_Records\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                          "OutputFieldMapping": ""
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_List_Records": [
+                          "Failed"
+                        ]
+                      }
+                    },
+                    "Set_Response_Body_-_List_Records_-_Skipped_or_TimedOut": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": "",
+                          "ErrorMessage": "Something went wrong while fetching records.",
+                          "StatusCode": 500,
+                          "IsSuccessful": "@false",
+                          "ServiceNowSessionID": "",
+                          "ServiceNowTransactionID": "",
+                          "OutputFieldMapping": ""
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_List_Records": [
+                          "TimedOut",
+                          "Skipped"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Set_Response_Body_-_Ticket_List_-_Failure": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "ResponseBody",
+                          "value": {
+                            "ServiceNowData": "",
+                            "ErrorMessage": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027errormessage\u0027]",
+                            "StatusCode": "@body(\u0027Run_a_Child_Flow_-_GetTicketList\u0027)?[\u0027statuscode\u0027]",
+                            "IsSuccessful": "@false",
+                            "ServiceNowSessionID": "",
+                            "ServiceNowTransactionID": ""
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Run_a_Child_Flow_-_GetTicketList": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "case": "msdyn_ITHelpdeskServiceNowITSMGetUserTickets"
+            },
+            "Case_-_GetTicketDetails": {
+              "actions": {
+                "Parse_JSON_-_Template_Configuration_for_Details": {
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": "@string(variables(\u0027TemplateConfig\u0027))",
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "Scenario": {
+                          "type": "string"
+                        },
+                        "Table": {
+                          "type": "string"
+                        },
+                        "DisplaySystemReferences": {
+                          "type": "boolean"
+                        },
+                        "ExcludeReferenceLinks": {
+                          "type": "boolean"
+                        },
+                        "OutputFieldMapping": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "FieldName": {
+                                "type": "string"
+                              },
+                              "OutputName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "FieldName",
+                              "OutputName"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Select_Output_Fields": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body(\u0027Parse_JSON_-_Template_Configuration_for_Details\u0027)?[\u0027OutputFieldMapping\u0027]",
+                    "select": "@first(split(item()?[\u0027FieldName\u0027],\u0027.\u0027))"
+                  },
+                  "runAfter": {
+                    "Parse_JSON_-_Template_Configuration_for_Details": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Join_Output_Fields": {
+                  "type": "Join",
+                  "inputs": {
+                    "from": "@body(\u0027Select_Output_Fields\u0027)",
+                    "joinWith": ","
+                  },
+                  "runAfter": {
+                    "Select_Output_Fields": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "ServiceNow_Get_Record": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "tableType": "@body(\u0027Parse_JSON_-_Template_Configuration_for_Details\u0027)?[\u0027Table\u0027]",
+                      "sysid": "@triggerBody()?[\u0027text_2\u0027]",
+                      "sysparm_display_value": "@body(\u0027Parse_JSON_-_Template_Configuration_for_Details\u0027)?[\u0027DisplaySystemReferences\u0027]",
+                      "sysparm_exclude_reference_link": "@body(\u0027Parse_JSON_-_Template_Configuration_for_Details\u0027)?[\u0027ExcludeReferenceLinks\u0027]",
+                      "sysparm_fields": "@body(\u0027Join_Output_Fields\u0027)"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_service-now",
+                      "operationId": "GetRecord",
+                      "connectionName": "shared_service-now"
+                    }
+                  },
+                  "runAfter": {
+                    "Join_Output_Fields": [
+                      "Succeeded"
+                    ]
+                  },
+                  "limit": {
+                    "timeout": "PT1M"
+                  }
+                },
+                "Set_Response_Body_-_Get_Record_-_Skipped_or_Timedout": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "ResponseBody",
+                    "value": {
+                      "ServiceNowData": "",
+                      "ErrorMessage": "Something went wrong while fetching the record.",
+                      "StatusCode": 500,
+                      "IsSuccessful": "@false",
+                      "ServiceNowSessionID": "",
+                      "ServiceNowTransactionID": "",
+                      "OutputFieldMapping": ""
+                    }
+                  },
+                  "runAfter": {
+                    "ServiceNow_Get_Record": [
+                      "TimedOut",
+                      "Skipped"
+                    ]
+                  }
+                },
+                "Set_Response_Body_-_Get_Record_-_Success": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "ResponseBody",
+                    "value": {
+                      "ServiceNowData": "@body(\u0027ServiceNow_Get_Record\u0027)?[\u0027result\u0027]",
+                      "ErrorMessage": "",
+                      "StatusCode": "@outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027statusCode\u0027]",
+                      "IsSuccessful": "@true",
+                      "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                      "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                      "OutputFieldMapping": "@body(\u0027Parse_JSON_-_Template_Configuration_for_Details\u0027)?[\u0027OutputFieldMapping\u0027]"
+                    }
+                  },
+                  "runAfter": {
+                    "ServiceNow_Get_Record": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Set_Response_Body_-_Get_Record_-_Failure": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "ResponseBody",
+                    "value": {
+                      "ServiceNowData": "",
+                      "ErrorMessage": "@body(\u0027ServiceNow_Get_Record\u0027)?[\u0027error\u0027]?[\u0027message\u0027]",
+                      "StatusCode": "@outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027statusCode\u0027]",
+                      "IsSuccessful": "@false",
+                      "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                      "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_Get_Record\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                      "OutputFieldMapping": ""
+                    }
+                  },
+                  "runAfter": {
+                    "ServiceNow_Get_Record": [
+                      "Failed"
+                    ]
+                  }
+                }
+              },
+              "case": "msdyn_ITHelpdeskServiceNowITSMGetTicketDetails"
+            },
+            "Case_-_CreateTicket": {
+              "actions": {
+                "Append_UserIdentifier_to_InputParams_for_CreateTicket": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "InputParams",
+                    "value": {
+                      "Name": "UserIdentifier",
+                      "Value": "@triggerBody()?[\u0027text_1\u0027]"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "eb5ea9cb-c166-4afb-a59a-32b7cf5ab261"
+                  }
+                },
+                "Run_a_Child_Flow_-_Request_Body_Generator_for_Create": {
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "8c7b6a5d-4e3f-2b1a-0c9d-7e6f5a4b3c2d"
+                    },
+                    "body": {
+                      "text": "@string(variables(\u0027TemplateConfig\u0027))",
+                      "text_1": "@string(variables(\u0027InputParams\u0027))"
+                    }
+                  },
+                  "runAfter": {
+                    "Append_UserIdentifier_to_InputParams_for_CreateTicket": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "c4d8c12b-25dc-4d72-9970-a1524c89ec1f"
+                  }
+                },
+                "CreateTicket_Child_Flow_-_Is_Successful": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Create\u0027)?[\u0027issuccessful\u0027]",
+                          "@true"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "ServiceNow_Create_Record": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "tableType": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Create\u0027)?[\u0027tablename\u0027]",
+                          "sysparm_display_value": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Create\u0027)?[\u0027displaysystemreferences\u0027]",
+                          "sysparm_exclude_reference_link": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Create\u0027)?[\u0027excludereferencelinks\u0027]",
+                          "sysparm_fields": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Create\u0027)?[\u0027fields\u0027]",
+                          "body": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Create\u0027)?[\u0027requestbody\u0027]"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_service-now",
+                          "operationId": "CreateRecord",
+                          "connectionName": "shared_service-now"
+                        }
+                      },
+                      "limit": {
+                        "timeout": "PT1M"
+                      }
+                    },
+                    "Set_Response_Body_-_Create_Ticket_-_Success": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": "@body(\u0027ServiceNow_Create_Record\u0027)?[\u0027result\u0027]",
+                          "ErrorMessage": "",
+                          "StatusCode": "@outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027statusCode\u0027]",
+                          "IsSuccessful": "@true",
+                          "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                          "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                          "OutputFieldMapping": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Create\u0027)?[\u0027outputfieldmapping\u0027]"
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_Create_Record": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                      }
+                    },
+                    "Set_Response_Body_-_Create_Ticket_-_Skipped_or_TimedOut": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": {},
+                          "ErrorMessage": "Something went wrong while creating the record",
+                          "StatusCode": 500,
+                          "IsSuccessful": "@false",
+                          "ServiceNowSessionID": "",
+                          "ServiceNowTransactionID": "",
+                          "OutputFieldMapping": ""
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_Create_Record": [
+                          "Skipped",
+                          "TimedOut"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                      }
+                    },
+                    "Set_Response_Body_-_Create_Ticket_-_Failure": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": {},
+                          "ErrorMessage": "@body(\u0027ServiceNow_Create_Record\u0027)?[\u0027error\u0027]?[\u0027message\u0027]",
+                          "StatusCode": "@outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027statusCode\u0027]",
+                          "IsSuccessful": "@false",
+                          "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                          "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_Create_Record\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                          "OutputFieldMapping": ""
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_Create_Record": [
+                          "Failed"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Set_Response_Body_-_Create_Ticket_Child_Flow_-_Failure": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "ResponseBody",
+                          "value": {
+                            "ServiceNowData": {},
+                            "ErrorMessage": "Something went wrong while creating the record",
+                            "StatusCode": 500,
+                            "IsSuccessful": "@false",
+                            "ServiceNowSessionID": "",
+                            "ServiceNowTransactionID": "",
+                            "OutputFieldMapping": ""
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Run_a_Child_Flow_-_Request_Body_Generator_for_Create": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "case": "msdyn_ITHelpdeskServiceNowITSMCreateTicket"
+            },
+            "Case_-_UpdateTicket": {
+              "actions": {
+                "Run_a_Child_Flow_-_Request_Body_Generator_for_Update": {
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "8c7b6a5d-4e3f-2b1a-0c9d-7e6f5a4b3c2d"
+                    },
+                    "body": {
+                      "text": "@string(variables(\u0027TemplateConfig\u0027))",
+                      "text_1": "@string(variables(\u0027InputParams\u0027))"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "2b039d0a-7b26-4daa-8ba9-195fcd8a7b10"
+                  }
+                },
+                "UpdateTicket_Child_Flow_-_Is_Successful": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Update\u0027)?[\u0027issuccessful\u0027]",
+                          "@true"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "ServiceNow_Update_Record": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "tableType": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Update\u0027)?[\u0027tablename\u0027]",
+                          "sysid": "@triggerBody()?[\u0027text_2\u0027]",
+                          "sysparm_display_value": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Update\u0027)?[\u0027displaysystemreferences\u0027]",
+                          "sysparm_exclude_reference_link": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Update\u0027)?[\u0027excludereferencelinks\u0027]",
+                          "sysparm_fields": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Update\u0027)?[\u0027fields\u0027]",
+                          "body": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Update\u0027)?[\u0027requestbody\u0027]"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_service-now",
+                          "operationId": "UpdateRecord",
+                          "connectionName": "shared_service-now"
+                        }
+                      },
+                      "limit": {
+                        "timeout": "PT1M"
+                      }
+                    },
+                    "Set_Response_Body_-_Update_Ticket_-_Success": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": "@body(\u0027ServiceNow_Update_Record\u0027)?[\u0027result\u0027]",
+                          "ErrorMessage": "",
+                          "StatusCode": "@outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027statusCode\u0027]",
+                          "IsSuccessful": "@true",
+                          "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                          "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                          "OutputFieldMapping": "@body(\u0027Run_a_Child_Flow_-_Request_Body_Generator_for_Update\u0027)?[\u0027outputfieldmapping\u0027]"
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_Update_Record": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                      }
+                    },
+                    "Set_Response_Body_-_Update_Ticket_-_Skipped_or_TimedOut-copy": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": {},
+                          "ErrorMessage": "Something went wrong while updating the record",
+                          "StatusCode": 500,
+                          "IsSuccessful": "@false",
+                          "ServiceNowSessionID": "",
+                          "ServiceNowTransactionID": "",
+                          "OutputFieldMapping": ""
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_Update_Record": [
+                          "Skipped",
+                          "TimedOut"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                      }
+                    },
+                    "Set_Response_Body_-_Update_Ticket_-_Failure": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "ResponseBody",
+                        "value": {
+                          "ServiceNowData": {},
+                          "ErrorMessage": "@body(\u0027ServiceNow_Update_Record\u0027)?[\u0027error\u0027]?[\u0027message\u0027]",
+                          "StatusCode": "@outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027statusCode\u0027]",
+                          "IsSuccessful": "@false",
+                          "ServiceNowSessionID": "@if(contains(outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store\u0027), first(split(last(split(outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027headers/Set-Cookie\u0027], \u0027glide_session_store=\u0027)), \u0027;\u0027)), \u0027\u0027)",
+                          "ServiceNowTransactionID": "@outputs(\u0027ServiceNow_Update_Record\u0027)?[\u0027headers/X-Transaction-ID\u0027]",
+                          "OutputFieldMapping": ""
+                        }
+                      },
+                      "runAfter": {
+                        "ServiceNow_Update_Record": [
+                          "Failed"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Set_ResponseBody_-_UpdateTicket_Child_Flow_-_Failure_": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "ResponseBody",
+                          "value": {
+                            "ServiceNowData": {},
+                            "ErrorMessage": "Something went wrong while updating the record",
+                            "StatusCode": 500,
+                            "IsSuccessful": "@false",
+                            "ServiceNowSessionID": "",
+                            "ServiceNowTransactionID": "",
+                            "OutputFieldMapping": ""
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "3326201d-2e0b-4311-b938-6ad0327e3004"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Run_a_Child_Flow_-_Request_Body_Generator_for_Update": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "case": "msdyn_ITHelpdeskServiceNowITSMUpdateTicket"
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_-_ResponseBody": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a4fb6cc1-9113-44b2-bb8f-c91de9c9a9c6"
+          }
+        },
+        "Parse_JSON_-_InputParameters": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@triggerBody()?[\u0027text_3\u0027]",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "Name",
+                  "Value"
+                ]
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "a51e5c84-a6aa-42c4-8308-d0af082389c6"
+          }
+        },
+        "Initialize_variable_-_InputParams": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "InputParams",
+                "type": "array",
+                "value": "@body(\u0027Parse_JSON_-_InputParameters\u0027)"
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_JSON_-_InputParameters": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "cfb1e502-3082-415f-95a1-07d810a38d6c"
+          }
+        },
+        "Respond_to_Copilot_-_Failure": {
+          "type": "Response",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "servicenowdata": {
+                  "title": "ServiceNowData",
+                  "x-ms-dynamically-added": true,
+                  "type": "string",
+                  "description": "Data returned from ServiceNow."
+                },
+                "issuccessful": {
+                  "title": "IsSuccessful",
+                  "x-ms-dynamically-added": true,
+                  "type": "boolean",
+                  "description": "Boolean to indicate whether the flow succeeded or not."
+                },
+                "errormessage": {
+                  "title": "ErrorMessage",
+                  "x-ms-dynamically-added": true,
+                  "type": "string",
+                  "description": "Error message in case of a failure."
+                },
+                "statuscode": {
+                  "title": "StatusCode",
+                  "x-ms-dynamically-added": true,
+                  "type": "number",
+                  "description": "Integer value to indicate the request status code."
+                },
+                "servicenowsessionid": {
+                  "title": "ServiceNowSessionID",
+                  "description": "The \u0022glide_session_store\u0022 cookie - used for correlating the REST call with copilot conversation ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "servicenowtransactionid": {
+                  "title": "ServiceNowTransactionID",
+                  "description": "The \u0022X-Transaction-ID\u0022 header - used for correlating the REST call with copilot conversation ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "servicenowdata": "{}",
+              "issuccessful": "@false",
+              "errormessage": "Something went wrong",
+              "statuscode": 500
+            }
+          },
+          "runAfter": {
+            "Condition_-_Response_from_child_flows_is_successful_or_not": [
+              "TimedOut",
+              "Skipped",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "81c94f73-dd52-465c-ad3b-a4686da63cc3"
+          }
+        },
+        "Retrieve_Template_Configuration_By_Unique_Name": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "msdyn_employeeselfservicetemplateconfigs",
+              "$select": "msdyn_value",
+              "$filter": "msdyn_uniquename eq \u0027@{triggerBody()?[\u0027text\u0027]}\u0027",
+              "$top": 1
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_-_InputParams": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "06cdfc2c-29f4-4ec1-851c-6b771e94d54a"
+          }
+        },
+        "Initialize_variable_-_TemplateConfig": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "TemplateConfig",
+                "type": "string",
+                "value": "@first(outputs(\u0027Retrieve_Template_Configuration_By_Unique_Name\u0027)?[\u0027body/value\u0027])?[\u0027msdyn_value\u0027]"
+              }
+            ]
+          },
+          "runAfter": {
+            "Parse_JSON_for_Base_ServiceNow_IT_Configuration": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "0d728e18-6028-4c3f-8351-996d91d76da7"
+          }
+        },
+        "Condition_-_Response_from_child_flows_is_successful_or_not": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@variables(\u0027ResponseBody\u0027)?[\u0027issuccessful\u0027]",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Call_ServiceNow_Custom_API_Dataverse_Plugin_to_map_ServiceNow_data": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "actionName": "msdyn_ServiceNowOutputFieldMapperPlugin",
+                  "item/ServiceNowTableData": "@variables(\u0027ResponseBody\u0027)?[\u0027ServiceNowData\u0027]",
+                  "item/OutputFieldMapping": "@variables(\u0027ResponseBody\u0027)?[\u0027OutputFieldMapping\u0027]",
+                  "item/ServiceNowITSMBaseConfiguration": "@body(\u0027Parse_JSON_for_Base_ServiceNow_IT_Configuration\u0027)"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "PerformUnboundAction",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "923cc8a0-20f6-4ea5-bf59-e990a12f601f"
+              }
+            },
+            "Set_variable_ResponseBody_with_the_updated_object": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "ResponseBody",
+                "value": "@outputs(\u0027Set_ServiceNowData_in_ResponseBody_to_mapped_output\u0027)"
+              },
+              "runAfter": {
+                "Set_ServiceNowData_in_ResponseBody_to_mapped_output": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "b93bb70d-1c35-449c-98aa-57486b8d7e32"
+              }
+            },
+            "Set_ServiceNowData_in_ResponseBody_to_mapped_output": {
+              "type": "Compose",
+              "inputs": "@setProperty(variables(\u0027ResponseBody\u0027),\u0027ServiceNowData\u0027,outputs(\u0027Call_ServiceNow_Custom_API_Dataverse_Plugin_to_map_ServiceNow_data\u0027)?[\u0027body/ServiceNowMappedOutput\u0027])",
+              "runAfter": {
+                "Call_ServiceNow_Custom_API_Dataverse_Plugin_to_map_ServiceNow_data": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "c57ca986-f5d4-44ff-a03b-7b0d153bfab0"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Switch_-_ScenarioName": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e7d898fd-57a5-4dc9-8813-d2b4c0e68d5f"
+          }
+        },
+        "Initialize_variable_-_ResponseBody": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "ResponseBody",
+                "type": "object",
+                "value": {
+                  "ServiceNowData": "",
+                  "ErrorMessage": "",
+                  "StatusCode": 500,
+                  "IsSuccessful": false,
+                  "ServiceNowSessionID": "",
+                  "ServiceNowTransactionID": "",
+                  "OutputFieldMapping": ""
+                }
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_TemplateConfig": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "5256cba6-a365-4965-bdfa-fd5f161e958b"
+          }
+        },
+        "Retrieve_Template_Configuration_For_ServiceNow_IT": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "msdyn_employeeselfservicetemplateconfigs",
+              "$select": "msdyn_value",
+              "$filter": "msdyn_uniquename eq \u0027msdyn_ServiceNowITSM\u0027",
+              "$top": 1
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {
+            "Retrieve_Template_Configuration_By_Unique_Name": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "06cdfc2c-29f4-4ec1-851c-6b771e94d54a"
+          }
+        },
+        "Initialize_variable_-_ServiceNowITSMBaseConfig": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "BaseConfig",
+                "type": "string",
+                "value": "@first(outputs(\u0027Retrieve_Template_Configuration_For_ServiceNow_IT\u0027)?[\u0027body/value\u0027])?[\u0027msdyn_value\u0027]"
+              }
+            ]
+          },
+          "runAfter": {
+            "Retrieve_Template_Configuration_For_ServiceNow_IT": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3331d810-3df7-4761-b2dd-2a5a7d754cda"
+          }
+        },
+        "Parse_JSON_for_Base_ServiceNow_IT_Configuration": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@variables(\u0027BaseConfig\u0027)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ServiceNowPortalBaseURI": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_-_ServiceNowITSMBaseConfig": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b854da9c-f8a1-4760-925a-00b3734d6020"
+          }
+        }
+      },
+      "outputs": {},
+      "description": "Run a flow from Copilot and send back a response."
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

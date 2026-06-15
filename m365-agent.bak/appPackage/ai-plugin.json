@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.3/plugin.schema.json",
+  "schema_version": "v2.3",
+  "name_for_human": "ServiceNow Catalog (MCP)",
+  "description_for_human": "Order ServiceNow catalog items, browse the catalog, and manage your open requests from Microsoft 365 Copilot.",
+  "description_for_model": "Action that wraps the ServiceNow MCP server (https://github.com/pavecer/mcp-server-servicenow). The MCP server exposes seven tools — search_catalog_items, get_catalog_item_form, place_order, list_user_orders, get_order_detail, update_order, validate_servicenow_config — and four MCP App (SEP-1865) widgets for browsing the catalog, filling the order form, listing open orders, and inspecting a single order.",
+  "namespace": "servicenow_mcp",
+  "runtimes": [
+    {
+      "type": "McpServer",
+      "auth": {
+        "type": "OAuthPluginVault",
+        "reference_id": "${{OAUTH_REGISTRATION_ID}}"
+      },
+      "spec": {
+        "url": "${{MCP_SERVER_URL}}"
+      }
+    }
+  ]
+}

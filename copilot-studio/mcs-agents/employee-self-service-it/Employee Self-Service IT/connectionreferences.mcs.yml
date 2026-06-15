@@ -1,0 +1,7 @@
+﻿connectionReferences:
+  - connectionReferenceLogicalName: msdyn_copilotforemployeeselfserviceit.cr.w2LCWZTZ
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_service-now
+  - connectionReferenceLogicalName: msdyn_copilotforemployeeselfserviceit.shared_alchemy.shared-alchemy-8262076a-e778-450b-8a35-5ae815712319
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_alchemy
+  - connectionReferenceLogicalName: new_sharedcommondataserviceforapps_41c83
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps

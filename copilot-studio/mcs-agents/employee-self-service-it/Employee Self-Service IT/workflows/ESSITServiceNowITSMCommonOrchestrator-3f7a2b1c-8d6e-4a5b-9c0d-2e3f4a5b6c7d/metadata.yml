@@ -1,0 +1,30 @@
+﻿jsonFileName: workflows/ESSITServiceNowITSMCommonOrchestrator-3f7a2b1c-8d6e-4a5b-9c0d-2e3f4a5b6c7d/workflow.json
+workflowId: 3f7a2b1c-8d6e-4a5b-9c0d-2e3f4a5b6c7d
+name: ESS IT ServiceNow ITSM Common Orchestrator
+type: 1
+description: Run a flow from Copilot and send back a response.
+subprocess: false
+category: 5
+mode: 0
+scope: 4
+onDemand: false
+triggerOnCreate: false
+triggerOnDelete: false
+asyncAutodelete: false
+syncWorkflowLogOnFailure: false
+stateCode: 1
+statusCode: 2
+runAs: 1
+isTransacted: true
+introducedVersion: 1.0
+isCustomizable:
+  value: false
+  canBeChanged: true
+  managedPropertyLogicalName: iscustomizableanddeletable
+businessProcessType: 
+isCustomProcessingStepAllowedForOtherPublishers:
+  value: true
+  canBeChanged: true
+  managedPropertyLogicalName: canbedeleted
+modernFlowType: 1
+primaryEntity: none

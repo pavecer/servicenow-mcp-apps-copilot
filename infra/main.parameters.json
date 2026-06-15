@@ -1,0 +1,108 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "serviceNowInstanceUrl": {
+      "value": "${SERVICENOW_INSTANCE_URL}"
+    },
+    "serviceNowClientId": {
+      "value": "${SERVICENOW_CLIENT_ID}"
+    },
+    "serviceNowClientSecret": {
+      "value": "${SERVICENOW_CLIENT_SECRET}"
+    },
+    "serviceNowUsername": {
+      "value": "${SERVICENOW_USERNAME}"
+    },
+    "serviceNowPassword": {
+      "value": "${SERVICENOW_PASSWORD}"
+    },
+    "serviceNowOauthTokenPath": {
+      "value": "${SERVICENOW_OAUTH_TOKEN_PATH=/oauth_token.do}"
+    },
+    "serviceNowOauthGrantType": {
+      "value": "${SERVICENOW_OAUTH_GRANT_TYPE=auto}"
+    },
+    "serviceNowOauthClientAuthStyle": {
+      "value": "${SERVICENOW_OAUTH_CLIENT_AUTH_STYLE=auto}"
+    },
+    "serviceNowRequireCallerAccessToken": {
+      "value": "${SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=false}"
+    },
+    "serviceNowRequestedForLookupFields": {
+      "value": "${SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS=email,user_name}"
+    },
+    "serviceNowRequestedForCallerFields": {
+      "value": "${SERVICENOW_REQUESTED_FOR_CALLER_FIELDS=callerUpn}"
+    },
+    "serviceNowRequestedForFallbackToCallerValue": {
+      "value": "${SERVICENOW_REQUESTED_FOR_FALLBACK_TO_CALLER_VALUE=true}"
+    },
+    "serviceNowRequestedForDiagnostics": {
+      "value": "${SERVICENOW_REQUESTED_FOR_DIAGNOSTICS=false}"
+    },
+    "serviceNowRequestedForDiagnosticsIncludePii": {
+      "value": "${SERVICENOW_REQUESTED_FOR_DIAGNOSTICS_INCLUDE_PII=false}"
+    },
+    "entraTenantId": {
+      "value": "${ENTRA_TENANT_ID}"
+    },
+    "entraClientId": {
+      "value": "${ENTRA_CLIENT_ID}"
+    },
+    "entraClientSecret": {
+      "value": "${ENTRA_CLIENT_SECRET}"
+    },
+    "entraAudience": {
+      "value": "${ENTRA_AUDIENCE}"
+    },
+    "entraTrustedTenantIds": {
+      "value": "${ENTRA_TRUSTED_TENANT_IDS}"
+    },
+    "entraAllowAnyTenant": {
+      "value": "${ENTRA_ALLOW_ANY_TENANT=false}"
+    },
+    "entraAuthDisabled": {
+      "value": "${ENTRA_AUTH_DISABLED=false}"
+    },
+    "entraOauthScopes": {
+      "value": "${ENTRA_OAUTH_SCOPES}"
+    },
+    "entraDcrRegistrationToken": {
+      "value": "${ENTRA_DCR_REGISTRATION_TOKEN}"
+    },
+    "entraDcrAllowUnauthenticated": {
+      "value": "${ENTRA_DCR_ALLOW_UNAUTHENTICATED=false}"
+    },
+    "entraAllowedAudiences": {
+      "value": "${ENTRA_ALLOWED_AUDIENCES}"
+    },
+    "entraOboEnabled": {
+      "value": "${ENTRA_OBO_ENABLED=false}"
+    },
+    "entraOboDownstreamScope": {
+      "value": "${ENTRA_OBO_DOWNSTREAM_SCOPE=}"
+    },
+    "corsAllowedOrigins": {
+      "value": "${CORS_ALLOWED_ORIGINS}"
+    },
+    "logLevel": {
+      "value": "${LOG_LEVEL=info}"
+    },
+    "logIncludeCallerIdentity": {
+      "value": "${LOG_INCLUDE_CALLER_IDENTITY=false}"
+    },
+    "logIncludeErrorStack": {
+      "value": "${LOG_INCLUDE_ERROR_STACK=false}"
+    },
+    "mcpAppsEnabled": {
+      "value": "${MCP_APPS_ENABLED=false}"
+    }
+  }
+}

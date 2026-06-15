@@ -1,0 +1,68 @@
+mcs.metadata:
+  componentName: ServiceNow ITSM Employee Handoff Scenarios
+kind: AdaptiveDialog
+modelDescription: |-
+  You will respond only to requests about common IT-related tasks such as requesting equipment or software, managing approvals, and reporting asset issues.
+  If the prompt is not about these categories for the user, this topic must not be triggered. Always deny when you do not have enough information.  
+
+  Valid examples:
+  - I need new laptop
+  - Request a monitor
+  - Order new equipment
+  - Request a Zoom license
+  - I need Photoshop
+  - Get software access
+  - Show my pending approvals
+  - Approve software request
+  - Delegate my approvals
+  - Who can approve for me while I'm away?
+  - What devices are assigned to me?
+  - List my IT assets
+  - Report broken laptop
+  - Submit damage report
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: SetVariable
+      id: setVariable_7l2dng
+      variable: Topic.HandoffAgentId
+      value: ="ServiceNowAgentIdentifier"
+
+    - kind: SetVariable
+      id: setVariable_qFsWaf
+      variable: Topic.UserPrompt
+      value: =System.Activity.Text
+
+    - kind: SetVariable
+      id: setVariable_phjZdC
+      variable: Topic.AgentHandoffPrompt
+      value: =Concatenate("@mention:", Topic.HandoffAgentId, ":", Topic.UserPrompt)
+
+    - kind: SetVariable
+      id: setVariable_T4Do6n
+      variable: Topic.SuggestedAgentHandoffList
+      value: =[Text(Topic.AgentHandoffPrompt),"Skip"]
+
+    - kind: Question
+      id: question_nmFHN3
+      interruptionPolicy:
+        allowInterruption: true
+
+      repeatCount: 0
+      variable: init:Topic.Var1
+      prompt: Your organization set up the ServiceNow Agent to help with requests about [scenario(s)]. Simply select ServiceNow Agent below to get the most accurate guidance, or choose Skip to move on.
+      defaultValue: =Blank()
+      entity:
+        kind: DynamicClosedListEntity
+        items: =Topic.SuggestedAgentHandoffList
+
+    - kind: EndDialog
+      id: 0fSpqJ
+
+    - kind: CancelAllDialogs
+      id: gaZWK2
+
+inputType: {}
+outputType: {}

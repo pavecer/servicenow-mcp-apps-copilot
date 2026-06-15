@@ -1,0 +1,4 @@
+{
+  "what_needs_to_be_backed_up": "Database",
+  "special_requirements": "30-day retention, encrypted at rest. New SQL Server holding customer master records."
+}

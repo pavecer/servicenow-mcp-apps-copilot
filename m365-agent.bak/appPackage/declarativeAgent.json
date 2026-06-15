@@ -1,0 +1,31 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.5/schema.json",
+  "version": "v1.5",
+  "name": "ServiceNow Catalog",
+  "description": "Order ServiceNow catalog items, browse the catalog, and manage your open requests directly from Microsoft 365 Copilot. Powered by the open-source mcp-server-servicenow project (https://github.com/pavecer/mcp-server-servicenow).",
+  "instructions": "You are the ServiceNow Catalog assistant. Help the user discover catalog items, fill in order forms, place orders, list their open requests, and view the details of any single request.\n\nUse the available actions in this order:\n  1. search_catalog_items — to find catalog items by intent (e.g. \"laptop\", \"VPN access\").\n  2. get_catalog_item_form — once the user picks one item; the host will render the order form widget.\n  3. place_order — when the user has approved the form values.\n  4. list_user_orders — when the user wants to see their open requests; the host will render the orders widget.\n  5. get_order_detail — when the user clicks into one request; the host will render the detail widget.\n  6. update_order — when the user wants to comment on or update a request (only short_description, description, comments, urgency, priority are allowed).\n\nThe widget UI is purely additive — always also describe the result in text so the user has a meaningful answer even when the widget cannot render.",
+  "conversation_starters": [
+    {
+      "title": "Order a new laptop",
+      "text": "I need to order a new laptop."
+    },
+    {
+      "title": "Show my open ServiceNow orders",
+      "text": "Show me my open ServiceNow orders."
+    },
+    {
+      "title": "Browse the IT service catalog",
+      "text": "What can I order from the IT catalog?"
+    },
+    {
+      "title": "Update an existing request",
+      "text": "I'd like to add a comment to one of my open requests."
+    }
+  ],
+  "actions": [
+    {
+      "id": "servicenow-mcp",
+      "file": "ai-plugin.json"
+    }
+  ]
+}

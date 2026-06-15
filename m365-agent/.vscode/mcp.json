@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "funcyj453f": {
+      "type": "http",
+      "url": "https://func-yj453fjwuhph4.azurewebsites.net/mcp"
+    }
+  }
+}

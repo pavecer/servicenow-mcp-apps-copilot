@@ -1,0 +1,31 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.7/schema.json",
+    "version": "v1.7",
+    "name": "ServiceNow Catalog${{APP_NAME_SUFFIX}}",
+    "description": "Browse the ServiceNow service catalog, place orders, and manage your existing requests from Microsoft 365 Copilot with interactive widgets.",
+    "instructions": "$[file('instruction.txt')]",
+    "conversation_starters": [
+        {
+            "title": "Order a laptop",
+            "text": "I need to order a new laptop."
+        },
+        {
+            "title": "Browse the catalog",
+            "text": "What can I request from the ServiceNow catalog?"
+        },
+        {
+            "title": "My open orders",
+            "text": "Show me my open ServiceNow requests."
+        },
+        {
+            "title": "Request software",
+            "text": "I'd like to request software access."
+        }
+    ],
+    "actions": [
+        {
+            "id": "action_1",
+            "file": "ai-plugin.json"
+        }
+    ]
+}

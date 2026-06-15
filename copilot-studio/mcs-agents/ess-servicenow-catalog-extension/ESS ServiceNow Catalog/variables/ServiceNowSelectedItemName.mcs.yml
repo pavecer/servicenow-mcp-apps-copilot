@@ -1,0 +1,10 @@
+# Name: ServiceNow Selected Item Name
+# Display name of the catalog item the user has selected.
+# Used for confirmation messages and context in downstream topics.
+name: ServiceNowSelectedItemName
+aIVisibility: UseInAIContext
+scope: Conversation
+description: The display name of the selected ServiceNow catalog item.
+schemaName: msdyn_essservicenowcatalog.globalvariable.ServiceNowSelectedItemName
+kind: GlobalVariableComponent
+defaultValue: DEFAULT

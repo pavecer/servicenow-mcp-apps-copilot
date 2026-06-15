@@ -1,0 +1,28 @@
+mcs.metadata:
+  componentName: "[System] - Log Telemetry Event"
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRedirect
+  id: main
+  actions:
+    - kind: LogCustomTelemetryEvent
+      id: 4ishvf
+      eventName: =Topic.EventName
+      properties: |-
+        ={
+            Message: Topic.Message,
+            TimeUTC: Text(Now(), DateTimeFormat.UTC),
+            ConversationId: System.Conversation.Id,
+            Channel: System.Activity.ChannelId,
+            AgentId: System.Bot.Name
+        }
+
+inputType:
+  properties:
+    EventName:
+      displayName: EventName
+      type: String
+
+    Message:
+      displayName: Message
+      type: String

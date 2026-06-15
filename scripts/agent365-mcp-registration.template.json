@@ -1,0 +1,36 @@
+{
+  "$schema-comment": "Template for `a365 develop-mcp register-external-mcp-server -f <file>`. Copy this file to scripts/agent365-mcp-registration.json and replace ALL <PLACEHOLDER> values. The serverName MUST start with 'ext_' and be at most 20 characters. See docs/AGENT_365_BYO_MCP.md for the full flow.",
+  "serverName": "ext_ServiceNowMCP",
+  "serverUrl": "https://YOUR-FUNCTION-APP.azurewebsites.net/mcp",
+  "authType": "EntraOAuth",
+  "description": "ServiceNow Service Catalog: search items, fill forms, place and manage orders.",
+  "publisherName": "YOUR-ORG-NAME",
+  "remoteScopes": "api://YOUR-ENTRA-CLIENT-ID/.default",
+  "tenantId": "YOUR-ENTRA-TENANT-ID",
+  "tools": [
+    {
+      "name": "search_catalog_items",
+      "description": "Search ServiceNow catalog items using a natural-language query."
+    },
+    {
+      "name": "get_catalog_item_form",
+      "description": "Get the order form for a selected ServiceNow catalog item."
+    },
+    {
+      "name": "place_order",
+      "description": "Place a ServiceNow catalog order with the collected form values."
+    },
+    {
+      "name": "list_user_orders",
+      "description": "Retrieve all current (non-closed) orders for the authenticated user."
+    },
+    {
+      "name": "update_order",
+      "description": "Update a small allowlist of fields (short_description, description, comments, urgency, priority) on the caller's catalog order."
+    },
+    {
+      "name": "validate_servicenow_config",
+      "description": "Validate ServiceNow authentication and catalog access end-to-end."
+    }
+  ]
+}

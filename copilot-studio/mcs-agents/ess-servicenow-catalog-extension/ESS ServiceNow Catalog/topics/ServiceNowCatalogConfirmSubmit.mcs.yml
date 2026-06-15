@@ -1,0 +1,186 @@
+mcs.metadata:
+  componentName: ESS ServiceNow Catalog Confirm and Submit
+  description: >-
+    Presents a confirmation summary of the order details before submission.
+    On user confirmation, calls place_order via the MCP server.
+    Stores the request number in Global.ServiceNowOrderRequestNumber and shows
+    a confirmation adaptive card. On cancellation, offers to modify or abandon.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnSystemRedirect
+  id: main
+  actions:
+    # Guard: require selected item and collected values
+    - kind: ConditionGroup
+      id: conditionGroup_Conf01
+      conditions:
+        - id: conditionItem_Conf02
+          condition: =IsBlank(Global.ServiceNowSelectedItemSysId)
+          displayName: No item selected
+          actions:
+            - kind: SendActivity
+              id: sendActivity_Conf03
+              activity: It looks like no catalog item has been selected yet. Let me restart the ordering process.
+            - kind: BeginDialog
+              id: beginDialog_Conf04
+              dialog: ESS ServiceNow Catalog Search
+
+      elseActions:
+        # Show confirmation summary
+        - kind: SendActivity
+          id: sendActivity_Conf05
+          activity: |-
+            Here's a summary of your order before I submit it:
+
+            📦 **Item:** {Global.ServiceNowSelectedItemName}
+
+            Please review the details above. The order form has been filled in based on our conversation.
+
+            **Shall I go ahead and submit this order?**
+
+        - kind: Question
+          id: question_Conf06
+          variable: init:Topic.UserConfirmed
+          prompt:
+            kind: AdaptiveCardTemplate
+            cardTemplateType: Text
+            text: Do you confirm submitting this order?
+          entity: BooleanPrebuiltEntity
+          invalidPrompt:
+            kind: AdaptiveCardTemplate
+            cardTemplateType: Text
+            text: Please say **yes** to submit the order or **no** to cancel.
+          interruptionPolicy:
+            allowInterruption: false
+
+        # Branch on confirmation answer
+        - kind: ConditionGroup
+          id: conditionGroup_Conf07
+          conditions:
+            - id: conditionItem_Conf08
+              condition: =Topic.UserConfirmed = true
+              displayName: User confirmed — submit order
+              actions:
+                - kind: SendActivity
+                  id: sendActivity_Conf09
+                  activity: Submitting your order now...
+
+                # The AI orchestrator calls place_order with:
+                #   itemSysId = Global.ServiceNowSelectedItemSysId
+                #   variables = parsed from Global.ServiceNowOrderValuesJson + conversation context
+                # The MCP server returns: requestNumber, requestId, adaptiveCard (confirmation)
+
+                - kind: ConditionGroup
+                  id: conditionGroup_Conf10
+                  conditions:
+                    - id: conditionItem_Conf11
+                      condition: =!IsBlank(Global.ServiceNowOrderRequestNumber)
+                      displayName: Order submitted successfully
+                      actions:
+                        - kind: SendActivity
+                          id: sendActivity_Conf12
+                          activity: |-
+                            ✅ **Your order has been submitted!**
+
+                            **Request Number:** {Global.ServiceNowOrderRequestNumber}
+
+                            You'll receive a confirmation email shortly. You can track the status of your request in the ServiceNow portal.
+
+                            Is there anything else I can help you with?
+
+                  elseActions:
+                    # Order failed or request number not returned
+                    - kind: SendActivity
+                      id: sendActivity_Conf13
+                      activity: |-
+                        I wasn't able to confirm your order was submitted. This could be a temporary issue.
+
+                        Would you like me to try again, or would you prefer to submit the order directly through the ServiceNow portal?
+
+                    - kind: Question
+                      id: question_Conf14
+                      variable: init:Topic.RetryChoice
+                      prompt:
+                        kind: AdaptiveCardTemplate
+                        cardTemplateType: Text
+                        text: Would you like to try submitting again?
+                      entity: BooleanPrebuiltEntity
+                      invalidPrompt:
+                        kind: AdaptiveCardTemplate
+                        cardTemplateType: Text
+                        text: Please say **yes** to retry or **no** to cancel.
+
+                    - kind: ConditionGroup
+                      id: conditionGroup_Conf15
+                      conditions:
+                        - id: conditionItem_Conf16
+                          condition: =Topic.RetryChoice = true
+                          displayName: Retry submission
+                          actions:
+                            - kind: BeginDialog
+                              id: beginDialog_Conf17
+                              dialog: ESS ServiceNow Catalog Confirm and Submit
+
+                      elseActions:
+                        - kind: SendActivity
+                          id: sendActivity_Conf18
+                          activity: |-
+                            No problem. You can complete your order at any time through the ServiceNow Service Portal.
+                            Is there anything else I can help you with?
+
+          elseActions:
+            # User did not confirm — offer to modify or abandon
+            - kind: SendActivity
+              id: sendActivity_Conf19
+              activity: |-
+                No problem. Would you like to:
+                - **Change the item** — start a new catalog search
+                - **Modify the details** — update the order information
+                - **Cancel** — abandon this order
+
+            - kind: Question
+              id: question_Conf20
+              variable: init:Topic.ModifyChoice
+              prompt:
+                kind: AdaptiveCardTemplate
+                cardTemplateType: Text
+                text: What would you like to do?
+              entity: StringPrebuiltEntity
+              invalidPrompt:
+                kind: AdaptiveCardTemplate
+                cardTemplateType: Text
+                text: Please choose to change the item, modify the details, or cancel.
+
+            - kind: ConditionGroup
+              id: conditionGroup_Conf21
+              conditions:
+                - id: conditionItem_Conf22
+                  condition: =Contains(Lower(Topic.ModifyChoice), "change") || Contains(Lower(Topic.ModifyChoice), "search") || Contains(Lower(Topic.ModifyChoice), "new")
+                  displayName: User wants to search again
+                  actions:
+                    - kind: SetVariable
+                      id: setVariable_Conf23
+                      variable: Global.ServiceNowSelectedItemSysId
+                      value: =Blank()
+                    - kind: SetVariable
+                      id: setVariable_Conf24
+                      variable: Global.ServiceNowSelectedItemName
+                      value: =Blank()
+                    - kind: BeginDialog
+                      id: beginDialog_Conf25
+                      dialog: ESS ServiceNow Catalog Search
+
+              elseActions:
+                - kind: SendActivity
+                  id: sendActivity_Conf26
+                  activity: |-
+                    Your order has been cancelled. If you'd like to order something later, just let me know.
+
+inputType: {}
+outputType: {}
+
+modelDisplayName: ESS ServiceNow Catalog Confirm and Submit
+modelDescription: >-
+  Use this topic to confirm and submit a prepared catalog order.
+  Shows order summary, asks for confirmation, then submits via place_order.
+  Handles retry on failure and cancel/modify flows.

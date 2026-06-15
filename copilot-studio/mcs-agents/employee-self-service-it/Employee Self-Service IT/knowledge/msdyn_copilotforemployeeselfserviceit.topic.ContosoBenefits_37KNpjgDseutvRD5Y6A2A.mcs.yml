@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: Contoso Benefits
+  description: Provides information about all available Contoso company benefits for their employees.
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  site: https://d365demotsce54115347.sharepoint.com/Shared%20Documents

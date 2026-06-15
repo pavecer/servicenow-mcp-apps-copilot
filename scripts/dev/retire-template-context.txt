@@ -1,0 +1,1 @@
+We've decided to retire the "Reset Active Directory Password" change template. It's been superseded by the SSPR self-service workflow and hasn't been used in over six months. Please retire it as part of the Q2 change template cleanup.

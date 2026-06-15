@@ -1,0 +1,89 @@
+mcs.metadata:
+  componentName: "[Example] - Crafted Response"
+kind: AdaptiveDialog
+modelDescription: |-
+  **This topic should only trigger** when users mention **explicitly question related to compa-ratio** such as **what is my compa-ratio**, **tell my compa-ratio**.
+  **Important:**
+  This topic **must not** trigger for **general employment-related inquiries** such as:
+  - Accessing **benefits information** (e.g., W-2 forms, health benefits),
+  - **Routine workplace questions**,
+  - **Performance concerns**, or
+  - Other **non-sensitive** matters.
+  **It should only activate** when explicit terms like **compa-ratio** is mentioned.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - what is my compa-ratio
+      - what is my compa ratio
+      - tell my compa-ratio
+
+  actions:
+    - kind: SetTextVariable
+      id: setVariable_05OHaW
+      displayName: Set Official Answer Response
+      variable: Topic.VerbatimResponse
+      value: Verbatim response placeholder - replace with your response.
+
+    - kind: AdaptiveCardPrompt
+      id: EZFv4Z
+      displayName: Official Answer 
+      card: |-
+        ={
+          type: "AdaptiveCard",
+          '$schema': "http://adaptivecards.io/schemas/adaptive-card.json",
+          version: "1.0",
+          body: [
+            {
+              type: "ColumnSet",
+              columns: [
+                {
+                  type: "Column",
+                  width: "auto",
+                  items: [
+                    {
+                      type: "Image",
+                      url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAFbSURBVHgBpVPbcYMwELTUQEgFIR2YDuwKgiuwePybDkw6cBoApQKng0wqMKnA7iDkn4HsTiRGFvjLmtFIh3b39m6OxeLOJfwPSqlASrnH9buqKm1ihfip7/tXrXXr4uVEUYgSQDEMwypJkhPiE+IAsYBQ4eMnAlgv2Ie6rhVIa+wIWUuc3LvZEozNHQAF9hsJM8LElXC0xf6w5UjH9iPIz7fIeZ6vjBO6EuSMJSC4wEHrN8iuNE33XdfFvANzAf4BIs0ogOwaH7YsZY6MtxjEwpaLeIlYjwImc+uQjgAusyyLAWYzN55uYJNJQ1Cw1dgS2CDER5zMvqZtyyQGb+9mNv4FaIkOoBoaUGOatXHJtgQc7EHoCpSms5+s2TbLJ/MNmDOc/ZKzmFuYvh9bH0/nHuLt7OMn/wKylLTIkthAnuyPiQUm9GqcJ6MMewcCjc0IhAj3L367afue9QfySQPBVCM/rQAAAABJRU5ErkJggg=="
+                    }
+                  ],
+                  verticalContentAlignment: "Center"
+                },
+                {
+                  type: "Column",
+                  width: "stretch",
+                  items: [
+                    {
+                      type: "TextBlock",
+                      text: "Official Answer",
+                      wrap: true,
+                      size: "Small",
+                      weight: "Lighter",
+                      color: "Default",
+                      isSubtle: true,
+                      height: "stretch"
+                    }
+                  ],
+                  spacing: "Small",
+                  verticalContentAlignment: "Bottom"
+                }
+              ],
+              spacing: "None",
+              horizontalAlignment: "Left",
+              height: "stretch"
+            },
+            {
+              type: "TextBlock",
+              text: Topic.VerbatimResponse,
+              wrap: true
+            }
+          ]
+        }
+      output: {}
+      outputType: {}
+
+    - kind: EndConversation
+      id: p0MQet
+
+    - kind: EndDialog
+      id: ujnAd4

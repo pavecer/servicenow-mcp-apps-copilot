@@ -1,0 +1,10 @@
+mcs.metadata:
+  componentName: "[TPC] SNOW Order"
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+
+inputType: {}
+outputType: {}

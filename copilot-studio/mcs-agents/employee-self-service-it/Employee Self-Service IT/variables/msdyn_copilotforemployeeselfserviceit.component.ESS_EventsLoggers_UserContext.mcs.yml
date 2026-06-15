@@ -1,0 +1,6 @@
+kind: Variable
+name: ESS_EventsLoggers_UserContext
+scope: Conversation
+isExternalInitializationAllowed: false
+initializationTimeoutInMilliseconds: 0
+aIVisibility: Hidden

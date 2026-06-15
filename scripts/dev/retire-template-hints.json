@@ -1,0 +1,4 @@
+{
+  "short_description": "Retire 'Reset AD Password' template - superseded by SSPR workflow",
+  "business_justification": "Template hasn't been used in 6+ months; superseded by SSPR self-service. Part of Q2 cleanup."
+}

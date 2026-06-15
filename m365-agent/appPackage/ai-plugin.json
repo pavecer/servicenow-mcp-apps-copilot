@@ -1,0 +1,62 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
+    "schema_version": "v2.4",
+    "name_for_human": "ServiceNow Catalog",
+    "description_for_human": "Order ServiceNow catalog items and manage requests from Microsoft 365 Copilot.",
+    "contact_email": "publisher-email@example.com",
+    "namespace": "servicenowcatalog",
+    "functions": [
+        {
+            "name": "search_catalog_items",
+            "description": "Search the ServiceNow service catalog to find items the employee can order or request - such as laptops, phones, monitors, software, hardware, or access. Call this whenever the user wants to order, request, buy, get, find, or browse anything (for example 'I need a new laptop', 'order VPN access', 'what software can I request'). Pass the user's request as a natural-language query."
+        },
+        {
+            "name": "get_catalog_item_form",
+            "description": "Get the order form for a selected ServiceNow catalog item, optionally prefilled from conversation context. Call this after the user picks an item returned by search_catalog_items."
+        },
+        {
+            "name": "place_order",
+            "description": "Place a ServiceNow catalog order with the collected form values."
+        },
+        {
+            "name": "validate_servicenow_config",
+            "description": "Validate ServiceNow authentication and catalog access."
+        },
+        {
+            "name": "list_user_orders",
+            "description": "Retrieve all current (non-closed) orders for the authenticated user."
+        },
+        {
+            "name": "update_order",
+            "description": "Update a service catalog order from the requestor's perspective. Allowed fields: short_description, description, comments, urgency, priority."
+        },
+        {
+            "name": "get_order_detail",
+            "description": "Retrieve a single ServiceNow service catalog request (sc_request) by sys_id, including its items and approval records."
+        }
+    ],
+    "runtimes": [
+        {
+            "type": "RemoteMCPServer",
+            "spec": {
+                "url": "https://func-yj453fjwuhph4.azurewebsites.net/mcp",
+                "mcp_tool_description": {
+                    "file": "mcp-tools-1.json"
+                }
+            },
+            "run_for_functions": [
+                "search_catalog_items",
+                "get_catalog_item_form",
+                "place_order",
+                "validate_servicenow_config",
+                "list_user_orders",
+                "update_order",
+                "get_order_detail"
+            ],
+            "auth": {
+                "type": "OAuthPluginVault",
+                "reference_id": "${{MCP_DA_AUTH_ID_FUNCYJ453F}}"
+            }
+        }
+    ]
+}

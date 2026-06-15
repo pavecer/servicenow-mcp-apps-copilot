@@ -1,0 +1,113 @@
+mcs.metadata:
+  componentName: Microsoft Self Help
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnUnknownIntent
+  id: main
+  actions:
+    - kind: InvokeAIBuilderModelAction
+      id: invokeAIBuilderModelAction_nio0lO
+      input:
+        binding:
+          Text_20input: =System.Activity.Text
+
+      output:
+        binding:
+          predictionOutput: Topic.ITClassification
+
+      aIModelId: 98a0c16d-8990-4a72-ac5a-e70f6a8431e4
+
+    - kind: ConditionGroup
+      id: conditionGroup_Cb82x4
+      conditions:
+        - id: conditionItem_BukfnG
+          condition: =Topic.ITClassification.structuredOutput.classification = "IT"
+          actions:
+            - kind: InvokeConnectorAction
+              id: invokeConnectorAction_aowp5D
+              input:
+                binding:
+                  Text: =System.Activity.Text
+
+              output:
+                kind: SingleVariableOutputBinding
+                variable: Topic.GetSelfHelpInsights
+
+              connectionReference: msdyn_copilotforemployeeselfserviceit.shared_alchemy.shared-alchemy-8262076a-e778-450b-8a35-5ae815712319
+              connectionProperties:
+                mode: Invoker
+
+              operationId: GetSelfHelpInsights
+
+            - kind: ConditionGroup
+              id: conditionGroup_yH4qcZ
+              conditions:
+                - id: conditionItem_BWppJe
+                  condition: =!IsBlank(Topic.GetSelfHelpInsights) And Topic.GetSelfHelpInsights.IsAIInsightsVisible And !IsBlank(Topic.GetSelfHelpInsights.AIInsights.GPTInsight)
+                  actions:
+                    - kind: SendActivity
+                      id: sendActivity_6f3CwI
+                      activity: Here is what I found from Microsoft:{Topic.GetSelfHelpInsights.AIInsights.GPTInsight}
+
+                    - kind: ConditionGroup
+                      id: conditionGroup_kgUNAm
+                      conditions:
+                        - id: conditionItem_cirXb4
+                          condition: =Topic.GetSelfHelpInsights.ClientDiagnostics.IsClientDiagVisible And !( Topic.GetSelfHelpInsights.ClientDiagnostics.ClientDiagId =-1)
+                          actions:
+                            - kind: SetVariable
+                              id: setVariable_d1uS11
+                              variable: Topic.troublehsooterurl
+                              value: ="https://m365.alchemy.microsoft.com/api/v2/troubleshoot/" & Topic.GetSelfHelpInsights.ClientDiagnostics.ClientDiagId
+
+                            - kind: SendActivity
+                              id: sendActivity_1ngm8J
+                              activity:
+                                attachments:
+                                  - kind: AdaptiveCardTemplate
+                                    cardContent: |-
+                                      ={
+                                        type: "AdaptiveCard",
+                                        '$schema': "http://adaptivecards.io/schemas/adaptive-card.json",
+                                        version: "1.5",
+                                        body: [
+                                          {
+                                            type: "Container",
+                                            items: [
+                                              {
+                                                type: "TextBlock",
+                                                text: Topic.GetSelfHelpInsights.ClientDiagnostics.ClientDiagTitle,
+                                                size: "Large",
+                                                weight: "Bolder",
+                                                wrap: true
+                                              },
+                                              {
+                                                type: "TextBlock",
+                                                text: "Also, I can help diagnose and automatically troubleshoot your issue using the Get Help app. This app works on devices running Windows 10 or later. Do I have your permission to get started?",
+                                                wrap: true
+                                              },
+                                              {
+                                                type: "ActionSet",
+                                                actions: [
+                                                  {
+                                                    type: "Action.OpenUrl",
+                                                    url: Topic.troublehsooterurl,
+                                                    title: "Start troubleshooting"
+                                                  }
+                                                ],
+                                                horizontalAlignment: "Left"
+                                              },
+                                            ]
+                                          }
+                                        ]
+                                      }
+
+      elseActions:
+        - kind: EndDialog
+          id: nCJsJi
+
+    - kind: EndDialog
+      id: e5Oow0
+
+inputType: {}
+outputType: {}

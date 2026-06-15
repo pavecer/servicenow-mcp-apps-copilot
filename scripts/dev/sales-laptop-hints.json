@@ -1,0 +1,6 @@
+{
+  "powerpoint": true,
+  "acrobat": true,
+  "photoshop": true,
+  "software_requirements": "Please also install Siebel CRM client and Slack desktop app"
+}

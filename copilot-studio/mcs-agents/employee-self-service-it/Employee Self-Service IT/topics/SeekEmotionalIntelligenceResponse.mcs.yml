@@ -1,0 +1,35 @@
+mcs.metadata:
+  componentName: Seek Emotional Intelligence Response
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: eqResponse
+    description: "Always begin with empathetic acknowledgment (rotate phrases, avoid repetition). Adapt to emotion type: Grief/Loss: “I’m so sorry for your loss. Let’s handle this with care.” Stress/Anxiety/Overwhelm: Normalize, break steps down, set timelines. Performance Anxiety (e.g., promotion concerns): Reassure effort, note many feel this way, provide clarity and next steps. Frustration/Confusion (e.g., denied leave or form overload): Validate emotion, explain simply, simplify process. Urgency/Crisis: Recognize urgency, prioritize fastest fix. Do’s: Rotate empathetic phrases (“This sounds challenging,” “I get why this is frustrating”), then transition (“Here’s how we’ll tackle this step by step”). Provide guidance, resources, escalation if needed, and close with care (“I hope this eases stress; reach out anytime”). Don’ts: Provide counseling, medical/legal advice, or overpromise. Avoid robotic, defensive, dismissive tone."
+    shouldPromptUser: true
+
+modelDescription: "Purpose: Deliver emotionally intelligent support for workplace issues requiring sensitivity, compassion, and clarity. Use When: Employee messages involve grief/loss, stress, burnout, anxiety, frustration, confusion, performance anxiety, urgency, or mental health. Examples: “Am I eligible for a promotion?” (performance insecurity), “Why was my leave denied?” (stress/frustration), “Why so many forms for an emergency contact?” (confusion/anger). Capabilities: Detects signals like “passed away,” “breaking point,” “urgent,” “don’t understand,” “ridiculous,” or “denied.” Always validate first, then provide solutions. Uses supportive phrases (“I can see how stressful this feels,” “I understand why this is frustrating,” “You’re not alone”). Maintains caring tone; avoids robotic, dismissive, defensive replies. Provides steps, timelines, resources, or escalation. Boundaries: No therapy, legal, or medical advice, and no overpromising. Focus on actionable workplace guidance with empathy."
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: SetVariable
+      id: setVariable_EngZEe
+      variable: Topic.EQResponse
+      value: eqResponse
+
+    - kind: EndDialog
+      id: Sjvi9n
+
+inputType:
+  properties:
+    eqResponse:
+      displayName: eqResponse
+      description: "Always begin with empathetic acknowledgment (rotate phrases, avoid repetition). Adapt to emotion type: Grief/Loss: “I’m so sorry for your loss. Let’s handle this with care.” Stress/Anxiety/Overwhelm: Normalize, break steps down, set timelines. Performance Anxiety (e.g., promotion concerns): Reassure effort, note many feel this way, provide clarity and next steps. Frustration/Confusion (e.g., denied leave or form overload): Validate emotion, explain simply, simplify process. Urgency/Crisis: Recognize urgency, prioritize fastest fix. Do’s: Rotate empathetic phrases (“This sounds challenging,” “I get why this is frustrating”), then transition (“Here’s how we’ll tackle this step by step”). Provide guidance, resources, escalation if needed, and close with care (“I hope this eases stress; reach out anytime”). Don’ts: Provide counseling, medical/legal advice, or overpromise. Avoid robotic, defensive, dismissive tone."
+      type: String
+
+outputType:
+  properties:
+    EQResponse:
+      displayName: EQResponse
+      type: String

@@ -1,0 +1,107 @@
+mcs.metadata:
+  componentName: ESS ServiceNow Catalog Form Handler
+  description: >-
+    Retrieves the order form for the selected catalog item via get_catalog_item_form.
+    Uses generative AI to extract known field values from the conversation context.
+    Falls back to structured questions only for required fields that cannot be inferred.
+    Stores collected values in Global.ServiceNowOrderValuesJson for submission.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnSystemRedirect
+  id: main
+  actions:
+    # Guard: require a selected item
+    - kind: ConditionGroup
+      id: conditionGroup_Form01
+      conditions:
+        - id: conditionItem_Form02
+          condition: =IsBlank(Global.ServiceNowSelectedItemSysId)
+          displayName: No item selected yet
+          actions:
+            - kind: SendActivity
+              id: sendActivity_Form03
+              activity: I need to know which catalog item you'd like to order first. Let me search the catalog.
+            - kind: BeginDialog
+              id: beginDialog_Form04
+              dialog: ESS ServiceNow Catalog Search
+
+      elseActions:
+        # Item is selected — retrieve its order form
+        - kind: SendActivity
+          id: sendActivity_Form05
+          activity: "Let me pull up the order form for **{Global.ServiceNowSelectedItemName}**..."
+
+        # The MCP tool get_catalog_item_form is called by the AI orchestrator.
+        # It returns: itemSysId, itemName, variableCount, adaptiveCard (JSON).
+        # The AI reads the adaptiveCard body to understand what fields are needed.
+
+        # Hybrid collection: AI extracts what it can from conversation context,
+        # then checks which required fields are still missing.
+
+        # Branch: complex form (more than 3 variables) — show field count context
+        - kind: ConditionGroup
+          id: conditionGroup_Form06
+          conditions:
+            - id: conditionItem_Form07
+              condition: =!IsBlank(Global.ServiceNowFormJson)
+              displayName: Form schema available
+              actions:
+                - kind: SendActivity
+                  id: sendActivity_Form08
+                  activity: |-
+                    I've retrieved the order form. I'll use the details you've already shared and only ask for information that's still needed.
+
+                    If any required fields are missing, I'll ask you about them now.
+
+          elseActions:
+            - kind: SendActivity
+              id: sendActivity_Form09
+              activity: |-
+                I've retrieved the order form for **{Global.ServiceNowSelectedItemName}**.
+                Please answer the following questions so I can complete your order.
+
+        # Structured fallback: Ask for fields the AI could not infer.
+        # This is a conversational prompt — the AI orchestrator decides what's needed
+        # based on the form schema and conversation history.
+        - kind: Question
+          id: question_Form10
+          variable: init:Topic.MissingFieldsResponse
+          prompt:
+            kind: AdaptiveCardTemplate
+            cardTemplateType: Text
+            text: |-
+              To complete your order for **{Global.ServiceNowSelectedItemName}**, I need a few details.
+
+              Please provide the following (you can answer in a single message):
+              - **Purpose / business justification** — why do you need this item?
+              - **Urgency** — how soon do you need it? (e.g., ASAP, within a week, flexible)
+              - **Any specific requirements** — model preference, configuration, or other details?
+
+              If any of these don't apply to your request, just let me know.
+          entity: StringPrebuiltEntity
+          invalidPrompt:
+            kind: AdaptiveCardTemplate
+            cardTemplateType: Text
+            text: Please provide the details needed for your order, or let me know if you have questions.
+          interruptionPolicy:
+            allowInterruption: false
+
+        # Store the collected context for submission topic
+        - kind: SetVariable
+          id: setVariable_Form11
+          variable: init:Global.ServiceNowOrderValuesJson
+          value: =Topic.MissingFieldsResponse
+
+        # Proceed to confirmation and submission
+        - kind: BeginDialog
+          id: beginDialog_Form12
+          dialog: ESS ServiceNow Catalog Confirm and Submit
+
+inputType: {}
+outputType: {}
+
+modelDisplayName: ESS ServiceNow Catalog Form Handler
+modelDescription: >-
+  Use this topic after the user has selected a catalog item to order.
+  Retrieves the item's order form and collects all required field values using
+  a hybrid approach: AI extraction from conversation context + structured fallback questions.

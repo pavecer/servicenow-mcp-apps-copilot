@@ -1,0 +1,165 @@
+mcs.metadata:
+  componentName: "[System] - User Context - Init Variables"
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRedirect
+  id: main
+  actions:
+    - kind: SetVariable
+      id: setVariable_u9o5QP
+      variable: Global.ESS_EventLoggers_UserContext
+      value: UserContextLog
+
+    - kind: ConditionGroup
+      id: conditionGroup_Ft7vLx
+      conditions:
+        - id: conditionItem_Ft7vLx
+          condition: =IsBlank(Global.ESS_UserContext_RefreshInterval_Hours)
+          actions:
+            - kind: SetVariable
+              id: setVariable_Ft7vLx
+              variable: Global.ESS_UserContext_RefreshInterval_Hours
+              value: 12
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATb
+      conditions:
+        - id: conditionItem_HCZx03
+          condition: =IsBlank(Global.ESS_UserContext_Employee_Firstname)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKtb
+              variable: Global.ESS_UserContext_Employee_Firstname
+              value: =System.User.FirstName
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATc
+      conditions:
+        - id: conditionItem_HCZx04
+          condition: =IsBlank(Global.ESS_UserContext_Employee_Lastname)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKtc
+              variable: Global.ESS_UserContext_Employee_Lastname
+              value: =System.User.LastName
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATd
+      conditions:
+        - id: conditionItem_HCZx05
+          condition: =IsBlank(Global.ESS_UserContext_Alias)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKtd
+              variable: Global.ESS_UserContext_Alias
+              value: |-
+                =First(
+                    Split(
+                        System.User.PrincipalName,
+                        "@"
+                    )
+                ).Value
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATe
+      conditions:
+        - id: conditionItem_HCZx06
+          condition: =IsBlank(Global.ESS_UserContext_UPN)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKte
+              variable: Global.ESS_UserContext_UPN
+              value: =Lower(Concatenate(System.User.FirstName,System.User.LastName))
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATf
+      conditions:
+        - id: conditionItem_HCZx07
+          condition: =IsBlank(Global.ESS_UserContext_Employee_Id)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKtf
+              variable: Global.ESS_UserContext_Employee_Id
+              value: "\"\""
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATg
+      conditions:
+        - id: conditionItem_HCZx08
+          condition: =IsBlank(Global.ESS_UserContext_Country_Code)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKtg
+              variable: Global.ESS_UserContext_Country_Code
+              value: "\"\""
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATh
+      conditions:
+        - id: conditionItem_HCZx09
+          condition: =IsBlank(Global.ESS_UserContext_Level)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKth
+              variable: Global.ESS_UserContext_Level
+              value: "\"\""
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATi
+      conditions:
+        - id: conditionItem_HCZx10
+          condition: =IsBlank(Global.ESS_UserContext_Locale)
+          actions:
+            - kind: SetVariable
+              id: setVariable_Pbc6fs
+              variable: Global.ESS_UserContext_Locale
+              value: "\"\""
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATj
+      conditions:
+        - id: conditionItem_HCZx11
+          condition: =IsBlank(Global.ESS_UserContext_Is_Manager)
+          actions:
+            - kind: SetVariable
+              id: setVariable_svRHfa
+              variable: Global.ESS_UserContext_Is_Manager
+              value: false
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATk
+      conditions:
+        - id: conditionItem_HCZx12
+          condition: =IsBlank(Global.ESS_UserContext_Company_Code)
+          actions:
+            - kind: SetVariable
+              id: setVariable_ErYKtk
+              variable: Global.ESS_UserContext_Company_Code
+              value: "\"\""
+
+    - kind: ConditionGroup
+      id: conditionGroup_OoqATl
+      conditions:
+        - id: conditionItem_HCZx13
+          condition: =IsBlank(Global.ESS_UserContext_User_Id)
+          actions:
+            - kind: SetVariable
+              id: setVariable_EaYKtk
+              variable: Global.ESS_UserContext_User_Id
+              value: "\"\""
+
+    - kind: ConditionGroup
+      id: conditionGroup_32J0SB
+      conditions:
+        - id: conditionItem_32J0SB
+          condition: =IsBlank(Global.ESS_UserContext_Next_Update_Time)
+          actions:
+            - kind: SetVariable
+              id: setVariable_32J0SB
+              variable: Global.ESS_UserContext_Next_Update_Time
+              value: |-
+                =DateAdd(
+                    Now(),
+                    -1,
+                    TimeUnit.Hours
+                )

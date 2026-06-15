@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServiceNow Order Detail</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b;
+    --border: #e0e0e0; --accent: #0078d4; --accent-fg: #ffffff;
+    --chip-bg: #eef4fb; --chip-fg: #1c3c5e;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3;
+    --border: #3b3a39; --accent: #2899f5;
+    --chip-bg: #1c3c5e; --chip-fg: #cfe5fb;
+  }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .grid {
+    display: grid; grid-template-columns: max-content 1fr;
+    gap: 6px 12px; font-size: 13px; margin-bottom: 16px;
+  }
+  .grid .k { color: var(--muted); }
+  .grid .v { word-break: break-word; }
+  .chip {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    background: var(--chip-bg); color: var(--chip-fg); font-size: 12px;
+  }
+  h2 { font-size: 14px; margin: 16px 0 6px; }
+  .items, .approvals { display: flex; flex-direction: column; gap: 8px; }
+  .item, .approval {
+    border: 1px solid var(--border); border-radius: 6px; padding: 10px;
+  }
+  .item .name { font-weight: 600; font-size: 13px; }
+  .item .desc { font-size: 12px; color: var(--muted); }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  button {
+    border: 1px solid var(--border); background: var(--bg); color: var(--fg);
+    padding: 6px 12px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  .btn-link {
+    display: inline-block; text-decoration: none; border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  .btn-link.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .banner-ok {
+    background: #107c10; color: #fff; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  textarea {
+    width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px; font: inherit;
+    min-height: 60px; margin-top: 8px;
+  }
+  .empty { color: var(--muted); }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  // --- MCP Apps host bridge (window.mcpHost from host-bridge.ts) -----------
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) {
+    var h = host();
+    if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
+    return Promise.reject(new Error("MCP Apps host bridge unavailable."));
+  }
+  function sendFollowUp(text) {
+    var h = host();
+    if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
+  }
+  // Open an external URL through the host bridge (sandbox blocks window.open /
+  // <a target=_blank> inside the widget iframe). Falls back to window.open only
+  // for local/standalone testing where no host bridge is present.
+  function openExternal(url) {
+    var h = host();
+    if (h && typeof h.openExternal === "function") {
+      try { if (h.openExternal(url)) return; } catch (_) {}
+    }
+    try { window.open(url, "_blank", "noopener"); } catch (_) {}
+  }
+  function subscribe(cb) {
+    var h = host();
+    if (h && typeof h.onData === "function") { h.onData(cb); return true; }
+    return false;
+  }
+  function showLoading(el, msg) {
+    el.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty";
+    p.textContent = msg || "Loading\u2026"; el.appendChild(p);
+  }
+  function readStr(v) {
+    if (v == null) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "object") return v.display_value || v.value || "";
+    return String(v);
+  }
+
+  var root = document.getElementById("root");
+  applyTheme();
+
+  function render(payload) {
+    root.innerHTML = "";
+    var data = payload || getData();
+    if (!data || typeof data !== "object") {
+      var e = document.createElement("p"); e.className = "empty";
+      e.textContent = "Order details unavailable."; root.appendChild(e); return;
+    }
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var order = data.order || data;
+    var items = Array.isArray(data.items) ? data.items : (Array.isArray(order.requestItems) ? order.requestItems : []);
+    var approvals = Array.isArray(data.approvals) ? data.approvals : [];
+
+    var number = readStr(order.number) || readStr(order.sys_id).slice(0, 8);
+    var orderSysId = readStr(order.sys_id);
+    var state = readStr(order.state) || readStr(order.request_status);
+    var sd = readStr(order.short_description);
+    var desc = readStr(order.description);
+    var created = readStr(order.created_on) || readStr(order.sys_created_on);
+    var updated = readStr(order.updated_on) || readStr(order.sys_updated_on);
+
+    // When this widget renders a freshly placed order (place_order), show a
+    // success banner up top so the user gets a clear "done" signal.
+    if (data.submitted) {
+      var banner = document.createElement("div"); banner.className = "banner-ok";
+      banner.textContent = "\u2713 Order " + (readStr(data.requestNumber) || number) + " submitted to ServiceNow";
+      root.appendChild(banner);
+    }
+
+    var h1 = document.createElement("h1"); h1.textContent = "Order " + number; root.appendChild(h1);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = sd || "ServiceNow request"; root.appendChild(meta);
+
+    var grid = document.createElement("div"); grid.className = "grid";
+    function row(k, v) {
+      if (!v) return;
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = k;
+      var vEl = document.createElement("div"); vEl.className = "v"; vEl.textContent = v;
+      grid.appendChild(kEl); grid.appendChild(vEl);
+    }
+    if (state) {
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = "State";
+      var vEl = document.createElement("div"); vEl.className = "v";
+      var chip = document.createElement("span"); chip.className = "chip"; chip.textContent = state;
+      vEl.appendChild(chip); grid.appendChild(kEl); grid.appendChild(vEl);
+    }
+    row("Created", created);
+    row("Updated", updated);
+    row("Requested for", readStr(order.requested_for));
+    row("Assigned to", readStr(order.assigned_to));
+    if (desc && desc !== sd) row("Description", desc);
+    root.appendChild(grid);
+
+    if (items.length > 0) {
+      var h2 = document.createElement("h2"); h2.textContent = "Items"; root.appendChild(h2);
+      var list = document.createElement("div"); list.className = "items";
+      items.forEach(function (it) {
+        var card = document.createElement("div"); card.className = "item";
+        var name = document.createElement("div"); name.className = "name";
+        var catName = (it.catalogItem && (it.catalogItem.name || it.catalogItem.short_description)) || "";
+        name.textContent = catName || readStr(it.short_description) || readStr(it.number);
+        card.appendChild(name);
+        var d = readStr(it.short_description) || readStr(it.description);
+        if (d && d !== name.textContent) {
+          var dd = document.createElement("div"); dd.className = "desc"; dd.textContent = d; card.appendChild(dd);
+        }
+        list.appendChild(card);
+      });
+      root.appendChild(list);
+    }
+
+    if (approvals.length > 0) {
+      var ah = document.createElement("h2"); ah.textContent = "Approvals"; root.appendChild(ah);
+      var alist = document.createElement("div"); alist.className = "approvals";
+      approvals.forEach(function (ap) {
+        var a = document.createElement("div"); a.className = "approval";
+        a.textContent = (readStr(ap.approver) || readStr(ap.sys_id)) + " \u2014 " + (readStr(ap.state) || "pending");
+        alist.appendChild(a);
+      });
+      root.appendChild(alist);
+    }
+
+    var notesLabel = document.createElement("h2"); notesLabel.textContent = "Add a comment"; root.appendChild(notesLabel);
+    var ta = document.createElement("textarea");
+    ta.placeholder = "Comment (visible to the fulfilment team)";
+    root.appendChild(ta);
+
+    var actions = document.createElement("div"); actions.className = "actions";
+
+    // "View in ServiceNow" — opens the request record. The host bridge prefers
+    // a real openExternal; otherwise the anchor's target=_blank is used.
+    var snLink = readStr(data.link);
+    if (snLink) {
+      var view = document.createElement("a");
+      view.className = "btn-link primary";
+      view.textContent = "View in ServiceNow";
+      view.href = snLink; view.target = "_blank"; view.rel = "noopener noreferrer";
+      // Sandbox blocks the native navigation, so route through the host bridge.
+      view.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(snLink); });
+      actions.appendChild(view);
+    }
+
+    // Comment / cancel drive the conversation via a follow-up message so the
+    // already-authenticated agent runs update_order. Widget-initiated callTool
+    // would trigger a fresh per-tool auth prompt in Microsoft 365 Copilot, so
+    // we deliberately avoid it here.
+    var commentBtn = document.createElement("button"); commentBtn.textContent = "Post comment";
+    commentBtn.addEventListener("click", function () {
+      var text = ta.value.trim(); if (!text) return;
+      commentBtn.disabled = true; commentBtn.textContent = "Posting\u2026";
+      sendFollowUp("Add this comment to order " + number + " (sys_id " + orderSysId + "): " + text);
+      ta.value = "";
+      commentBtn.disabled = false; commentBtn.textContent = "Post comment";
+    });
+    var cancelBtn = document.createElement("button"); cancelBtn.textContent = "Request cancellation";
+    cancelBtn.title = "Asks fulfillment to cancel — does not change order state directly.";
+    cancelBtn.addEventListener("click", function () {
+      cancelBtn.disabled = true; cancelBtn.textContent = "Requesting\u2026";
+      sendFollowUp("Please request cancellation of order " + number + " (sys_id " + orderSysId + ").");
+      cancelBtn.disabled = false; cancelBtn.textContent = "Request cancellation";
+    });
+    actions.appendChild(commentBtn);
+    actions.appendChild(cancelBtn);
+    root.appendChild(actions);
+  }
+
+  showLoading(root, "Loading order\u2026");
+  if (!subscribe(render)) { render(getData()); }
+})();
+</script>
+</body>
+</html>

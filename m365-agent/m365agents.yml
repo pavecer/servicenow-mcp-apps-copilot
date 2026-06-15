@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://aka.ms/m365-agents-toolkits/v1.11/yaml.schema.json
+# Visit https://aka.ms/teamsfx-v5.0-guide for details on this file
+# Visit https://aka.ms/teamsfx-actions for details on actions
+version: v1.11
+
+environmentFolderPath: ./env
+
+# Triggered when 'teamsapp provision' is executed
+provision:
+  # Creates an app
+  - uses: teamsApp/create
+    with:
+      # app name
+      name: ServiceNowCatalog${{APP_NAME_SUFFIX}}
+    # Write the information of created resources into environment file for
+    # the specified environment variable(s).
+    writeToEnvironmentFile:
+      teamsAppId: TEAMS_APP_ID
+
+  # Register the OAuth client (Microsoft Entra as the OAuth 2.0 provider) in the
+  # Teams Developer Portal so the MCP plugin can obtain a per-user bearer token.
+  # Idempotent: skipped automatically when MCP_DA_AUTH_ID_FUNCYJ453F is already set.
+  - uses: oauth/register
+    with:
+      name: servicenowcatalog
+      appId: ${{TEAMS_APP_ID}}
+      flow: authorizationCode
+      identityProvider: Custom
+      clientId: ${{MCP_DA_OAUTH_CLIENT_ID_FUNCYJ453F}}
+      clientSecret: ${{SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F}}
+      scope: ${{MCP_DA_OAUTH_SCOPE_FUNCYJ453F}}
+      authorizationUrl: https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/oauth2/v2.0/authorize
+      tokenUrl: https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/oauth2/v2.0/token
+      refreshUrl: https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/oauth2/v2.0/token
+      baseUrl: https://func-yj453fjwuhph4.azurewebsites.net/mcp
+    writeToEnvironmentFile:
+      configurationId: MCP_DA_AUTH_ID_FUNCYJ453F
+
+  # Build app package with latest env value
+  - uses: teamsApp/zipAppPackage
+    with:
+      # Path to manifest template
+      manifestPath: ./appPackage/manifest.json
+      outputZipPath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+      outputFolder: ./appPackage/build
+  # Validate app package using validation rules
+  - uses: teamsApp/validateAppPackage
+    with:
+      # Relative path to this file. This is the path for built zip file.
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+  # Apply the app manifest to an existing app in
+  # Developer Portal.
+  # Will use the app id in manifest file to determine which app to update.
+  - uses: teamsApp/update
+    with:
+      # Relative path to this file. This is the path for built zip file.
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+  # Extend your app to Outlook and the Microsoft 365 app
+  - uses: teamsApp/extendToM365
+    with:
+      # Relative path to the build app package.
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+    # Write the information of created resources into environment file for
+    # the specified environment variable(s).
+    writeToEnvironmentFile:
+      titleId: M365_TITLE_ID
+      appId: M365_APP_ID
+
+# Triggered when 'teamsapp publish' is executed
+publish:
+  # Build app package with latest env value
+  - uses: teamsApp/zipAppPackage
+    with:
+      # Path to manifest template
+      manifestPath: ./appPackage/manifest.json
+      outputZipPath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+      outputFolder: ./appPackage/build
+  # Validate app package using validation rules
+  - uses: teamsApp/validateAppPackage
+    with:
+      # Relative path to this file. This is the path for built zip file.
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+  # Apply the app manifest to an existing app in
+  # Developer Portal.
+  # Will use the app id in manifest file to determine which app to update.
+  - uses: teamsApp/update
+    with:
+      # Relative path to this file. This is the path for built zip file.
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+  # Publish the app to
+  # Teams Admin Center (https://admin.teams.microsoft.com/policies/manage-apps)
+  # for review and approval
+  - uses: teamsApp/publishAppPackage
+    with:
+      appPackagePath: ./appPackage/build/appPackage.${{TEAMSFX_ENV}}.zip
+    # Write the information of created resources into environment file for
+    # the specified environment variable(s).
+    writeToEnvironmentFile:
+      publishedAppId: TEAMS_APP_PUBLISHED_APP_ID
+projectId: 637a2ad5-5db9-4a91-9493-cfc089d79be1

@@ -1,0 +1,37 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+
+    "SERVICENOW_INSTANCE_URL": "https://your-instance.service-now.com",
+    "SERVICENOW_CLIENT_ID": "",
+    "SERVICENOW_CLIENT_SECRET": "",
+    "SERVICENOW_USERNAME": "",
+    "SERVICENOW_PASSWORD": "",
+    "SERVICENOW_OAUTH_TOKEN_PATH": "/oauth_token.do",
+    "SERVICENOW_OAUTH_GRANT_TYPE": "auto",
+    "SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS": "email,user_name",
+    "SERVICENOW_REQUESTED_FOR_CALLER_FIELDS": "callerUpn",
+    "SERVICENOW_REQUESTED_FOR_FALLBACK_TO_CALLER_VALUE": "true",
+    "SERVICENOW_REQUESTED_FOR_DIAGNOSTICS": "false",
+    "SERVICENOW_REQUESTED_FOR_DIAGNOSTICS_INCLUDE_PII": "false",
+
+    "ENTRA_TENANT_ID": "",
+    "ENTRA_CLIENT_ID": "",
+    "ENTRA_CLIENT_SECRET": "",
+    "ENTRA_AUDIENCE": "",
+    "ENTRA_OAUTH_SCOPES": "api://<ENTRA_CLIENT_ID>/access_as_user openid profile offline_access",
+    "ENTRA_DCR_REGISTRATION_TOKEN": "",
+    "ENTRA_DCR_ALLOW_UNAUTHENTICATED": "false",
+    "ENTRA_ALLOWED_AUDIENCES": "",
+    "ENTRA_OBO_ENABLED": "false",
+    "ENTRA_OBO_DOWNSTREAM_SCOPE": "",
+    "CORS_ALLOWED_ORIGINS": "",
+    "ENTRA_AUTH_DISABLED": "true",
+
+    "LOG_LEVEL": "info",
+    "LOG_INCLUDE_CALLER_IDENTITY": "false",
+    "LOG_INCLUDE_ERROR_STACK": "false"
+  }
+}

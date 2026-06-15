@@ -1,0 +1,42 @@
+mcs.metadata:
+  componentName: "[Example] - Sensitive Topics"
+kind: AdaptiveDialog
+modelDescription: |-
+  **This topic should only trigger** when users mention **explicitly sensitive, confidential, or legal concerns** such as **harassment and unfair treatment**, **abuse**, **discrimination or bias**, **unethical behavior**, or **retaliation or revolt** in the workplace. It activates in situations involving or similar to: 
+  - Requests for **HR consultation** related to sensitive matters, 
+  - **Privacy concerns**, 
+  - **Hostile work environments**, 
+  - **Workplace violence**, 
+  - **Legal action**, or 
+  - Reporting of **severe misconduct**. 
+
+  **Important:** This topic **must not** trigger for **general HR-related inquiries** such as: 
+  - Accessing **benefits information** (e.g., W-2 forms, health benefits), 
+  - **Routine workplace questions**, 
+  - **Performance concerns**, or 
+  - Other **non-sensitive** matters.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - sensitive topics
+      - discuss sensitive subjects
+      - talk about touchy issues
+      - address controversial matters
+      - engage in difficult conversations
+      - explore delicate topics
+      - open up about sensitive subjects
+      - navigate challenging discussions
+      - illegal topics
+
+  actions:
+    - kind: SendActivity
+      id: sendActivity_85pmxq
+      activity: Consulting with a professional is the best way to get assistance with this request. Please contact a representative for further support.
+
+    - kind: EndConversation
+      id: 0kkEm2
+
+    - kind: EndDialog
+      id: AVN4jX

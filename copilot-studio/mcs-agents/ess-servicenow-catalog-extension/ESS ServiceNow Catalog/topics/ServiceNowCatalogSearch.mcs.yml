@@ -1,0 +1,79 @@
+mcs.metadata:
+  componentName: ESS ServiceNow Catalog Search
+  description: >-
+    Searches the ServiceNow Service Catalog for items matching the employee's request.
+    Presents a selection adaptive card so the employee can choose the right item.
+    Stores the selected item sys_id and name in global variables for downstream topics.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - I need to order something from the catalog
+      - I want to request a catalog item
+      - order software
+      - request hardware
+      - catalog request
+      - I need to request equipment
+      - service catalog
+      - order from catalog
+
+  actions:
+    # Extract the search query from the conversation context
+    - kind: SetVariable
+      id: setVariable_Srch01
+      variable: init:Topic.SearchQuery
+      value: =System.Activity.Text
+
+    # Call search_catalog_items via the MCP server
+    - kind: SendActivity
+      id: sendActivity_Srch02
+      activity: Let me search the catalog for you...
+
+    # The MCP action is invoked by the generative orchestrator using the tool description.
+    # The AI extracts the search intent from the conversation and calls search_catalog_items.
+    # Result is captured in Topic.SearchResultJson via output binding in the action.
+
+    # Branch: no results found
+    - kind: ConditionGroup
+      id: conditionGroup_Srch03
+      conditions:
+        - id: conditionItem_Srch04
+          condition: =IsBlank(Global.ServiceNowSelectedItemSysId)
+          displayName: Item not yet selected
+          actions:
+            - kind: Question
+              id: question_Srch05
+              variable: init:Topic.UserSearchInput
+              prompt:
+                kind: AdaptiveCardTemplate
+                cardTemplateType: Text
+                text: >-
+                  I searched the catalog but need a bit more context.
+                  What are you looking to request? For example: *new laptop*, *VPN access*, *software license*, *mobile phone*.
+              entity: StringPrebuiltEntity
+              invalidPrompt:
+                kind: AdaptiveCardTemplate
+                cardTemplateType: Text
+                text: Please describe what you'd like to request from the IT catalog.
+
+            - kind: SetVariable
+              id: setVariable_Srch06
+              variable: Topic.SearchQuery
+              value: =Topic.UserSearchInput
+
+      elseActions:
+        # Item already selected (e.g. handed off from parent ESS agent context)
+        - kind: BeginDialog
+          id: beginDialog_Srch07
+          dialog: ESS ServiceNow Catalog Form Handler
+
+inputType: {}
+outputType: {}
+
+modelDisplayName: ESS ServiceNow Catalog Search
+modelDescription: >-
+  Use this topic when the user wants to search the ServiceNow Service Catalog and select an item to order.
+  Triggers on phrases like "order", "request", "catalog", "hardware", "software", "equipment".
+  Do NOT use this for IT support tickets or incident creation — only for catalog item ordering.

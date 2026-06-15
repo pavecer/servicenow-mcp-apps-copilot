@@ -1,0 +1,12 @@
+# Name: ServiceNow Form JSON
+# Stores the full adaptive card JSON returned by get_catalog_item_form.
+# Serialized as a string. Topics parse this to determine required fields and variable count.
+name: ServiceNowFormJson
+aIVisibility: HideFromAIContext
+scope: Conversation
+description: >-
+  JSON string of the adaptive card form returned by get_catalog_item_form.
+  Contains field definitions, types, labels, and default values.
+schemaName: msdyn_essservicenowcatalog.globalvariable.ServiceNowFormJson
+kind: GlobalVariableComponent
+defaultValue: DEFAULT

@@ -1,0 +1,13 @@
+mcs.metadata:
+  componentName: ServiceNow
+  description: I want to use this connection to provide solutions, best practices, troubleshooting guides, and other relevant content. It serves as a valuable resource for users, IT professionals, and support teams within organizations. The data source contains articles, documents, and FAQs related to various topics, including software applications, hardware, processes, and policies.
+kind: KnowledgeSourceConfiguration
+source:
+  kind: GraphConnectorSearchSource
+  connectionId:
+    schemaName: msdyn_copilotforemployeeselfserviceit.envVar.GRepzFr4TCzz7q1KmT40d
+
+  connectionName: ServiceNowKB1
+  contentSourceDisplayName: ServiceNow
+  contentSourceIcon: https://res.sdf.cdn.office.net/admincenter/admin-content/ServiceNow_Medium.png
+  publisherName: Microsoft

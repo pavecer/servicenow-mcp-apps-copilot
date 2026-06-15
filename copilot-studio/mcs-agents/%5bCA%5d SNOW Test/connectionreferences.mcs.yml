@@ -1,0 +1,5 @@
+﻿connectionReferences:
+  - connectionReferenceLogicalName: copilots_header_pve_agent_snow.shared_a365mcpservers.933f1d40d2084dec94f672dfe7cd0e1b
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_a365mcpservers
+  - connectionReferenceLogicalName: copilots_header_pve_agent_snow.shared_service-now.4731a495e0e24aa2b6bcf60ccf7813c9
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_service-now

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "inputs": [
+    {
+      "id": "mcp-server-url",
+      "type": "promptString",
+      "description": "The full https URL of the deployed ServiceNow MCP /mcp endpoint (e.g. https://servicenow-mcp.azurewebsites.net/mcp).",
+      "password": false
+    },
+    {
+      "id": "function-key",
+      "type": "promptString",
+      "description": "Optional Azure Function host key for the MCP endpoint (leave blank if Entra auth covers access).",
+      "password": true
+    }
+  ],
+  "servers": {
+    "servicenow-mcp": {
+      "url": "${input:mcp-server-url}",
+      "headers": {
+        "x-functions-key": "${input:function-key}"
+      }
+    }
+  }
+}

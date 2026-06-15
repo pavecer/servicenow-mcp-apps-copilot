@@ -1,0 +1,567 @@
+mcs.metadata:
+  componentName: ESS IT ServiceNow ITSM Create Ticket
+  description: ESS IT ServiceNow ITSM Create Ticket
+kind: AdaptiveDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: IconBase64
+    value: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPG1hc2sgaWQ9Im1hc2swXzM5NzNfMTkwMTU4IiBzdHlsZT0ibWFzay10eXBlOmx1bWluYW5jZSIgbWFza1VuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeD0iMCIgeT0iMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIj4KPHBhdGggZD0iTTYgNEM0Ljg5NTQzIDQgNCA0Ljg5NTQzIDQgNlYxNEM0IDE1LjEwNDYgNC44OTU0MyAxNiA2IDE2SDE0QzE1LjEwNDYgMTYgMTYgMTUuMTA0NiAxNiAxNFYxMS41QzE2IDExLjIyMzkgMTYuMjIzOSAxMSAxNi41IDExQzE2Ljc3NjEgMTEgMTcgMTEuMjIzOSAxNyAxMS41VjE0QzE3IDE1LjY1NjkgMTUuNjU2OSAxNyAxNCAxN0g2QzQuMzQzMTUgMTcgMyAxNS42NTY5IDMgMTRWNkMzIDQuMzQzMTUgNC4zNDMxNSAzIDYgM0g4LjVDOC43NzYxNCAzIDkgMy4yMjM4NiA5IDMuNUM5IDMuNzc2MTQgOC43NzYxNCA0IDguNSA0SDZaTTExIDMuNUMxMSAzLjIyMzg2IDExLjIyMzkgMyAxMS41IDNIMTYuNUMxNi43NzYxIDMgMTcgMy4yMjM4NiAxNyAzLjVWOC41QzE3IDguNzc2MTQgMTYuNzc2MSA5IDE2LjUgOUMxNi4yMjM5IDkgMTYgOC43NzYxNCAxNiA4LjVWNC43MDcxMUwxMS44NTM2IDguODUzNTVDMTEuNjU4MyA5LjA0ODgyIDExLjM0MTcgOS4wNDg4MiAxMS4xNDY0IDguODUzNTVDMTAuOTUxMiA4LjY1ODI5IDEwLjk1MTIgOC4zNDE3MSAxMS4xNDY0IDguMTQ2NDVMMTUuMjkyOSA0SDExLjVDMTEuMjIzOSA0IDExIDMuNzc2MTQgMTEgMy41WiIgZmlsbD0id2hpdGUiLz4KPC9tYXNrPgo8ZyBtYXNrPSJ1cmwoI21hc2swXzM5NzNfMTkwMTU4KSI+CjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0iIzQ2NEZFQiIvPgo8L2c+Cjwvc3ZnPgo=
+
+  - kind: AutomaticTaskInput
+    propertyName: ShortDescription
+    description: short_description will be title of the problem that user is facing. If the issue is not specified then assign any value to this variable.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: Description
+    description: "'description' is the description of the problem for which the user is creating the ticket. "
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: IsDirectAttempt
+    description: |-
+      Using the user's conversation history, identify if the user initially try to resolve the issue by asking issue related questions or providing issue details and then ask to create the support ticket, or did the user directly ask to create the support ticket without attempting to resolve the issue first? 
+      If the user directly asks to create a support ticket without providing the details of the issue that the user is having, then set "isDirectAttempt" to true. If the user has provided the issue description or other details about the issue, then set "isDirectAttempt" to false.
+    entity: BooleanPrebuiltEntity
+    shouldPromptUser: false
+    inputSettings:
+      repeatCount: 0
+
+modelDisplayName: ESS IT ServiceNow ITSM Create Ticket
+modelDescription: |-
+  This tool creates a new IT support or helpdesk tickets.
+
+  It should **only** be used when
+  1. The conversation context is explicitly related to IT support issues 
+  2. User has explicitly asked to create a support ticket.
+
+  Do **not** use this tool:
+  1. For HR-related or other non-IT-related requests.
+  2. If the user is requesting help but has not clearly stated that they want to create a support ticket.
+
+  Examples of when to use this tool:
+  "Report a new helpdesk incident."
+  "Open a new helpdesk ticket."
+
+  Examples of when NOT to use this tool:
+  "VPN not working, what should I do?"
+  "Wi-Fi is slow, how can I resolve this issue?"
+  "I can't access email."
+  "How do I reset my password? Can you help me with that?"
+  "Create an HR ticket."
+  "Help with payroll."
+
+  If a user directly asks to create a support ticket *without* providing any details of the issue they are facing, set the "isDirectAttempt" variable to true otherwise set "isDirectAttempt" to false.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: ConditionGroup
+      id: conditionGroup_tlFe66
+      conditions:
+        - id: conditionItem_rXiBv6
+          condition: =Topic.IsDirectAttempt = true || IsBlank(Topic.IsDirectAttempt)
+          displayName: Is direct attempt to create?
+          actions:
+            - kind: ConditionGroup
+              id: conditionGroup_SNhPCA
+              conditions:
+                - id: conditionItem_c1D3c0
+                  condition: =IsBlank(Global.ESS_ServiceNow_DirectAttemptCount) || Global.ESS_ServiceNow_DirectAttemptCount < 2
+                  displayName: Has max direct attempts been reached?
+                  actions:
+                    - kind: SetVariable
+                      id: setVariable_8rkrQm
+                      variable: Global.ESS_ServiceNow_DirectAttemptCount
+                      value: =If(IsBlank(Global.ESS_ServiceNow_DirectAttemptCount),1,Global.ESS_ServiceNow_DirectAttemptCount+1)
+
+                    - kind: SendActivity
+                      id: sendActivity_YviNgQ
+                      activity: |-
+                        Sure, I can help. First let’s understand more about the issue you’re experiencing.
+
+                        - **What is the problem?**
+
+                        Describe the specific issue you’re experiencing.
+                        - **What are you having the problem with?**
+
+                        Specify the service, product, or platform where you’re encountering the issue.
+                        - **Any error messages or symptoms?** Include any error messages you see or symptoms you notice.
+
+
+                        For example: _"I can't send email. I see an error message in Outlook that says 'cannot connect'”_
+                        These details will help me assist you better. If we can't resolve it together, I'll help you create a support ticket for the same.
+
+                    - kind: CancelAllDialogs
+                      id: hPsBHe
+
+              elseActions:
+                - kind: SetVariable
+                  id: setVariable_wdMHUK
+                  variable: Global.ESS_ServiceNow_DirectAttemptCount
+                  value: 0
+
+    - kind: SendActivity
+      id: sendActivity_FY0Ttj
+      activity: The form has been auto-populated from your recent chat history. Make edits, and provide clear detailed information about the issue.
+
+    - kind: AdaptiveCardPrompt
+      id: Bxfm06
+      card: |-
+        ={
+          type: "AdaptiveCard",
+          '$schema': "https://adaptivecards.io/schemas/adaptive-card.json",
+          version: "1.5",
+          body: [
+            {
+              type: "TextBlock",
+              text: "Create a new support ticket",
+              size: "Medium",
+              weight: "Bolder"
+            },
+            {
+              type: "Input.Text",
+              placeholder: "Title of the issue",
+              isRequired: true,
+              errorMessage: "Please enter subject",
+              label: "Subject",
+              id: "short_description",
+              value: Topic.ShortDescription
+            },
+            {
+              type: "Input.ChoiceSet",
+              choices: [
+                {
+                  title: "Application & Service",
+                  value: "Application & Service"
+                },
+                {
+                  title: "Client Device",
+                  value: "Client Device"
+                },
+                {
+                  title: "Infrastructure",
+                  value: "Infrastructure"
+                }
+              ],
+              placeholder: "Select issue",
+              label: "Type of issue",
+              isRequired: true,
+              errorMessage: "Please select the type of issue",
+              value: "Application & Service",
+              id: "category"
+            },
+            {
+              type: "Input.ChoiceSet",
+              choices: [
+                {
+                  title: "Phone",
+                  value: "Phone"
+                },
+                {
+                  title: "WebCall",
+                  value: "WebCall"
+                }
+              ],
+              placeholder: "Placeholder text",
+              label: "Preferred Contact Method",
+              isRequired: true,
+              errorMessage: "Please select the preferred contact method",
+              value: "Phone",
+              id: "contact_type"
+            },
+            {
+              type: "Input.ChoiceSet",
+              label: "Level of impact",
+              choices: [
+                {
+                  title: "Low",
+                  value: "low"
+                },
+                {
+                  title: "Medium",
+                  value: "medium"
+                },
+                {
+                  title: "Heigh",
+                  value: "heigh"
+                }
+              ],
+              placeholder: "Placeholder text",
+              id: "level_of_impact",
+              isRequired: true,
+              errorMessage: "Please select the level of impact",
+              value: "low"
+            },
+            {
+              type: "Input.Text",
+              placeholder: "Please describe your issue",
+              isMultiline: true,
+              errorMessage: "Please enter description",
+              label: "Description",
+              id: "description",
+              value: Topic.Description
+            },
+            {
+              type: "Container",
+              spacing: "Medium",
+              items: [
+                {
+                  type: "ActionSet",
+                  actions: [
+                    {
+                      type: "Action.Submit",
+                      title: "Submit",
+                      associatedInputs: "auto"
+                    },
+                    {
+                      type: "Action.Submit",
+                      title: "Cancel",
+                      associatedInputs: "none"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      output:
+        binding:
+          actionSubmitId: Topic.actionSubmitId
+          category: Topic.category
+          contact_type: Topic.contact_type
+          description: Topic.description
+          level_of_impact: Topic.level_of_impact
+          short_description: Topic.short_description
+
+      outputType:
+        properties:
+          actionSubmitId: String
+          category: String
+          contact_type: String
+          description: String
+          level_of_impact: String
+          short_description: String
+
+    - kind: ConditionGroup
+      id: conditionGroup_9qTuJB
+      conditions:
+        - id: conditionItem_RN14x6
+          condition: =Topic.actionSubmitId = "Cancel"
+          displayName: User clicked on cancel?
+          actions:
+            - kind: AdaptiveCardPrompt
+              id: TDsyBI
+              interruptionPolicy:
+                allowInterruption: false
+
+              card: |
+                ={
+                  type: "AdaptiveCard",
+                  '$schema': "http://adaptivecards.io/schemas/adaptive-card.json",
+                  version: "1.3",
+                  body: [
+                    {
+                      type: "TextBlock",
+                      text: "Are you sure you want to cancel? Any changes you made won't be saved.",
+                      wrap: true
+                    },
+                    {
+                      type: "Container",
+                      items: [
+                        {
+                          type: "ActionSet",
+                          actions: [
+                            {
+                              type: "Action.Submit",
+                              title: "Yes, cancel",
+                              associatedInputs: "none"
+                            },
+                            {
+                              type: "Action.Submit",
+                              title: "No, keep editing",
+                              associatedInputs: "none"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+
+                              
+              output:
+                binding:
+                  actionSubmitId: Topic.actionSubmitId
+
+              outputType:
+                properties:
+                  actionSubmitId: String
+
+            - kind: ConditionGroup
+              id: conditionGroup_NBF0Gn
+              conditions:
+                - id: conditionItem_gwk7J3
+                  condition: =Topic.actionSubmitId = "Yes, cancel"
+                  actions:
+                    - kind: SendActivity
+                      id: sendActivity_ikOOrc
+                      activity: Ok, I’ve canceled new IT support ticket creation. Is there anything else you need help with?
+
+                - id: conditionItem_MCIGD2
+                  condition: =Topic.actionSubmitId = "No, keep editing"
+                  actions:
+                    - kind: SendActivity
+                      id: sendActivity_cv02hQ
+                      activity: Ok, let’s try this again. Please edit and provide clear and detailed information about the issue.
+
+                    - kind: GotoAction
+                      id: 3w8dSo
+                      actionId: Bxfm06
+
+              elseActions:
+                - kind: SendActivity
+                  id: sendActivity_DX9eV9
+                  activity: Please select one of the two suggestions.
+
+                - kind: GotoAction
+                  id: dtsZEh
+                  actionId: TDsyBI
+
+            - kind: CancelAllDialogs
+              id: PyzaF7
+
+    - kind: SetVariable
+      id: setVariable_cfGgsL
+      displayName: Set Input Parameters
+      variable: Topic.InputParameters
+      value: |-
+        =JSON(Table(
+            {
+                Name: "ShortDescription",
+                Value: Topic.ShortDescription
+            },
+            {
+                Name: "ContactType",
+                Value: Topic.contact_type
+            },
+            {
+                Name: "Description",
+                Value: Topic.Description
+            },
+            {
+                Name: "Category",
+                Value: Topic.category
+            },
+                {
+                Name: "Level of impact",
+                Value: Topic.level_of_impact
+            }
+        ))
+
+    - kind: BeginDialog
+      id: aPfpbV
+      input:
+        binding:
+          InputParameters: =Topic.InputParameters
+          UserIdentifier: =Global.ESS_UserContext_UPN
+
+      dialog: msdyn_copilotforemployeeselfserviceit.topic.ServiceNowITSMSystemCreateTicket
+      output:
+        binding:
+          ServiceNowData: Topic.ServiceNowData
+
+    - kind: ParseValue
+      id: ycjzaU
+      variable: Topic.TicketDetails
+      valueType:
+        kind: Record
+        properties:
+          AssignedTo: String
+          CallerIdSystemLink: String
+          Category: String
+          Comments: String
+          Description: String
+          LastUpdated: String
+          ServiceNowPortalBaseURI: String
+          Severity: String
+          ShortDescription: String
+          State: String
+          SysId: String
+          TicketNumber: String
+
+      value: =Topic.ServiceNowData
+
+    - kind: SendActivity
+      id: sendActivity_ly3T2X
+      activity:
+        text:
+          - Your support ticket is submitted and an agent will get back to you within 48 hours. You can view your ticket and track its status on Employee Self-Service.
+        attachments:
+          - kind: AdaptiveCardTemplate
+            cardContent: |-
+              ={
+                type: "AdaptiveCard",
+                '$schema': "http://adaptivecards.io/schemas/adaptive-card.json",
+                version: "1.3",
+                body: [
+                  {
+                    type: "Container",
+                    items: [
+                      {
+                        type: "RichTextBlock",
+                        inlines: [
+                          {
+                            type: "TextRun",
+                            text: "IT Support Ticket #" &Topic.TicketDetails.TicketNumber &" | ",
+                            weight: "Bolder"
+                          },
+                          {
+                            type: "TextRun",
+                            text: Topic.TicketDetails.State,
+                            color: If(Topic.TicketDetails.State = "Active", "good", "default"),
+                            weight: "Bolder"
+                          }
+                        ]
+                      },
+                      {
+                        type: "TextBlock",
+                        text: Topic.TicketDetails.ShortDescription,
+                        wrap: true,
+                        weight: "Bolder",
+                        size: "Medium"
+                      },
+                      {
+                        type: "ColumnSet",
+                        columns: [
+                          {
+                            type: "Column",
+                            width: "50",
+                            items: [
+                              {
+                                type: "TextBlock",
+                                text: "Agent handling",
+                                isSubtle: true,
+                                wrap: true
+                              },
+                              {
+                                type: "TextBlock",
+                                text: If(IsBlank(Topic.TicketDetails.AssignedTo), "No agent assigned", Topic.TicketDetails.AssignedTo),
+                                wrap: true,
+                                spacing: "None"
+                              }
+                            ]
+                          },
+                          {
+                            type: "Column",
+                            width: "50",
+                            items: [
+                              {
+                                type: "TextBlock",
+                                text: "Last updated",
+                                wrap: true,
+                                isSubtle: true
+                              },
+                              {
+                                type: "TextBlock",
+                                text: Text(DateValue(Topic.TicketDetails.LastUpdated), "mmmm d, yyyy"),
+                                wrap: true,
+                                spacing: "None"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      If(IsBlank(Topic.TicketDetails.Description),{},{
+                        type: "TextBlock",
+                        text: "Description",
+                        wrap: true,
+                        isSubtle: true
+                      }),
+                      If(IsBlank(Topic.TicketDetails.Description),{},{
+                        type: "TextBlock",
+                        text: Topic.TicketDetails.Description,
+                        wrap: true,
+                        spacing: "None"
+                      }),
+                      {
+                        type: "TextBlock",
+                        text: "SysId",
+                        isVisible: false
+                      },
+                      {
+                        type: "TextBlock",
+                        text: Topic.TicketDetails.SysId,
+                        isVisible: false
+                      }
+                    ]
+                  },
+                  {
+                    type: "Container",
+                    items: [
+                      {
+                        type: "ColumnSet",
+                        columns: [
+                          {
+                            type: "Column",
+                            width: "auto",
+                            items: [
+                              {
+                                type: "TextBlock",
+                                text: "[Open in ServiceNow]("& Topic.TicketDetails.ServiceNowPortalBaseURI & "?id=ticket&table=incident&sys_id="&Topic.TicketDetails.SysId&")",
+                                wrap: true,
+                                weight: "Bolder"
+                              }
+                            ]
+                          },
+                          {
+                            type: "Column",
+                            width: "auto",
+                            selectAction: {
+                              type: "Action.OpenUrl",
+                              url: Topic.TicketDetails.ServiceNowPortalBaseURI &"?id=ticket&table=incident&sys_id="&Topic.TicketDetails.SysId
+                            },
+                            items: [
+                              {
+                                type: "Image",
+                                url: Topic.IconBase64
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ],
+                    separator: true,
+                    spacing: "ExtraLarge"
+                  }
+                ]
+              }
+
+    - kind: CancelAllDialogs
+      id: ll0ash
+
+inputType:
+  properties:
+    Description:
+      displayName: Description
+      description: "'description' is the description of the problem for which the user is creating the ticket. "
+      type: String
+
+    IconBase64:
+      displayName: IconBase64
+      type: String
+
+    IsDirectAttempt:
+      displayName: IsDirectAttempt
+      description: |-
+        Using the user's conversation history, identify if the user initially try to resolve the issue by asking issue related questions or providing issue details and then ask to create the support ticket, or did the user directly ask to create the support ticket without attempting to resolve the issue first? 
+        If the user directly asks to create a support ticket without providing the details of the issue that the user is having, then set "isDirectAttempt" to true. If the user has provided the issue description or other details about the issue, then set "isDirectAttempt" to false.
+      type: Boolean
+
+    ShortDescription:
+      displayName: ShortDescription
+      description: "short_description will be title of the problem that user is facing. If the issue is not specified then assign any value to this variable. "
+      type: String

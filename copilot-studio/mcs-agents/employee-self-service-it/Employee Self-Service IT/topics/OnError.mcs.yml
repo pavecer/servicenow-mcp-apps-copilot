@@ -1,0 +1,152 @@
+mcs.metadata:
+  componentName: "[System] - On Error"
+  description: This system topic triggers when the bot encounters an error. When using the test chat pane, the full error description is displayed.
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: varErrorCode
+    description: get error code for this error
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: varErrorMessage
+    description: get error message for this error
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: ManualTaskInput
+    propertyName: varShowDebugInfo
+    value: false
+
+beginDialog:
+  kind: OnError
+  id: main
+  actions:
+    - kind: SetVariable
+      id: setVariable_timestamp
+      variable: init:Topic.CurrentTime
+      value: =Text(Now(), DateTimeFormat.UTC)
+
+    - kind: SetVariable
+      id: setVariable_Ntcx24
+      variable: Topic.ActualErrorCode
+      value: =System.Error.Code
+
+    - kind: LogCustomTelemetryEvent
+      id: UZT6bO
+      eventName: OnErrorLog
+      properties: |-
+        ={
+            ErrorMessage: If(IsBlank(Topic.varErrorMessage),
+                System.Error.Message,
+                Topic.varErrorMessage
+            ),
+            ErrorCode: If(IsBlank(Topic.varErrorCode),
+                System.Error.Code,
+                Topic.varErrorCode
+            ),
+            TimeUTC: Topic.CurrentTime,
+            ConversationId: System.Conversation.Id
+        }
+
+    - kind: ConditionGroup
+      id: conditionGroup_fq0AmY
+      conditions:
+        - id: conditionItem_M8zo4n
+          condition: =!IsBlank(Topic.varErrorCode) && !IsBlank(Topic.varErrorMessage)
+          actions:
+            - kind: SetVariable
+              id: setVariable_FJQxON
+              variable: Topic.varErrorMessageToShow
+              value: |-
+                =If(
+                    Topic.varShowDebugInfo,
+                    " Error code: " & Topic.varErrorCode &
+                    " Error Message: " & Topic.varErrorMessage &
+                    " Conversation Id: " & System.Conversation.Id &
+                    " Time (UTC): " & Topic.CurrentTime,
+                    " Error code: " & Topic.varErrorCode &
+                    " Error Message: " & Topic.varErrorMessage
+                )
+
+            - kind: SendActivity
+              id: sendMessage_dZ0gaF
+              activity:
+                text:
+                  - "{Topic.varErrorMessageToShow}"
+                speak:
+                  - An error has occurred, please try again.
+
+            - kind: CancelAllDialogs
+              id: g3KNzK
+
+    - kind: ConditionGroup
+      id: conditionGroup_ZmpY0g
+      conditions:
+        - id: conditionItem_FTTtR9
+          condition: =Topic.ActualErrorCode = "ContentFiltered"
+          actions:
+            - kind: SendActivity
+              id: sendActivity_YOelyq
+              activity: I can't help with the request. Try asking me about benefits or workplace policies.
+
+            - kind: EndConversation
+              id: jVWfEE
+
+            - kind: CancelAllDialogs
+              id: kpYUId
+
+    - kind: ConditionGroup
+      id: conditionGroup_PHyW5T
+      conditions:
+        - id: conditionItem_AUdLrZ
+          condition: =Topic.ActualErrorCode = "OpenAIRateLimitReached"
+          actions:
+            - kind: SendActivity
+              id: sendActivity_6PFm7W
+              activity: We are working on increasing the capacity for usage. Please wait for a couple of minutes before retrying the Employee Self-Service agent. We regret the inconvenience.
+
+            - kind: EndConversation
+              id: HO9gB9
+
+            - kind: CancelAllDialogs
+              id: IT5hvN
+
+    - kind: SetVariable
+      id: setVariable_wXMVKz
+      variable: Topic.formattedErrorMessage
+      value: |-
+        =If(
+            Topic.varShowDebugInfo,
+            "An unexpected error has ocurred. Please try rephrasing your question or contact the owner of this bot." &
+            " Conversation Id: " & System.Conversation.Id &
+            " Time (UTC): " & Topic.CurrentTime,
+            "An unexpected error has ocurred. Please try rephrasing your question or contact the owner of this bot."
+        )
+
+    - kind: SendActivity
+      id: cQRSJk
+      activity: "{Topic.formattedErrorMessage}"
+
+    - kind: CancelAllDialogs
+      id: eM24F4
+
+inputType:
+  properties:
+    varErrorCode:
+      displayName: varErrorCode
+      description: get error code for this error
+      type: String
+
+    varErrorMessage:
+      displayName: varErrorMessage
+      description: get error message for this error
+      type: String
+
+    varShowDebugInfo:
+      displayName: varShowDebugInfo
+      description: toggle to show conversationId and time when an error happens
+      type: Boolean
+
+outputType: {}

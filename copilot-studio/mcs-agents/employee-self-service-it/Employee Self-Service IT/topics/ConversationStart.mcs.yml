@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Conversation Start
+  description: This system topic triggers when the bot receives an Activity indicating the beginning of a new conversation. If do not want the bot to initiate the conversation, disable this topic.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnConversationStart
+  id: main
+  actions:
+    - kind: BeginDialog
+      id: Vtg7G9
+      dialog: msdyn_copilotforemployeeselfserviceit.topic.System-UserContext-Createglobalvariables
+
+    - kind: ConditionGroup
+      id: conditionGroup_2ZNAri
+      conditions:
+        - id: conditionItem_mQ2YVF
+          condition: =System.Activity.InvocationSource = InvocationSource.Agent
+          displayName: Check if a connected-agent flow
+
+      elseActions:
+        - kind: SendActivity
+          id: sendActivity_nNaLCC
+          displayName: Welcome Message
+          activity: Hi {Global.ESS_UserContext_Employee_Firstname}, I'm here to assist you with any employment-related questions or requests you may have. Whether you need help finding policy information, making changes to your benefits, or any other employment-related tasks, I can assist you.

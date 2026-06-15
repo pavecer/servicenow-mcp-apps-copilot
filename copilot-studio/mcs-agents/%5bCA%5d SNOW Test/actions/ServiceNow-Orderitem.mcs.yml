@@ -1,0 +1,30 @@
+mcs.metadata:
+  componentName: ServiceNow - Order item
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: "'sys_id'"
+    value: 73b1bafa9752cd1021983d1e6253afb5
+
+modelDisplayName: Order item
+modelDescription: Orders or buys a specific catalog item.
+outputs:
+  - propertyName: result.number
+
+  - propertyName: result.request_id
+
+  - propertyName: result.request_number
+
+  - propertyName: result.sys_id
+
+  - propertyName: result.table
+
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: copilots_header_pve_agent_snow.shared_service-now.4731a495e0e24aa2b6bcf60ccf7813c9
+  connectionProperties:
+    mode: Invoker
+
+  operationId: OrderItem
+
+outputMode: All

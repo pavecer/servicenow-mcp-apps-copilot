@@ -1,0 +1,11 @@
+kind: EnvironmentVariableDefinition
+version: 9050449
+schemaName: msdyn_copilotforemployeeselfserviceit.envVar.GRepzFr4TCzz7q1KmT40d
+id: 884705da-f8f2-464d-95c9-ee8117f90f59
+valueComponent:
+  version: 9050450
+  id: 1adf6aec-3013-f111-8342-7c1e52fd22a7
+  definitionId: 884705da-f8f2-464d-95c9-ee8117f90f59
+  value: ServiceNowKB2602231934
+
+type: String

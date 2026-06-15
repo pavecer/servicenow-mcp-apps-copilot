@@ -1,0 +1,32 @@
+mcs.metadata:
+  componentName: "[System] - Response Preparation"
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnGeneratedResponse
+  id: main
+  actions:
+    - kind: SetVariable
+      id: setVariable_cAdqkT
+      displayName: Add official source badge
+      variable: Topic.ResponseWithOfficialSourceTag
+      value: ="<div><m-official> " & System.Response.FormattedText & " </m-official></div>"
+
+    - kind: SetTextVariable
+      id: setVariable_CjKq69
+      variable: Topic.DisclaimerToShow
+      value: "{Blank()}"
+
+    - kind: SetVariable
+      id: setVariable_ZDoIvx
+      variable: System.ContinueResponse
+      value: =false
+
+    - kind: SendActivity
+      id: sendActivity_50lBbY
+      activity:
+        text:
+          - "{Topic.ResponseWithOfficialSourceTag} {If(!IsBlank(Topic.DisclaimerToShow), Topic.DisclaimerToShow)}"
+        citationEntities: =System.Response.Citations
+
+    - kind: EndDialog
+      id: gsbg2J

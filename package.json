@@ -1,0 +1,59 @@
+{
+  "name": "mcp-server-servicenow",
+  "version": "1.0.0",
+  "description": "ServiceNow MCP server with Azure Functions hosting",
+  "private": true,
+  "license": "MIT",
+  "main": "dist/functions/*.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pavecer/mcp-server-servicenow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pavecer/mcp-server-servicenow/issues"
+  },
+  "homepage": "https://github.com/pavecer/mcp-server-servicenow#readme",
+  "scripts": {
+    "build:widgets": "node scripts/dev/build-widgets.mjs",
+    "prebuild": "npm run build:widgets",
+    "build": "tsc -p .",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "deploy:azure": "pwsh -File scripts/deploy-azure.ps1",
+    "start:standalone": "npm run build && node dist/server.js",
+    "start": "func start",
+    "start:dev": "npm run build && func start",
+    "smoke:test": "node scripts/smoke-test.mjs",
+    "sn:local": "npm run build && node scripts/dev/test-servicenow-local.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint:topics": "node scripts/dev/lint-topics.mjs",
+    "pretest": "npm run build:widgets"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.11.2",
+    "@azure/msal-node": "^5.2.1",
+    "@modelcontextprotocol/ext-apps": "^1.7.4",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "axios": "^1.16.0",
+    "express": "^4.22.1",
+    "serverless-http": "^4.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "hono": "^4.12.18",
+    "fast-uri": "^3.1.2",
+    "ip-address": "^10.2.0"
+  }
+}

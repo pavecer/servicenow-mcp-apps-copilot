@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: "[Admin] - User Context - Setup"
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRedirect
+  id: main
+  priority: 0

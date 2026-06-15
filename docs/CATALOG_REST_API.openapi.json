@@ -1,0 +1,206 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "ServiceNow MCP - Catalog REST API",
+    "description": "Deterministic REST endpoints for Copilot Studio topic-driven ordering flows. Use these operations in topics when you need deterministic adaptive card rendering (search → form → order). The MCP endpoint (/mcp) remains for AI-orchestrated generative flows.",
+    "version": "1.0.0"
+  },
+  "host": "your-mcp-host.azurewebsites.net",
+  "basePath": "/",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "oauth2": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://login.microsoftonline.com/ENTRA_TENANT_ID_PLACEHOLDER/oauth2/v2.0/authorize",
+      "tokenUrl": "https://login.microsoftonline.com/ENTRA_TENANT_ID_PLACEHOLDER/oauth2/v2.0/token",
+      "scopes": {
+        "api://ENTRA_CLIENT_ID_PLACEHOLDER/access_as_user": "Access ServiceNow MCP as user",
+        "offline_access": "Maintain access"
+      }
+    }
+  },
+  "security": [{ "oauth2": ["api://ENTRA_CLIENT_ID_PLACEHOLDER/access_as_user", "offline_access"] }],
+  "paths": {
+    "/api/catalog/search": {
+      "post": {
+        "operationId": "SearchCatalogItems",
+        "summary": "Search ServiceNow catalog items",
+        "description": "Search the ServiceNow Service Catalog for items matching a natural language query. Returns a list of items and an Adaptive Card (selectionAdaptiveCard) that can be rendered in a Copilot Studio topic as a card attachment.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": ["query"],
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "description": "Natural language search text, e.g. 'new laptop' or 'VPN access'"
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "Maximum number of results (default: 10)",
+                  "default": 10
+                },
+                "catalogSysId": {
+                  "type": "string",
+                  "description": "Optional catalog sys_id to restrict the search"
+                },
+                "categorySysId": {
+                  "type": "string",
+                  "description": "Optional category sys_id to filter results"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results with optional Adaptive Card",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "found": { "type": "integer", "description": "Number of items found" },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sysId": { "type": "string" },
+                      "name": { "type": "string" },
+                      "shortDescription": { "type": "string" },
+                      "category": { "type": "string" },
+                      "categoryId": { "type": "string" },
+                      "catalog": { "type": "string" },
+                      "catalogId": { "type": "string" }
+                    }
+                  }
+                },
+                "selectionAdaptiveCard": {
+                  "type": "object",
+                  "description": "Adaptive Card JSON — send as application/vnd.microsoft.card.adaptive in a SendActivity step"
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request — query missing" },
+          "401": { "description": "Unauthorized — Bearer token missing or invalid" },
+          "502": { "description": "ServiceNow upstream error" }
+        }
+      }
+    },
+    "/api/catalog/form/{sysId}": {
+      "get": {
+        "operationId": "GetCatalogItemForm",
+        "summary": "Get order form for a catalog item",
+        "description": "Returns the order form variables and an Adaptive Card (formAdaptiveCard) for the selected catalog item. Send formAdaptiveCard as a card attachment in a SendActivity topic step so the user can fill in the form.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sysId",
+            "required": true,
+            "type": "string",
+            "description": "The sys_id of the catalog item (from SearchCatalogItems)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Form definition with Adaptive Card",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sysId": { "type": "string" },
+                "name": { "type": "string" },
+                "shortDescription": { "type": "string" },
+                "variableCount": { "type": "integer" },
+                "variables": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "label": { "type": "string" },
+                      "type": { "type": "string" },
+                      "mandatory": { "type": "boolean" },
+                      "defaultValue": { "type": "string" }
+                    }
+                  }
+                },
+                "formAdaptiveCard": {
+                  "type": "object",
+                  "description": "Adaptive Card JSON — send as application/vnd.microsoft.card.adaptive in a SendActivity step"
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request — sysId missing" },
+          "401": { "description": "Unauthorized — Bearer token missing or invalid" },
+          "502": { "description": "ServiceNow upstream error" }
+        }
+      }
+    },
+    "/api/catalog/order": {
+      "post": {
+        "operationId": "PlaceCatalogOrder",
+        "summary": "Place a ServiceNow catalog order",
+        "description": "Submit the catalog order with variable values collected from the user. Returns a confirmation Adaptive Card (confirmationAdaptiveCard) with request number and status.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": ["itemSysId", "variables"],
+              "properties": {
+                "itemSysId": {
+                  "type": "string",
+                  "description": "Catalog item sys_id to order"
+                },
+                "variables": {
+                  "type": "object",
+                  "description": "Key-value pairs of form variable names to user-provided values",
+                  "additionalProperties": { "type": "string" }
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Quantity to order (default: 1)",
+                  "default": 1
+                },
+                "requestedFor": {
+                  "type": "string",
+                  "description": "Optional sys_id, user_name, or email of the user the item is ordered for. If omitted, the server attempts to use the authenticated Copilot caller UPN/email."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Order placed successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": { "type": "boolean" },
+                "requestNumber": { "type": "string" },
+                "requestId": { "type": "string" },
+                "confirmationAdaptiveCard": {
+                  "type": "object",
+                  "description": "Adaptive Card JSON — send as application/vnd.microsoft.card.adaptive in a SendActivity step"
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request — itemSysId or variables missing" },
+          "401": { "description": "Unauthorized — Bearer token missing or invalid" },
+          "502": { "description": "ServiceNow upstream error" }
+        }
+      }
+    }
+  }
+}

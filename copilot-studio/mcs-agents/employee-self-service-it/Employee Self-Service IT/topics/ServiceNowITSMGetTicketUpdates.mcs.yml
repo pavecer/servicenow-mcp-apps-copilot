@@ -1,0 +1,138 @@
+mcs.metadata:
+  componentName: ESS IT ServiceNow ITSM Get Ticket Updates
+  description: ESS IT ServiceNow ITSM Get Ticket Updates
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: TicketIdentifier
+    description: |-
+      `TicketIdentifier` is a unique value used to identify a support ticket.
+      
+      There are only two valid types of TicketIdentifiers:
+      1. **SysID**  
+        - A globally unique 32-character identifier.  
+        - Format: hexadecimal string (digits 0-9 and lowercase letters a-f).  
+        - Regex: `^[a-f0-9]{32}$`
+      2. **TicketNumber**  
+        - A unique identifier between 8-14 characters.  
+        - Format: Always starts with the prefix `INC` followed by digits.  
+        - Regex: `^INC\d{5,}$`
+      
+      If neither identifier is available, use the tool `ServiceNow-ITSM-Get-User-Tickets` to extract the `TicketIdentifier` from its response.
+      
+      **Important:** The extracted `SysID` or `TicketNumber` must be an exact match with the user query. Partial or fuzzy matches are not valid.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: RelevantTicketFound
+    description: |-
+      `RelevantTicketFound` is a boolean value that indicates whether a matching ticket was found based on the user's input.
+      
+      Set `RelevantTicketFound = true` **only if** one of the following conditions is met:
+      1. **Exact Identifier Match**
+        - The user provides a `TicketNumber` (8-14 characters, starts with `"INC"`) or a `SysID` (32-character hexadecimal string: digits `0-9` and lowercase letters `a-f`).
+      
+      2. **High-Relevance Descriptive Match**
+        - The user provides a descriptive query (e.g., "VPN related ticket").
+        - Use the tool `ServiceNow-ITSM-Get-User-Tickets` to get user's ticket. 
+        - A ticket in the list must match with **VERY HIGH SEMANTIC RELEVANCE** to user query.
+        - If the match is partial, uncertain, or low-confidence, set `RelevantTicketFound = false`.
+      
+      **Do not set `RelevantTicketFound = true` for partial, fuzzy, or ambiguous matches.**
+    entity: BooleanPrebuiltEntity
+    shouldPromptUser: false
+
+modelDescription: |-
+  This tool retrieves the latest updates of IT support or helpdesk tickets for the user.
+  
+  Example queries handled by this tool:
+  * "Latest update on my support ticket"
+  * "Who is my latest ticket assigned to"
+  * "Latest update on IT helpdesk ticket related to issue"
+  
+  Use below instructions to respond back:
+  1. If a matching ticket is found, use the following  format to create the TicketLink: 
+  `{InstanceUrl}/sp?id=ticket&table=incident&sys_id={SysId}`
+  2. Form a polite, coherent and single sentence response with only the relevant information. **ALWAYS** include the TicketNumber and TicketLink in the following markdown format - `[TicketNumber](TicketLink)`. 
+  3. Highlight important values like short description, assigned to, state, last updated on, etc. in **bold** and format the date as Month Date, Year.
+  4. Let the user know you can assist with updating a ticket or providing more details.
+  5. If user doesn't have any ticket or no matching ticket is found, politely inform the user.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: BeginDialog
+      id: 6ve11q
+      input:
+        binding:
+          TicketState: ="active"
+
+      dialog: msdyn_copilotforemployeeselfserviceit.topic.ServiceNowITSMGetUserTickets
+      output:
+        binding:
+          ServiceNowData: Topic.ServiceNowData
+
+    - kind: ConditionGroup
+      id: conditionGroup_9FY1y8
+      conditions:
+        - id: conditionItem_6BUOah
+          condition: =Topic.RelevantTicketFound = true && Topic.TicketIdentifier in Topic.ServiceNowData
+          displayName: Is a relevant ticket found?
+
+      elseActions:
+        - kind: SetVariable
+          id: setVariable_TxdQo6
+          variable: Topic.RelevantTicketFound
+          value: =false
+
+inputType:
+  properties:
+    RelevantTicketFound:
+      displayName: RelevantTicketFound
+      description: |-
+        `RelevantTicketFound` is a boolean value that indicates whether a matching ticket was found based on the user's input.
+        
+        Set `RelevantTicketFound = true` **only if** one of the following conditions is met:
+        1. **Exact Identifier Match**
+          - The user provides a `TicketNumber` (8-14 characters, starts with `"INC"`) or a `SysID` (32-character hexadecimal string: digits `0-9` and lowercase letters `a-f`).
+        
+        2. **High-Relevance Descriptive Match**
+          - The user provides a descriptive query (e.g., "VPN related ticket").
+          - Use the tool `ServiceNow-ITSM-Get-User-Tickets` to get user's ticket. 
+          - A ticket in the list must match with **VERY HIGH SEMANTIC RELEVANCE** to user query.
+          - If the match is partial, uncertain, or low-confidence, set `RelevantTicketFound = false`.
+        
+        **Do not set `RelevantTicketFound = true` for partial, fuzzy, or ambiguous matches.**
+      type: Boolean
+
+    TicketIdentifier:
+      displayName: TicketIdentifier
+      description: |-
+        `TicketIdentifier` is a unique value used to identify a support ticket.
+        
+        There are only two valid types of TicketIdentifiers:
+        1. **SysID**  
+          - A globally unique 32-character identifier.  
+          - Format: hexadecimal string (digits 0-9 and lowercase letters a-f).  
+          - Regex: `^[a-f0-9]{32}$`
+        2. **TicketNumber**  
+          - A unique identifier between 8-14 characters.  
+          - Format: Always starts with the prefix `INC` followed by digits.  
+          - Regex: `^INC\d{5,}$`
+        
+        If neither identifier is available, use the tool `ServiceNow-ITSM-Get-User-Tickets` to extract the `TicketIdentifier` from its response.
+        
+        **Important:** The extracted `SysID` or `TicketNumber` must be an exact match with the user query. Partial or fuzzy matches are not valid.
+      type: String
+
+outputType:
+  properties:
+    RelevantTicketFound:
+      displayName: RelevantTicketFound
+      type: Boolean
+
+    ServiceNowData:
+      displayName: ServiceNowData
+      type: String

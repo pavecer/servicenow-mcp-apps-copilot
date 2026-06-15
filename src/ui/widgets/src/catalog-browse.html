@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServiceNow Catalog</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b;
+    --border: #e0e0e0; --accent: #0078d4; --accent-fg: #ffffff;
+    --card-bg: #fafafa;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3;
+    --border: #3b3a39; --accent: #2899f5; --card-bg: #2a2a2a;
+  }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; display: flex; flex-direction: column; gap: 6px; cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card .name { font-weight: 600; font-size: 14px; }
+  .card .desc { font-size: 12px; color: var(--muted); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .cat { font-size: 11px; color: var(--muted); margin-top: auto; }
+  .empty { color: var(--muted); padding: 12px 0; }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  // --- MCP Apps host bridge -------------------------------------------------
+  // window.mcpHost is injected by the bundled host-bridge
+  // (src/ui/widgets/bridge/host-bridge.ts). It performs the MCP Apps
+  // `ui/initialize` handshake and pushes the tool result via onData().
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) {
+    var h = host();
+    if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
+    return Promise.reject(new Error("MCP Apps host bridge unavailable."));
+  }
+  function sendFollowUp(text) {
+    var h = host();
+    if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
+  }
+  function subscribe(cb) {
+    var h = host();
+    if (h && typeof h.onData === "function") { h.onData(cb); return true; }
+    return false;
+  }
+  function showLoading(el, msg) {
+    el.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty";
+    p.textContent = msg || "Loading\u2026"; el.appendChild(p);
+  }
+
+  var root = document.getElementById("root");
+  applyTheme();
+
+  function render(payload) {
+    root.innerHTML = "";
+    var data = payload || getData();
+    if (!data || typeof data !== "object") {
+      var e = document.createElement("p"); e.className = "empty";
+      e.textContent = "No catalog results to display."; root.appendChild(e); return;
+    }
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var items = Array.isArray(data.items) ? data.items : [];
+
+    var h1 = document.createElement("h1"); h1.textContent = "ServiceNow catalog results"; root.appendChild(h1);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = items.length + " item" + (items.length === 1 ? "" : "s") +
+      (data.query ? " for \u201c" + data.query + "\u201d" : "");
+    root.appendChild(meta);
+
+    if (items.length === 0) {
+      var p = document.createElement("p"); p.className = "empty";
+      p.textContent = "No matching catalog items. Try different keywords."; root.appendChild(p); return;
+    }
+
+    var grid = document.createElement("div"); grid.className = "grid";
+    items.forEach(function (item) {
+      var card = document.createElement("div"); card.className = "card";
+      var name = document.createElement("div"); name.className = "name"; name.textContent = item.name || "";
+      var desc = document.createElement("div"); desc.className = "desc"; desc.textContent = item.short_description || "";
+      var cat = document.createElement("div"); cat.className = "cat";
+      cat.textContent = (item.category || "") + (item.catalog ? " \u2022 " + item.catalog : "");
+      card.appendChild(name);
+      if (item.short_description) card.appendChild(desc);
+      if (item.category || item.catalog) card.appendChild(cat);
+      card.addEventListener("click", function () {
+        var sysId = item.sys_id || "";
+        var itemName = item.name || sysId;
+        if (!sysId && !itemName) return;
+        // Opening the order-form widget requires the AGENT to call
+        // get_catalog_item_form as a tool in the conversation. A widget-initiated
+        // callTool only returns data to THIS widget; it does not mount a new
+        // widget. So we drive it via a follow-up message the model acts on.
+        sendFollowUp("Open the order form for \"" + itemName + "\"" + (sysId ? " (catalog item sys_id " + sysId + ")" : "") + ".");
+      });
+      grid.appendChild(card);
+    });
+    root.appendChild(grid);
+  }
+
+  showLoading(root, "Loading catalog\u2026");
+  if (!subscribe(render)) { render(getData()); }
+})();
+</script>
+</body>
+</html>

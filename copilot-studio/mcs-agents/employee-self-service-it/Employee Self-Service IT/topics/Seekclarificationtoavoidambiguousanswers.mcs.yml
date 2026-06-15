@@ -1,0 +1,39 @@
+mcs.metadata:
+  componentName: Seek Clarification to Avoid Ambiguous Answers
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: clarificationResponse
+    description: |-
+      This is the response that will be 
+      sent to the user to confirm or clarify to be able to 
+      best answer the question. try and include what you 
+      understood or options for user to decide.
+    shouldPromptUser: true
+
+modelDescription: Use this when the user query is not clear to you and you want to seek clarification based upon the instructions, tools, capabilities, context provided to you.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: SendActivity
+      id: sendActivity_TR1shB
+      displayName: Send Clarifying Message
+      activity: "{Topic.clarificationResponse}"
+
+    - kind: EndDialog
+      id: CN5Mda
+
+inputType:
+  properties:
+    clarificationResponse:
+      displayName: clarificationResponse
+      description: |-
+        This is the response that will be 
+        sent to the user to confirm or clarify to be able to 
+        best answer the question. try and include what you 
+        understood or options for user to decide.
+      type: String
+
+outputType: {}

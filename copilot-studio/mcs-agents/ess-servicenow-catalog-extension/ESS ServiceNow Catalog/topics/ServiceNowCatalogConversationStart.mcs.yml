@@ -1,0 +1,52 @@
+mcs.metadata:
+  componentName: ESS ServiceNow Catalog Conversation Start
+  description: >-
+    Greeting topic for the ESS ServiceNow Catalog agent.
+    Initializes global order state variables to ensure a clean session.
+    When invoked as a child agent from ESS IT or ESS HR, the parent agent's
+    conversation context flows in naturally via generative orchestration.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnConversationStart
+  id: main
+  actions:
+    # Initialize all order state variables to blank at conversation start
+    - kind: SetVariable
+      id: setVariable_Start01
+      variable: init:Global.ServiceNowSelectedItemSysId
+      value: =Blank()
+
+    - kind: SetVariable
+      id: setVariable_Start02
+      variable: init:Global.ServiceNowSelectedItemName
+      value: =Blank()
+
+    - kind: SetVariable
+      id: setVariable_Start03
+      variable: init:Global.ServiceNowFormJson
+      value: =Blank()
+
+    - kind: SetVariable
+      id: setVariable_Start04
+      variable: init:Global.ServiceNowOrderValuesJson
+      value: =Blank()
+
+    - kind: SetVariable
+      id: setVariable_Start05
+      variable: init:Global.ServiceNowOrderRequestNumber
+      value: =Blank()
+
+    - kind: SendActivity
+      id: sendActivity_Start06
+      activity: |-
+        Hi! I'm here to help you order items from the IT service catalog.
+
+        You can tell me what you need — for example:
+        - *"I need a new laptop"*
+        - *"Request software access for Slack"*
+        - *"Order a USB hub"*
+
+        What can I help you order today?
+
+inputType: {}
+outputType: {}

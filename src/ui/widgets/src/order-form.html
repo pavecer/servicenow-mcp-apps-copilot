@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServiceNow Order Form</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1f1f1f;
+    --muted: #6b6b6b;
+    --border: #e0e0e0;
+    --accent: #0078d4;
+    --accent-fg: #ffffff;
+    --error: #c50f1f;
+    --required: #c50f1f;
+    --field-bg: #fafafa;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f;
+    --fg: #f3f2f1;
+    --muted: #b3b3b3;
+    --border: #3b3a39;
+    --accent: #2899f5;
+    --field-bg: #2a2a2a;
+  }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  form { display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 13px; font-weight: 600; }
+  .field .help { font-size: 12px; color: var(--muted); }
+  .section {
+    font-size: 13px; font-weight: 700; color: var(--fg);
+    margin: 10px 0 -2px; padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  .checkbox-row { flex-direction: row; align-items: center; gap: 8px; }
+  .checkbox-row input[type=checkbox] { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; }
+  .checkbox-row label { font-weight: 400; }
+  .req { color: var(--required); margin-left: 4px; }
+  input[type=text], input[type=number], input[type=email], input[type=date], textarea, select {
+    background: var(--field-bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 8px 10px; font: inherit;
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea { min-height: 80px; resize: vertical; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .actions { display: flex; gap: 8px; margin-top: 8px; }
+  button {
+    border: 1px solid var(--border); background: var(--field-bg); color: var(--fg);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  .btn-link {
+    display: inline-block; text-decoration: none; border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  .btn-link.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .banner-ok {
+    background: #107c10; color: #fff; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  .error { color: var(--error); font-size: 13px; }
+  .empty { color: var(--muted); font-size: 13px; }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  // --- MCP Apps host bridge (window.mcpHost from host-bridge.ts) -----------
+  // The host performs the MCP Apps `ui/initialize` handshake and pushes the
+  // tool result asynchronously, so we render on the onData() event rather than
+  // reading a synchronous global.
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) {
+    var h = host();
+    if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
+    return Promise.reject(new Error("MCP Apps host bridge unavailable."));
+  }
+  function sendFollowUp(text) {
+    var h = host();
+    if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
+  }
+  // Open an external URL through the host bridge (sandbox blocks window.open /
+  // <a target=_blank> inside the widget iframe). Falls back to window.open only
+  // for local/standalone testing where no host bridge is present.
+  function openExternal(url) {
+    var h = host();
+    if (h && typeof h.openExternal === "function") {
+      try { if (h.openExternal(url)) return; } catch (_) {}
+    }
+    try { window.open(url, "_blank", "noopener"); } catch (_) {}
+  }
+  function subscribe(cb) {
+    var h = host();
+    if (h && typeof h.onData === "function") { h.onData(cb); return true; }
+    return false;
+  }
+  function showLoading(el, msg) {
+    el.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty";
+    p.textContent = msg || "Loading\u2026"; el.appendChild(p);
+  }
+
+  // --- Render -------------------------------------------------------------
+  var root = document.getElementById("root");
+  applyTheme();
+
+  function renderEmpty(msg) {
+    root.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty"; p.textContent = msg || "No form data available.";
+    root.appendChild(p);
+  }
+
+  function render(data) {
+    if (!data || typeof data !== "object") {
+      renderEmpty("Form data unavailable. The agent will continue without the widget.");
+      return;
+    }
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+
+  var itemName = data.itemName || data.name || "Catalog item";
+  var itemSysId = data.itemSysId || data.sys_id || "";
+  var fields = Array.isArray(data.fields) ? data.fields : [];
+  var prefilled = (data.prefilledValues && typeof data.prefilledValues === "object") ? data.prefilledValues : {};
+
+  if (fields.length === 0) {
+    // No configurable options — render a friendly "ready to order" state with
+    // a single Place order button rather than a dead-end empty form. The agent
+    // (already authenticated) runs place_order in response to the follow-up.
+    root.innerHTML = "";
+    var h0 = document.createElement("h1"); h0.textContent = itemName; root.appendChild(h0);
+    var p0 = document.createElement("p"); p0.className = "empty";
+    p0.textContent = "No options to configure for this item \u2014 it's ready to order.";
+    root.appendChild(p0);
+    var act0 = document.createElement("div"); act0.className = "actions";
+    var b0 = document.createElement("button");
+    b0.type = "button"; b0.className = "primary"; b0.textContent = "Place order";
+    b0.addEventListener("click", function () {
+      b0.disabled = true; b0.textContent = "Submitting\u2026";
+      // No variables to collect — place the order directly (same path as the
+      // form submit). callTool is traceable + reliable; sendFollowUp fallback.
+      placeOrder(itemName, itemSysId, {}, b0, null);
+    });
+    act0.appendChild(b0);
+    root.appendChild(act0);
+    return;
+  }
+
+  var h1 = document.createElement("h1"); h1.textContent = itemName; root.appendChild(h1);
+  if (itemSysId) {
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = "Item " + itemSysId.slice(0, 8) + "\u2026 \u2022 Review and submit your order";
+    root.appendChild(meta);
+  }
+
+  var form = document.createElement("form");
+  form.addEventListener("submit", function (ev) { ev.preventDefault(); submit(); });
+
+  function inputFor(field, currentValue) {
+    var type = field.type || "string";
+    var name = field.name;
+    var el;
+    if (Array.isArray(field.choices) && field.choices.length > 0) {
+      el = document.createElement("select");
+      if (!field.required) {
+        var blank = document.createElement("option"); blank.value = ""; blank.textContent = "\u2014";
+        el.appendChild(blank);
+      }
+      field.choices.forEach(function (c) {
+        var o = document.createElement("option");
+        o.value = c.value != null ? String(c.value) : "";
+        o.textContent = c.title || c.label || o.value;
+        if (currentValue != null && String(currentValue) === o.value) o.selected = true;
+        el.appendChild(o);
+      });
+    } else if (type === "boolean") {
+      el = document.createElement("input"); el.type = "checkbox";
+      el.checked = currentValue === true || currentValue === "true";
+    } else if (type === "number" || type === "integer") {
+      el = document.createElement("input"); el.type = "number";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "email") {
+      el = document.createElement("input"); el.type = "email";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "date") {
+      el = document.createElement("input"); el.type = "date";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "datetime") {
+      el = document.createElement("input"); el.type = "datetime-local";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "longtext" || type === "multiline") {
+      el = document.createElement("textarea");
+      if (currentValue != null) el.value = String(currentValue);
+    } else {
+      el = document.createElement("input"); el.type = "text";
+      if (currentValue != null) el.value = String(currentValue);
+    }
+    el.name = name; el.id = "f_" + name;
+    if (field.required) el.required = true;
+    return el;
+  }
+
+  var inputs = {};
+  fields.forEach(function (field) {
+    // Section header (ServiceNow container_start / label). Carries no input;
+    // renders as a heading so checkboxes below it read as a grouped section.
+    if (field.type === "label") {
+      var head = document.createElement("div");
+      head.className = "section";
+      head.textContent = field.label || field.name;
+      form.appendChild(head);
+      return;
+    }
+
+    var input = inputFor(field, prefilled[field.name]);
+
+    // Checkboxes read better with the label beside the box on one line.
+    if (field.type === "boolean") {
+      var crow = document.createElement("div"); crow.className = "field checkbox-row";
+      var clabel = document.createElement("label"); clabel.htmlFor = "f_" + field.name;
+      clabel.textContent = field.label || field.name;
+      if (field.required) { var cr = document.createElement("span"); cr.className = "req"; cr.textContent = "*"; clabel.appendChild(cr); }
+      crow.appendChild(input);
+      crow.appendChild(clabel);
+      if (field.help) { var ch = document.createElement("div"); ch.className = "help"; ch.textContent = field.help; crow.appendChild(ch); }
+      inputs[field.name] = input;
+      form.appendChild(crow);
+      return;
+    }
+
+    var wrap = document.createElement("div"); wrap.className = "field";
+    var label = document.createElement("label"); label.htmlFor = "f_" + field.name;
+    label.textContent = field.label || field.name;
+    if (field.required) { var r = document.createElement("span"); r.className = "req"; r.textContent = "*"; label.appendChild(r); }
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    if (field.help) {
+      var h = document.createElement("div"); h.className = "help"; h.textContent = field.help;
+      wrap.appendChild(h);
+    }
+    inputs[field.name] = input;
+    form.appendChild(wrap);
+  });
+
+  var error = document.createElement("div"); error.className = "error"; error.style.display = "none";
+  form.appendChild(error);
+
+  var actions = document.createElement("div"); actions.className = "actions";
+  var submitBtn = document.createElement("button");
+  submitBtn.type = "submit"; submitBtn.className = "primary"; submitBtn.textContent = "Submit order";
+  actions.appendChild(submitBtn);
+  form.appendChild(actions);
+
+  root.appendChild(form);
+
+  function gatherVariables() {
+    var vars = {};
+    Object.keys(inputs).forEach(function (k) {
+      var el = inputs[k];
+      var v;
+      if (el.type === "checkbox") v = el.checked;
+      else if (el.type === "number") v = el.value === "" ? "" : Number(el.value);
+      else v = el.value;
+      if (v !== "" && v !== null && v !== undefined) vars[k] = v;
+    });
+    return vars;
+  }
+
+  function submit() {
+    error.style.display = "none"; error.textContent = "";
+    var vars = gatherVariables();
+    submitBtn.disabled = true; submitBtn.textContent = "Submitting\u2026";
+    placeOrder(itemName, itemSysId, vars, submitBtn, error);
+  }
+  }
+
+  // Shared by the form submit and the no-options "Place order" button.
+  // PRIMARY path: call place_order directly through the host bridge. This runs
+  // over the same authenticated MCP channel the host already uses (so it does
+  // NOT trigger a fresh sign-in once the connector is consented), returns the
+  // confirmation, AND is fully traceable in backend telemetry (tools/call:
+  // place_order). On success we re-render THIS widget as the confirmation.
+  // FALLBACK: if the host gates widget-initiated tools/call (callTool rejects
+  // or is unavailable), drive the order through the conversation so the agent
+  // runs place_order instead. We never do both, so an order is placed once.
+  function placeOrder(name, sysId, vars, btn, errEl) {
+    var settled = false;
+    function fallback() {
+      if (settled) return; settled = true;
+      sendFollowUp(
+        "Place the order for \"" + name + "\"" +
+        (sysId ? " (catalog item sys_id " + sysId + ")" : "") +
+        " using exactly these field values (do not change them): " +
+        JSON.stringify(vars) + "."
+      );
+      if (btn) btn.textContent = "Submitting in chat\u2026";
+    }
+    var p;
+    try { p = callTool("place_order", { itemSysId: sysId, variables: vars }); }
+    catch (e) { fallback(); return; }
+    if (!p || typeof p.then !== "function") { fallback(); return; }
+    p.then(function (result) {
+      if (settled) return; settled = true;
+      renderConfirmation(unwrapResult(result), name);
+    }).catch(function () {
+      fallback();
+    });
+  }
+
+  // Extract the place_order structuredContent from whatever shape the host's
+  // callTool returns (OpenAI returns the structured value directly; ext-apps
+  // returns { content, structuredContent }).
+  function unwrapResult(result) {
+    if (result && typeof result === "object") {
+      var r = result;
+      if (r.structuredContent) return r.structuredContent;
+      if (r.result && r.result.structuredContent) return r.result.structuredContent;
+    }
+    return result || {};
+  }
+
+  // Re-render this widget in place as an order confirmation: success banner,
+  // request number, and a "View in ServiceNow" link. We deliberately do NOT
+  // send a follow-up here, to avoid the agent placing a second order.
+  function renderConfirmation(data, name) {
+    data = data || {};
+    var order = data.order || {};
+    var reqNum = data.requestNumber || order.number || "";
+    var link = data.link || "";
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var banner = document.createElement("div"); banner.className = "banner-ok";
+    banner.textContent = "\u2713 Order " + (reqNum || "submitted") + " submitted to ServiceNow";
+    root.appendChild(banner);
+    var h = document.createElement("h1"); h.textContent = name; root.appendChild(h);
+    if (reqNum) {
+      var meta = document.createElement("div"); meta.className = "meta";
+      meta.textContent = "Request " + reqNum + " \u2022 submitted";
+      root.appendChild(meta);
+    }
+    if (link) {
+      var act = document.createElement("div"); act.className = "actions";
+      var a = document.createElement("a");
+      a.className = "btn-link primary"; a.textContent = "View in ServiceNow";
+      a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
+      // Sandbox blocks the native navigation, so route through the host bridge.
+      a.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(link); });
+      act.appendChild(a);
+      root.appendChild(act);
+    }
+  }
+
+  showLoading(root, "Loading order form\u2026");
+  if (!subscribe(render)) { render(getData()); }
+})();
+</script>
+</body>
+</html>
