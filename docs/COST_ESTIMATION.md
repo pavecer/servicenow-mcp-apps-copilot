@@ -256,7 +256,7 @@ If a customer asks "what does this cost per transaction?", the safe answer in mi
 ## 5. Where these numbers come from
 
 - **Azure pricing meters**: [Azure Functions pricing](https://azure.microsoft.com/pricing/details/functions/), [Storage](https://azure.microsoft.com/pricing/details/storage/blobs/), [Key Vault](https://azure.microsoft.com/pricing/details/key-vault/), [Log Analytics](https://azure.microsoft.com/pricing/details/monitor/), [Bandwidth](https://azure.microsoft.com/pricing/details/bandwidth/) — all checked against the West Europe rate card.
-- **Empirical timings**: production-shaped deployment in tenant where the OBO rollout was validated (see `docs/CUSTOM_MCP_CONNECTOR_OBO.md`). Wall-clock per call measured via App Insights, with the ServiceNow round-trip being the dominant component.
+- **Empirical timings**: production-shaped deployment in tenant where the OBO rollout was validated (see `docs/AUTH_ENTRA_OBO_OKTA.md`). Wall-clock per call measured via App Insights, with the ServiceNow round-trip being the dominant component.
 - **Copilot Studio pricing**: the [official Copilot Studio pricing page](https://www.microsoft.com/microsoft-copilot/microsoft-copilot-studio/pricing) and the message-counting rules published in [Copilot Studio capacity documentation](https://learn.microsoft.com/microsoft-copilot-studio/requirements-messages-management). The per-MCP-call message multiplier is an empirical observation as of mid-2026; expect this to shift as Microsoft formalizes MCP billing.
 
 ---

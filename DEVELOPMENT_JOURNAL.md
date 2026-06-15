@@ -1,16 +1,21 @@
 # Development journal — MCP Apps widget capability
 
-> This repo is the **MCP Apps fork** of `mcp-server-servicenow`. It was split out
-> of the public repo on 2026-06-15 to keep `origin/main` of the public project
-> clean while this experimental widget capability matured. This file is the
-> "lab notebook" for that work — what we built, the bugs we hit, and how each was
-> fixed (mostly the hard way, with a real headless browser).
+> This repo started as the **MCP Apps fork** of `mcp-server-servicenow` and, on
+> 2026-06-15, was promoted to a **standalone private repo**
+> (`github.com/pavecer/mcp-server-servicenow-mcp-apps`) with its own fresh git
+> history. The legacy Copilot Studio agent exports and connector docs were
+> removed at that point so the repo is dedicated to delivering ServiceNow
+> catalog ordering to Microsoft 365 Copilot / Cowork via MCP Apps. This file is
+> the "lab notebook" for that work — what we built, the bugs we hit, and how each
+> was fixed (mostly the hard way, with a real headless browser). Some entries
+> below predate the split and still describe the fork layout for historical
+> context.
 
 ## Repo & deployment map (READ FIRST)
 
 | Thing | Value |
 | --- | --- |
-| **This repo** | `mcp-server-servicenow-mcp-apps` — the MCP Apps fork. **No git remote** (cannot push to the public repo). Base commit `bab317a` (= public `origin/main`); MCP Apps work is commit `9b57070`. |
+| **This repo** | `mcp-server-servicenow-mcp-apps` — now a standalone private repo at `github.com/pavecer/mcp-server-servicenow-mcp-apps` (fresh history; squashed initial commit). Originally forked from public `mcp-server-servicenow` at base commit `bab317a`. |
 | **Original public repo** | `mcp-server-servicenow` — restored to a clean `origin/main` (`bab317a`). Contains **no** MCP Apps code. The public GitHub repo was never pushed any of this work. |
 | **This fork's function app** | `func-yj453fjwuhph4` in RG `rg-snowmcpwidg-dev` (westeurope), `MCP_APPS_ENABLED=true`. MCP endpoint `https://func-yj453fjwuhph4.azurewebsites.net/mcp`, `/health` 200. azd env `snowmcpwidg-dev`. |
 | **Original repo's function app** | `func-xflvdzmohd3e2` in RG `rg-dev-alt-tenant` — **no** `MCP_APPS_ENABLED`. Pre-MCP-Apps MCP server. Never touched by the widget work. |

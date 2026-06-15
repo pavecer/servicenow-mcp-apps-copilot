@@ -144,7 +144,7 @@ Authentication:  OAuth 2.0
 Type:            Dynamic discovery
 ```
 
-Direct the user to [COPILOT_STUDIO_SETUP.md](../COPILOT_STUDIO_SETUP.md) for the complete Copilot Studio setup guide.
+Direct the user to [docs/M365_COPILOT_MCP_APPS.md](../../docs/M365_COPILOT_MCP_APPS.md) for adding the server to Microsoft 365 Copilot as an MCP Apps declarative agent.
 
 ---
 

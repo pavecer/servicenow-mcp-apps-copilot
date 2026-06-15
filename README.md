@@ -1,6 +1,6 @@
 ﻿# ServiceNow MCP Server
 
-A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for ServiceNow Service Catalog, hosted on Azure Functions. It connects Microsoft Copilot Studio to ServiceNow so users can search catalog items, fill order forms rendered as Adaptive Cards, and place orders from within a Copilot Studio agent.
+A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for ServiceNow Service Catalog, hosted on Azure Functions. It delivers ServiceNow catalog ordering — search items, fill order forms, place and track orders — directly inside **Microsoft 365 Copilot and Cowork** via **MCP Apps** (SEP-1865) interactive widgets.
 
 **MCP tools provided:**
 
@@ -14,21 +14,17 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 | `update_order` | Updates a small allowlist of requestor-mutable fields on the caller's order (`short_description`, `description`, `comments`, `urgency`, `priority`) |
 | `validate_servicenow_config` | Validates OAuth and catalog API access end-to-end |
 
-> **This is the MCP Apps fork** of `mcp-server-servicenow` (split out 2026-06-15; **no git remote**). The MCP Apps widget capability lives here so the public repo's `main` stays clean. The full build-and-debug story, the deployment map, and the per-user-identity (OBO) research are in [`DEVELOPMENT_JOURNAL.md`](DEVELOPMENT_JOURNAL.md). This fork deploys to `func-yj453fjwuhph4` (`rg-snowmcpwidg-dev`, `MCP_APPS_ENABLED=true`); the original repo's server is a separate app (`func-xflvdzmohd3e2`).
+> **This repo is dedicated to the MCP Apps capability** — delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. The full build-and-debug story, the deployment map, and the per-user-identity (OBO) research are in [`DEVELOPMENT_JOURNAL.md`](DEVELOPMENT_JOURNAL.md).
 
-**Optional Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and four `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, my orders, order detail). The flag is **off by default** so the existing Copilot Studio surface (Adaptive Cards in `content[0].text`) is byte-identical to today. Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
+**Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and four `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, my orders, order detail). When the flag is **off**, tool results fall back to a legacy Adaptive Card surface in `content[0].text` (still consumable by an MCP client such as a Copilot Studio agent). Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
 
 **Related documentation:**
 
-- [Copilot Studio Setup](COPILOT_STUDIO_SETUP.md) -- add MCP tool and configure ordering topic
-- [Copilot Studio reference agents](copilot-studio/README.md) -- how this MCP server fits the ESS IT / ESS ServiceNow Catalog agent architecture
-- [Why not the MCP wizard? Use a custom connector for SSO/OBO](docs/WHY_CUSTOM_MCP_CONNECTOR.md) -- why the auto-provisioned MCP connector cannot do silent SSO, and what to do instead (Teams + M365 Copilot)
-- [Custom MCP Connector with OBO / SSO](docs/CUSTOM_MCP_CONNECTOR_OBO.md) -- hand-author a custom MCP connector so users get true silent SSO instead of the per-user "Open connection manager" prompt
 - [Microsoft 365 Copilot MCP Apps integration](docs/M365_COPILOT_MCP_APPS.md) -- enable SEP-1865 widget rendering and sideload the declarative-agent package under [`m365-agent/`](m365-agent/README.md)
-- [Cost Estimation](docs/COST_ESTIMATION.md) -- Azure infrastructure + Copilot Studio message consumption cost model, per-operation pricing, and worked examples for pilot / SMB / enterprise scenarios
 - [Agent 365 BYO MCP](docs/AGENT_365_BYO_MCP.md) -- register this server in the Microsoft 365 admin center for tenant-wide governance
+- [Authentication patterns (Entra OBO / Okta)](docs/AUTH_ENTRA_OBO_OKTA.md) -- per-user ServiceNow identity via On-Behalf-Of token exchange
 - [ServiceNow Setup](docs/SERVICENOW_SETUP.md) -- OAuth app, integration user, and permissions
-- [Action Contracts](docs/MCS_ACTION_CONTRACTS.md) -- tool schemas for Copilot Studio topic authors
+- [Cost Estimation](docs/COST_ESTIMATION.md) -- Azure infrastructure cost model, per-operation pricing, and worked examples for pilot / SMB / enterprise scenarios
 - [Optional Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) -- run as one Docker container in Azure Container Apps
 - [Security Guidelines](SECURITY.md) -- what to never commit
 
@@ -44,7 +40,7 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 | Node.js 20+ | To build the project locally |
 | ServiceNow instance | Admin access to create OAuth apps and users |
 | Microsoft Entra ID | Permission to register an app |
-| Copilot Studio agent model | **GPT-5 or newer**, or **Claude Sonnet**. **GPT-4.1 is not supported** because it does not render the MCP Adaptive Cards. See [COPILOT_STUDIO_SETUP.md](COPILOT_STUDIO_SETUP.md#supported-orchestrator-models). |
+| Microsoft 365 Copilot | A Microsoft 365 Copilot license to sideload and run the declarative agent; MCP Apps widgets render inline in Copilot / Cowork |
 
 ---
 
@@ -153,22 +149,13 @@ This path builds this repo as a single Node.js container and exposes the same MC
 
 ---
 
-### Step 4 -- Add to Microsoft Copilot Studio
+### Step 4 -- Add to Microsoft 365 Copilot (MCP Apps)
 
-See [COPILOT_STUDIO_SETUP.md](COPILOT_STUDIO_SETUP.md) for the full guide.
+1. Set `MCP_APPS_ENABLED=true` on the deployed Function App.
+2. Sideload the declarative-agent package under [`m365-agent/`](m365-agent/README.md) (the Microsoft 365 Agents Toolkit points at this server's MCP discovery URL and generates the manifests).
+3. Open the agent in Microsoft 365 Copilot and try a prompt such as `Order a new laptop` — the catalog-browse, order-form, my-orders, and order-detail widgets mount inline in Copilot / Cowork.
 
-1. Copilot Studio > your agent > **Tools > Add a tool > Model Context Protocol**
-2. Fill in:
-
-   | Field | Value |
-   |-------|-------|
-   | Server name | `ServiceNow MCP` |
-   | Server URL | `https://<your-function-app>.azurewebsites.net/mcp` |
-   | Authentication | `OAuth 2.0` |
-   | Type | `Dynamic discovery` |
-
-3. Click **Create** > sign in when prompted > verify all 4 tools appear.
-4. Import the ordering topic from `copilot-studio/topics/` into your agent.
+See [docs/M365_COPILOT_MCP_APPS.md](docs/M365_COPILOT_MCP_APPS.md) for the full end-to-end story (SEP-1865 widget rendering and the four `ui://servicenow-mcp/*.html` widgets).
 
 ---
 

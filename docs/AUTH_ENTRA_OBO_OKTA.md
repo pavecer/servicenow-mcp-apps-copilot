@@ -4,7 +4,6 @@ This document describes two end-to-end authentication architectures for hosting 
 
 It complements:
 
-- [COPILOT_STUDIO_SETUP.md](../COPILOT_STUDIO_SETUP.md) — the current `Dynamic discovery` setup (`oauth2pkcewithprm`) and why the per-user prompt is unavoidable with that identity provider.
 - [SERVICENOW_SETUP.md](SERVICENOW_SETUP.md) — ServiceNow OAuth app, integration user, roles.
 - [AGENT_365_BYO_MCP.md](AGENT_365_BYO_MCP.md) — tenant-governed registration in Microsoft 365 admin.
 
@@ -20,7 +19,7 @@ It complements:
 
 ## Why this matters
 
-Today, when you publish the agent to Teams or Microsoft 365 Copilot, every new user is hit with a one-time **"Let's get you connected first… Open connection manager"** card before any tool fires. This is documented behavior of the `oauth2pkcewithprm` identity provider used by Copilot Studio's MCP Dynamic discovery wizard. See the *Channel notes* section of [COPILOT_STUDIO_SETUP.md](../COPILOT_STUDIO_SETUP.md#channel-notes---teams-and-microsoft-365-copilot-per-user-open-connection-manager-prompt-no-sso) for the full reasoning.
+Today, when you publish the agent to Teams or Microsoft 365 Copilot, every new user is hit with a one-time **"Let's get you connected first… Open connection manager"** card before any tool fires. This is documented behavior of the `oauth2pkcewithprm` identity provider used by Copilot Studio's MCP Dynamic discovery wizard.
 
 Both patterns below replace `oauth2pkcewithprm` with an **SSO-capable** Entra ID OAuth connector configured with **Enable on-behalf-of login**. Combined with pre-authorizing the host (Teams / M365 Copilot) on the MCP server's Entra app, this eliminates the connection-manager prompt entirely.
 
@@ -96,7 +95,7 @@ This is the exact recipe from [Deploy Azure MCP Server with on-behalf-of authent
 
 ### Teams / M365 Copilot manifest (only required for true silent SSO)
 
-For Teams: add a `webApplicationInfo` block to the Teams app manifest with `id = <server-app-id>` and `resource = api://<server-app-id>`. Publish the Teams app to your tenant catalog. This is what the existing [COPILOT_STUDIO_SETUP.md](../COPILOT_STUDIO_SETUP.md#why-sso-does-not-kick-in-automatically-any-channel) calls out as a prerequisite for SSO.
+For Teams: add a `webApplicationInfo` block to the Teams app manifest with `id = <server-app-id>` and `resource = api://<server-app-id>`. Publish the Teams app to your tenant catalog. This is a prerequisite for SSO.
 
 For Microsoft 365 Copilot: declare the equivalent in the agent's M365 Copilot manifest. If you registered the server via [AGENT_365_BYO_MCP.md](AGENT_365_BYO_MCP.md), the BYO MCP record already carries the Entra resource binding — verify it matches the **Server App** ID.
 
@@ -308,7 +307,7 @@ If Okta is the primary corporate IdP and Microsoft 365 sign-in is already federa
 If the ServiceNow team will not register Entra and Okta will not enable JWT-Bearer, you have two practical fallbacks:
 
 1. **SAML 2.0 Bearer Assertion (RFC 7522)** — same idea as JWT-Bearer but uses a SAML assertion. Workable when Okta is already configured with Entra as a SAML IdP. Trades the JSON exchange for a SAML one; mechanics in the Function are similar.
-2. **Stay on the current pattern** — keep the shared ServiceNow integration user, keep `requested_for` attribution from the Entra token (already implemented), and accept the one-time-per-channel "Open connection manager" prompt. Per-user *audit* is preserved; per-user *authorization* is not. This is what the repo does today and what the [COPILOT_STUDIO_SETUP.md](../COPILOT_STUDIO_SETUP.md#what-the-user-actually-experiences) workarounds table calls out as the recommended default.
+2. **Stay on the current pattern** — keep the shared ServiceNow integration user, keep `requested_for` attribution from the Entra token (already implemented), and accept the one-time-per-channel "Open connection manager" prompt. Per-user *audit* is preserved; per-user *authorization* is not. This is what the repo does today and the recommended default.
 
 ---
 

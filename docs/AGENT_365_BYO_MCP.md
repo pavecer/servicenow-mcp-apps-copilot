@@ -272,8 +272,7 @@ server is ready to invoke.
 4. Test with a prompt such as `Order a new laptop` — the MCP server should
    respond with an Adaptive Card item picker.
 
-The legacy "Add MCP from URL" flow described in
-[`COPILOT_STUDIO_SETUP.md`](../COPILOT_STUDIO_SETUP.md) is still supported but
+The legacy "Add MCP from URL" flow for Copilot Studio is still supported but
 no longer required once BYO MCP is in place.
 
 ### VS Code, Claude Code, GitHub Copilot CLI
@@ -339,7 +338,6 @@ with your tenant admin to delete and re-create the registry entry.
 ## Related docs
 
 - [`README.md`](../README.md) — base deployment, Entra app, env vars
-- [`COPILOT_STUDIO_SETUP.md`](../COPILOT_STUDIO_SETUP.md) — legacy direct-MCP path (still works)
 - [`docs/SERVICENOW_SETUP.md`](SERVICENOW_SETUP.md) — ServiceNow OAuth + integration user
-- [`docs/MCS_ACTION_CONTRACTS.md`](MCS_ACTION_CONTRACTS.md) — tool input/output schemas
+- [`docs/M365_COPILOT_MCP_APPS.md`](M365_COPILOT_MCP_APPS.md) — MCP Apps widget rendering in Microsoft 365 Copilot
 - [`SECURITY.md`](../SECURITY.md) — secrets and what never to commit
