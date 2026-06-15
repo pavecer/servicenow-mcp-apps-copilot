@@ -213,13 +213,33 @@ function hintKeyMatchesVariable(
     return "hint_exact_name";
   }
 
-  const labelTokens = tokenSet(getVariableLabel(variable));
-  const keyTokens = normalizedKey.split(/\s+/);
+  // Match against the label tokens, normalizing both sides through a small
+  // synonym map so locale/spelling variants line up (e.g. the agent's hint
+  // key "color" against a "Choose the colour" label). Mirrors the synonym
+  // awareness the free-text path already has in classifyLabel().
+  const labelTokens = new Set([...tokenSet(getVariableLabel(variable))].map(normalizeKeywordToken));
+  const keyTokens = normalizedKey.split(/\s+/).map(normalizeKeywordToken);
   if (keyTokens.length > 0 && keyTokens.every(token => labelTokens.has(token))) {
     return "hint_label_match";
   }
 
   return undefined;
+}
+
+/**
+ * Collapse known spelling/locale variants of a token to a single canonical
+ * form so structured-hint label matching is locale-agnostic. Kept tiny and
+ * conservative; only unambiguous synonyms.
+ */
+const KEYWORD_TOKEN_SYNONYMS: Record<string, string> = {
+  colour: "color",
+  color: "color",
+  capacity: "storage",
+  storage: "storage"
+};
+
+function normalizeKeywordToken(token: string): string {
+  return KEYWORD_TOKEN_SYNONYMS[token] ?? token;
 }
 
 // ---------------------------------------------------------------------------

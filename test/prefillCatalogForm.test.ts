@@ -108,6 +108,22 @@ describe("computePrefillValues (iPhone scenario)", () => {
     expect(diagnostics[0].source).toBe("hint_label_match");
   });
 
+  it("matches an American 'color' hint against a British 'colour' variable/label", () => {
+    // Mirrors the dev310193 Pixel 4a item: variable name + label use the
+    // British spelling, while the agent's structured hint key is American.
+    const item: ServiceNowCatalogItemDetail = {
+      sys_id: "pixel", name: "Pixel 4a",
+      variables: [
+        { name: "colour", label: "Choose the colour", type: "3", choices: "black\nwhite" }
+      ]
+    };
+    const { values, diagnostics } = computePrefillValues(item.variables, {
+      prefillHints: { color: "white" }
+    });
+    expect(values.colour).toBe("white");
+    expect(diagnostics[0].source).toBe("hint_label_match");
+  });
+
   it("prefills via the exact variable name when the hint key matches it", () => {
     const item = iphoneItem();
     const { values, diagnostics } = computePrefillValues(item.variables, {
