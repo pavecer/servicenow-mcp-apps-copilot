@@ -4,6 +4,38 @@ import { createMcpExpressApp } from "../app";
 import { withFunctionContext } from "./wrap";
 
 /**
+ * serverless-http's Azure provider calls `context.log(response)` on every
+ * request, dumping the entire Node ServerResponse object into App Insights
+ * `traces` (Category Function.servicenow-mcp.User). That single object is huge,
+ * has no operational value, and drowns our structured Logger lines (plus it adds
+ * ingestion cost). This proxy drops `log()` calls whose only argument is an
+ * object (the ServerResponse dump) while forwarding string logs and every other
+ * context member (including info/warn/error/debug used by our Logger sink)
+ * untouched.
+ *
+ * Exported for unit testing.
+ */
+export function createQuietContext<T extends { log: (...args: unknown[]) => void }>(context: T): T {
+  return new Proxy(context, {
+    get(target, prop) {
+      if (prop === "log") {
+        const original = Reflect.get(target, prop) as (...args: unknown[]) => void;
+        const quietLog = (...args: unknown[]): void => {
+          if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
+            return; // swallow serverless-http's ServerResponse dump
+          }
+          original.apply(target, args);
+        };
+        // Preserve the level methods hanging off context.log (log.info, etc.).
+        return Object.assign(quietLog, original);
+      }
+      const value = Reflect.get(target, prop);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+  }) as T;
+}
+
+/**
  * Azure Functions v4 HTTP trigger that hosts the ServiceNow MCP server.
  *
  * The MCP endpoint is accessible at:
@@ -49,6 +81,9 @@ app.http("servicenow-mcp", {
   // withFunctionContext binds the per-invocation logging sink so Logger.* lands in App Insights `traces`.
   handler: withFunctionContext(async (request, context) => {
     const mutableReq = await toMutableAzureRequest(request);
-    return handler(context, mutableReq);
+    // Suppress serverless-http's per-request ServerResponse dump (see
+    // createQuietContext). The Logger sink bound by withFunctionContext still
+    // uses the real context, so structured traces are unaffected.
+    return handler(createQuietContext(context), mutableReq);
   })
 });
