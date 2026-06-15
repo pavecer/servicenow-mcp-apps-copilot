@@ -214,15 +214,26 @@ When `ENTRA_AUTH_DISABLED=true` (intended for local dev only), Bearer validation
 
 ### Delegated Identity Flow
 
-Each order is correctly attributed to the Copilot Studio user who placed it:
+Each order is correctly attributed to the Microsoft 365 Copilot user who placed it:
 
-1. Copilot Studio sends the user's Entra Bearer token to the MCP server.
+1. Copilot sends the user's Entra Bearer token to the MCP server.
 2. The MCP server validates the token and extracts the caller's UPN/email.
 3. The server obtains a ServiceNow token for the integration user (password grant).
 4. The caller's email is looked up in `sys_user` to find their ServiceNow `sys_id`.
-5. The order is placed, then immediately PATCHed to set `requested_for` to the resolved user.
+5. The order is placed, then immediately PATCHed to set `requested_for` (the
+   beneficiary) and — unless `SERVICENOW_ATTRIBUTE_OWNERSHIP_TO_CALLER=false` —
+   `opened_by` and `requested_by` (the ordering user) on the `sc_request` and its
+   `sc_req_item` rows. Without the `opened_by` patch, ServiceNow stamps the
+   record with whoever authenticated the REST call (the integration user), so it
+   would read "Opened by: System Administrator".
 
-> **Integration user permissions needed**: read on `sys_user`, read+write on `sc_request`, plus `catalog` and/or `itil` roles.
+> **Integration user permissions needed**: read on `sys_user`, read+write on
+> `sc_request` and `sc_req_item` (including the `opened_by`/`requested_by`
+> fields), plus `catalog` and/or `itil` roles.
+>
+> For true per-user ServiceNow ACL enforcement (the REST call itself runs as the
+> end user), see the On-Behalf-Of options in
+> [docs/AUTH_ENTRA_OBO_OKTA.md](docs/AUTH_ENTRA_OBO_OKTA.md).
 
 ---
 
@@ -282,6 +293,7 @@ npm run smoke:test
 | `SERVICENOW_OAUTH_GRANT_TYPE` | `auto` | Override grant type: `password` or `client_credentials` |
 | `SERVICENOW_OAUTH_CLIENT_AUTH_STYLE` | `auto` | OAuth client auth style: `request_body` or `basic` |
 | `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN` | `false` | When `true`, refuse calls without `x-servicenow-access-token` (per-user ACL enforcement) |
+| `SERVICENOW_ATTRIBUTE_OWNERSHIP_TO_CALLER` | `true` | After placing an order, patch `opened_by`/`requested_by` on the `sc_request` (and its `sc_req_item` rows) to the real ordering user. Set `false` if the integration user lacks write access to `opened_by` |
 | `SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS` | `email,user_name` | `sys_user` fields for identity resolution |
 | `SERVICENOW_REQUESTED_FOR_CALLER_FIELDS` | `callerUpn` | Entra token claims to use as identity source |
 | `SERVICENOW_REQUESTED_FOR_FALLBACK_TO_CALLER_VALUE` | `true` | Fall back to UPN if no `sys_user` match |

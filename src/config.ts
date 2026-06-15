@@ -30,7 +30,15 @@ export const config = {
     // When true, all ServiceNow API calls must use a caller-provided ServiceNow
     // bearer token (x-servicenow-access-token). This enforces ServiceNow ACLs for
     // each end user and prevents fallback to a shared integration identity.
-    requireCallerAccessToken: process.env.SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN === "true"
+    requireCallerAccessToken: process.env.SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN === "true",
+    // When true (default), after an order is placed under the shared integration
+    // identity the server patches `opened_by` and `requested_by` on the created
+    // sc_request (and its sc_req_item rows) to the real ordering user. Without
+    // this, ServiceNow stamps `opened_by` with whoever authenticated the REST
+    // call — the integration user — so the record shows "Opened by: System
+    // Administrator" instead of the person who placed the order. Set to "false"
+    // to disable (e.g. if the integration user lacks write access to opened_by).
+    attributeOwnershipToCaller: process.env.SERVICENOW_ATTRIBUTE_OWNERSHIP_TO_CALLER !== "false"
   },
 
   // Microsoft Entra ID (Azure AD) OAuth 2.0 settings.

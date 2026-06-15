@@ -488,21 +488,74 @@ export class ServiceNowClient {
     return this.httpClient;
   }
 
-  private async updateRequestRequestedFor(
-    client: AxiosInstance,
-    requestSysId: string,
-    requestedForSysId: string
-  ): Promise<void> {
-    await client.patch(`/api/now/table/sc_request/${requestSysId}`, {
-      requested_for: requestedForSysId
-    });
+  /**
+   * Resolves the caller's (the person placing the order) ServiceNow sys_id from
+   * the Entra-derived caller values (UPN/email) in the request context. Used to
+   * stamp `opened_by` / `requested_by` so the record reflects the real ordering
+   * user instead of the shared integration identity. Returns undefined when the
+   * caller cannot be resolved; callers must treat that as "leave as-is".
+   */
+  private async resolveCallerSysId(client: AxiosInstance): Promise<string | undefined> {
+    const callerValues = this.getCallerValues();
+    if (callerValues.length === 0) {
+      return undefined;
+    }
+    const lookupFields = this.getRequestedForLookupFields();
+    if (lookupFields.length === 0) {
+      return undefined;
+    }
+    try {
+      const lookup = await this.lookupServiceNowUser(client, callerValues, lookupFields);
+      return lookup.sysId;
+    } catch {
+      return undefined;
+    }
   }
 
-  private async updateRequestItemsRequestedFor(
+  /**
+   * Patches attribution fields on the created sc_request. `requested_for` is the
+   * beneficiary; `opened_by` / `requested_by` are the ordering user (caller).
+   * No-op when neither value is provided.
+   */
+  private async patchRequestAttribution(
     client: AxiosInstance,
     requestSysId: string,
-    requestedForSysId: string
+    attribution: { requestedForSysId?: string; ownerSysId?: string }
   ): Promise<void> {
+    const body: Record<string, string> = {};
+    if (attribution.requestedForSysId) {
+      body.requested_for = attribution.requestedForSysId;
+    }
+    if (attribution.ownerSysId) {
+      body.opened_by = attribution.ownerSysId;
+      body.requested_by = attribution.ownerSysId;
+    }
+    if (Object.keys(body).length === 0) {
+      return;
+    }
+    await client.patch(`/api/now/table/sc_request/${requestSysId}`, body);
+  }
+
+  /**
+   * Patches the same attribution fields on every sc_req_item belonging to the
+   * request so the line items match the parent. No-op when neither value is set.
+   */
+  private async patchRequestItemsAttribution(
+    client: AxiosInstance,
+    requestSysId: string,
+    attribution: { requestedForSysId?: string; ownerSysId?: string }
+  ): Promise<void> {
+    const body: Record<string, string> = {};
+    if (attribution.requestedForSysId) {
+      body.requested_for = attribution.requestedForSysId;
+    }
+    if (attribution.ownerSysId) {
+      body.opened_by = attribution.ownerSysId;
+    }
+    if (Object.keys(body).length === 0) {
+      return;
+    }
+
     // Fetch all sc_req_item records that belong to this sc_request
     const itemsResponse = await client.get<{ result: Array<{ sys_id: string }> }>(
       "/api/now/table/sc_req_item",
@@ -517,9 +570,7 @@ export class ServiceNowClient {
 
     const items = itemsResponse.data.result || [];
     await mapWithConcurrency(items, SERVICENOW_FANOUT_CONCURRENCY, (item) =>
-      client.patch(`/api/now/table/sc_req_item/${item.sys_id}`, {
-        requested_for: requestedForSysId
-      })
+      client.patch(`/api/now/table/sc_req_item/${item.sys_id}`, body)
     );
   }
 
@@ -712,6 +763,23 @@ export class ServiceNowClient {
         usedCallerServiceNowToken: Boolean(getRequestContext()?.serviceNowAccessToken)
       });
 
+      // Resolve the ordering user (caller) for opened_by / requested_by. When no
+      // explicit beneficiary was given, requested_for already resolved to the
+      // caller, so reuse it and skip a redundant sys_user lookup.
+      let ownerSysId: string | undefined;
+      if (config.serviceNow.attributeOwnershipToCaller) {
+        if (
+          !input.requestedFor &&
+          typeof resolvedRequestedFor === "string" &&
+          this.isLikelyServiceNowSysId(resolvedRequestedFor)
+        ) {
+          ownerSysId = resolvedRequestedFor;
+        } else {
+          const resolved = await this.resolveCallerSysId(client);
+          ownerSysId = resolved && this.isLikelyServiceNowSysId(resolved) ? resolved : undefined;
+        }
+      }
+
       const response = await client.post<{ result: ServiceNowOrderResult }>(
         `/api/sn_sc/servicecatalog/items/${itemSysId}/order_now`,
         payload
@@ -719,23 +787,29 @@ export class ServiceNowClient {
 
       // Always use sys_id for the request identifier - it's the reliable primary key
       const requestSysId = response.data.result.sys_id;
+      const requestedForSysId =
+        typeof resolvedRequestedFor === "string" && this.isLikelyServiceNowSysId(resolvedRequestedFor)
+          ? resolvedRequestedFor
+          : undefined;
       if (
         typeof requestSysId === "string" &&
-        typeof resolvedRequestedFor === "string" &&
         this.isLikelyServiceNowSysId(requestSysId) &&
-        this.isLikelyServiceNowSysId(resolvedRequestedFor)
+        (requestedForSysId || ownerSysId)
       ) {
         try {
-          await this.updateRequestRequestedFor(client, requestSysId, resolvedRequestedFor);
-          await this.updateRequestItemsRequestedFor(client, requestSysId, resolvedRequestedFor);
-          Logger.debug("Order requestedFor field patched", {
-            operation: "order.requestedFor_patched",
+          const attribution = { requestedForSysId, ownerSysId };
+          await this.patchRequestAttribution(client, requestSysId, attribution);
+          await this.patchRequestItemsAttribution(client, requestSysId, attribution);
+          Logger.debug("Order attribution patched", {
+            operation: "order.attribution_patched",
             itemSysId,
-            requestSysId
+            requestSysId,
+            requestedForPatched: Boolean(requestedForSysId),
+            openedByPatched: Boolean(ownerSysId)
           });
         } catch (error) {
-          Logger.warn("Failed to patch order requestedFor field", {
-            operation: "order.requestedFor_patch_failed",
+          Logger.warn("Failed to patch order attribution fields", {
+            operation: "order.attribution_patch_failed",
             itemSysId,
             requestSysId
           }, error);

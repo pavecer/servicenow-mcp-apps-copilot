@@ -116,8 +116,27 @@ stamps `opened_by`/`sys_created_by` with **whoever authenticates the REST call**
 ("Requested for" is correct because `placeOrder` explicitly sets
 `sysparm_requested_for` from the M365 caller's Entra `upn`/`oid`.)
 
-We researched making "Opened by" the **real requesting user** (Option 2 = Entra
-OBO) and confirmed it's **documented and supported**:
+### Solution shipped (2026-06-15) — patch the ownership fields
+
+We verified live against `dev310193` that **PATCHing `opened_by` on the created
+`sc_request` sticks** (no business rule re-stamps it). So `placeOrder` now, after
+`order_now`, resolves the **caller's** `sys_user` sys_id and patches
+`opened_by` + `requested_by` (the ordering user) alongside `requested_for` (the
+beneficiary) — on both the `sc_request` and its `sc_req_item` rows. Gated by
+`SERVICENOW_ATTRIBUTE_OWNERSHIP_TO_CALLER` (default **on**; set `false` if the
+integration user lacks write access to `opened_by`). Code:
+`src/services/servicenowClient.ts` (`resolveCallerSysId`,
+`patchRequestAttribution`, `patchRequestItemsAttribution`), `src/config.ts`;
+test `test/placeOrderAttribution.test.ts`. This makes "Opened by" the real user
+**without** ServiceNow OIDC trust or Entra reconfiguration — the record is still
+authenticated by the integration user under the hood, but every visible
+ownership field shows the requester.
+
+### Deeper option (still available) — Entra OBO for true per-user ACLs
+
+For the REST call itself to run **as the end user** (so ServiceNow ACLs apply
+per user, not the integration user's), use Entra On-Behalf-Of. This is
+**documented and supported**:
 
 - **MCP Apps** in M365 Copilot: *"Authentication — OAuth 2.1 and Microsoft Entra
   SSO are supported."* (also confirms `openExternal` → `openLink` is supported).
@@ -134,7 +153,7 @@ OBO) and confirmed it's **documented and supported**:
   switching to Entra SSO **does not break the widgets** in M365 or Cowork; auth
   is channel-level and the widget contract is unchanged.
 
-**Code impact ≈ zero — the OBO path is already fully implemented and tested:**
+**OBO code is already implemented and tested (gated off):**
 
 - `src/utils/entraAuthMiddleware.ts` captures `res.locals.callerAccessToken`.
 - `src/requestContext.ts` carries it through.
@@ -144,18 +163,18 @@ OBO) and confirmed it's **documented and supported**:
   `isOboEnabled()`, falling back to the integration user.
 - `src/config.ts` reads `ENTRA_OBO_ENABLED` + `ENTRA_OBO_DOWNSTREAM_SCOPE`.
 
-So enabling Option 2 is **configuration**, gated behind two app settings
-(currently off). The only suggested code tweak is mapping the OBO
-"consent required" failure to an HTTP **401** so Copilot shows the sign-in prompt.
+So enabling OBO is **configuration**, gated behind two app settings (currently
+off). The only suggested code tweak is mapping the OBO "consent required"
+failure to an HTTP **401** so Copilot shows the sign-in prompt.
 
-**Remaining real dependencies / risks (not code):**
+**Remaining real dependencies / risks for OBO (not code):**
 1. ServiceNow must trust **Entra as an OIDC provider** (admin + governance).
 2. Entra users must map deterministically to a `sys_user` (email/UPN).
 3. Per-user ACLs then apply — `admin` currently bypasses them, so real users
    need catalog-ordering rights. **Pilot in a test ServiceNow instance first.**
 
 Runbook: [`docs/AUTH_ENTRA_OBO_OKTA.md`](docs/AUTH_ENTRA_OBO_OKTA.md). Status:
-**not implemented** — researched and ready; the user was reviewing feasibility.
+**"Opened by" fix shipped**; OBO researched and ready but not enabled.
 
 ## Lessons worth keeping
 
