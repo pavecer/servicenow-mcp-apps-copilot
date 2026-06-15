@@ -61,11 +61,17 @@ export function buildSearchTermCandidates(text: string): string[] {
 
   if (keywords.length > 0) {
     candidates.push(keywords.join(" "));
-    // As a last resort, try the single longest keyword on its own — it is the
-    // most likely to be the noun the user actually wants (e.g. "laptop").
-    const longest = keywords.slice().sort((a, b) => b.length - a.length)[0];
-    if (longest) {
-      candidates.push(longest);
+    // As a last resort, try each keyword on its own, longest first — the
+    // longer words tend to be the more specific nouns the user wants
+    // (e.g. "laptop"). Trying EVERY keyword (not just the single longest)
+    // matters for multi-word product names where the brand word is longer
+    // than the model word: e.g. "google pixel" must still try "pixel" after
+    // "google" returns nothing, because ServiceNow's sysparm_text is literal.
+    const byLengthDesc = keywords
+      .slice()
+      .sort((a, b) => b.length - a.length);
+    for (const keyword of byLengthDesc) {
+      candidates.push(keyword);
     }
   }
 

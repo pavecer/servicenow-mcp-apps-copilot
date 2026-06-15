@@ -38,4 +38,24 @@ describe("buildSearchTermCandidates", () => {
     const out = buildSearchTermCandidates("monitor");
     expect(out).toEqual(["monitor"]);
   });
+
+  it("tries EVERY keyword (longest first), not just the single longest", () => {
+    // ServiceNow's sysparm_text is literal, so a multi-word product name like
+    // "google pixel" must fall through to each keyword individually. The brand
+    // word "google" is longer than the model word "pixel", so a single-longest
+    // fallback would stop at "google" (0 hits on the demo instance) and never
+    // try "pixel" (which matches the Pixel 4a item).
+    const out = buildSearchTermCandidates("google pixel");
+    expect(out).toContain("google");
+    expect(out).toContain("pixel");
+    // Longest keyword comes before the shorter one.
+    expect(out.indexOf("google")).toBeLessThan(out.indexOf("pixel"));
+  });
+
+  it("surfaces every keyword from a verbose multi-noun sentence", () => {
+    const out = buildSearchTermCandidates("I want a Google Pixel phone");
+    expect(out).toContain("google");
+    expect(out).toContain("pixel");
+    expect(out).toContain("phone");
+  });
 });
