@@ -1,16 +1,16 @@
 # Microsoft 365 Copilot MCP Apps integration
 
-> **This is the MCP Apps fork** of `mcp-server-servicenow`. It was split out of
-> the public repo so the widget capability can mature without touching
-> `origin/main` of the public project. For the full build-and-debug story (every
-> bug we hit and how it was fixed) see
-> [`DEVELOPMENT_JOURNAL.md`](../DEVELOPMENT_JOURNAL.md).
+> This repo is a **standalone project dedicated to the MCP Apps capability** —
+> delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. (It
+> began as a fork of `mcp-server-servicenow` and was promoted to its own repo on
+> 2026-06-15.) For the full build-and-debug story (every bug we hit and how it
+> was fixed) see [`DEVELOPMENT_JOURNAL.md`](../DEVELOPMENT_JOURNAL.md).
 
 This server optionally exposes [SEP-1865 "MCP Apps"][sep-1865] widget UIs that
 render inline inside Microsoft 365 Copilot. When you ask the agent to "order a
 laptop" or "show my open ServiceNow orders", Copilot mounts a sandboxed
-HTML iframe right in the chat — backed by the same MCP tools the existing
-Copilot Studio agents call.
+HTML iframe right in the chat — backed by the same MCP tools an MCP client
+(such as a Copilot Studio agent) can call.
 
 [sep-1865]: https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx
 
