@@ -33,6 +33,25 @@ Set these in Container Apps:
 
 Optional variables are the same as in `README.md` (for example `ENTRA_AUDIENCE`, `ENTRA_TRUSTED_TENANT_IDS`, `ENTRA_ALLOW_ANY_TENANT`).
 
+### Enabling MCP Apps (Microsoft 365 Copilot widgets)
+
+The container image is built the same way as the Functions package: `npm run
+build` runs the `build:widgets` prebuild step, so the SEP-1865
+`ui://servicenow-mcp/*.html` widgets are baked into the image and served from the
+same `/mcp` endpoint. **MCP Apps works in the container exactly as it does on
+Azure Functions** — it is off until you opt in. To enable it, set:
+
+- `MCP_APPS_ENABLED=true` — registers the widget resources and decorates the
+  widget-backed tools with `_meta.ui.resourceUri`.
+- `CORS_ALLOWED_ORIGINS` — comma-separated widget-host origins so the sandboxed
+  iframe can reach the server (use <https://aka.ms/mcpwidgeturlgenerator> to
+  generate the M365 Copilot / Cowork origins for your tenant).
+- `MCP_APPS_PUBLIC_ORIGIN` *(optional)* — the public origin where the Container
+  App is reachable (documentation only; not consumed at runtime).
+
+When `MCP_APPS_ENABLED` is unset/`false` the container serves the legacy
+Adaptive Card surface, byte-identical to the Functions deployment.
+
 ## 1) Create Azure Resources
 
 PowerShell example:
@@ -141,12 +160,17 @@ Expected response includes:
 {"status":"ok","server":"servicenow-mcp"}
 ```
 
-## 5) Point Copilot Studio to Container URL
+## 5) Point a Copilot client to the Container URL
 
 Use:
 
 - MCP URL: `https://<container-app-fqdn>/mcp`
-- Authentication: OAuth 2.0 (same Entra app flow as current setup)
+- Authentication: OAuth 2.0 (same Entra app flow as the Functions deployment)
+
+For Microsoft 365 Copilot, sideload the declarative-agent package under
+[`m365-agent/`](../m365-agent/README.md) pointed at this MCP URL, and set
+`MCP_APPS_ENABLED=true` (see *Enabling MCP Apps* above) to render the widgets
+inline.
 
 ## Updating the Deployment
 
