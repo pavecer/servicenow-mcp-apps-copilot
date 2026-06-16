@@ -89,6 +89,37 @@ export function buildSearchTermCandidates(text: string): string[] {
 }
 
 /**
+ * Tokenizes free text into a lowercase set of alphanumeric words. Used to
+ * compare a catalog item's NAME against the user's search query so we can tell
+ * when a result is an unambiguous match (e.g. the item "Pixel 4a" when the user
+ * asked for a "white Pixel 4a with 256GB").
+ */
+export function catalogQueryTokens(text: string): Set<string> {
+  return new Set(
+    (text ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+  );
+}
+
+/**
+ * True when EVERY token of the catalog item's name appears in the user's query
+ * tokens — i.e. the user named the item (possibly with extra adjectives/specs).
+ * "Pixel 4a" matches the query "white Pixel 4a with 256GB"; "Standard 27 Monitor"
+ * does not. An empty name never matches.
+ */
+export function itemNameMatchesQuery(name: string, queryTokens: Set<string>): boolean {
+  const nameTokens = [...catalogQueryTokens(name)];
+  if (nameTokens.length === 0) {
+    return false;
+  }
+  return nameTokens.every(token => queryTokens.has(token));
+}
+
+/**
  * Runs `worker` for every item in `items` with at most `concurrency` calls in
  * flight at any time. Preserves input order in the returned array. Errors
  * thrown by `worker` propagate to the caller; existing in-flight tasks are
@@ -593,18 +624,39 @@ export class ServiceNowClient {
       // verbose natural-language query like "I need to order a new laptop."
       // often returns nothing even though "laptop" matches several items. We
       // therefore try the query as-is first, then progressively fall back to a
-      // keyword-only form (stopwords + punctuation stripped). The first
-      // non-empty result wins.
+      // keyword-only form (stopwords + punctuation stripped).
+      //
+      // Among the candidates we PREFER the first whose results contain an item
+      // whose NAME matches the user's query (token-subset). This avoids a
+      // verbose query like "white Pixel 4a with 256GB storage" landing on the
+      // longest keyword ("storage") and returning unrelated server/DB items —
+      // the candidate "pixel" surfaces the actual "Pixel 4a" item. If no
+      // candidate yields a name match we fall back to the first non-empty set.
       const attempts = buildSearchTermCandidates(text);
+      const queryTokens = catalogQueryTokens(text);
 
       let items: ServiceNowCatalogItem[] = [];
       let usedTerm = attempts[0] ?? text;
+      let fallbackItems: ServiceNowCatalogItem[] | undefined;
+      let fallbackTerm: string | undefined;
       for (const term of attempts) {
-        items = await this.runCatalogTextSearch(term, options);
-        if (items.length > 0) {
+        const results = await this.runCatalogTextSearch(term, options);
+        if (results.length === 0) {
+          continue;
+        }
+        if (results.some(result => itemNameMatchesQuery(result.name, queryTokens))) {
+          items = results;
           usedTerm = term;
           break;
         }
+        if (!fallbackItems) {
+          fallbackItems = results;
+          fallbackTerm = term;
+        }
+      }
+      if (items.length === 0 && fallbackItems) {
+        items = fallbackItems;
+        usedTerm = fallbackTerm ?? usedTerm;
       }
 
       Logger.debug("Catalog search completed", {

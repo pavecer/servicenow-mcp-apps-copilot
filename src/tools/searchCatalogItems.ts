@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { ServiceNowClient } from "../services/servicenowClient";
+import { ServiceNowClient, catalogQueryTokens, itemNameMatchesQuery } from "../services/servicenowClient";
 import { buildCatalogItemSelectionAdaptiveCard } from "../utils/adaptiveCards";
 import { config } from "../config";
 
@@ -112,22 +112,34 @@ export function registerSearchCatalogItemsTool(server: McpServer, client: Servic
       // Only emitted when the feature flag is on so the historical Copilot
       // Studio surface is byte-identical in the default state.
       if (config.mcpApps.enabled) {
-        // UX: when EXACTLY ONE item matches, skip the catalog-browse selection
-        // step entirely — making the user "pick" from a list of one is friction.
-        // We do NOT emit structuredContent (so the catalog-browse widget does
-        // not mount) and instead instruct the model to go straight to
-        // get_catalog_item_form, which mounts the order-form widget. The result
-        // is: search -> order form, with no intermediate selection.
-        if (items.length === 1) {
-          const only = itemList[0];
+        // UX: skip the catalog-browse selection step when the user has clearly
+        // identified a single item. Two cases auto-advance straight to the
+        // order form (no intermediate "pick from a list" step):
+        //   1. Exactly one item matched the search.
+        //   2. Exactly one result's NAME is contained in the user's query
+        //      (e.g. "Pixel 4a" when they asked for a "white Pixel 4a 256GB") —
+        //      even when the literal text search also returned loosely-related
+        //      items (the 2 monitors that mention "pixel" resolution).
+        const queryTokens = catalogQueryTokens(query);
+        const strongMatches = itemList.filter(item =>
+          itemNameMatchesQuery(item.name, queryTokens)
+        );
+        const soleTarget =
+          strongMatches.length === 1
+            ? strongMatches[0]
+            : items.length === 1
+              ? itemList[0]
+              : undefined;
+
+        if (soleTarget) {
           result.content = [
             {
               type: "text" as const,
               text:
-                `Exactly one catalog item matched "${query}": ${only.name} ` +
-                `(sys_id ${only.sys_id}). Do not show a selection or ask the user ` +
-                `to choose. Immediately call get_catalog_item_form with ` +
-                `itemSysId="${only.sys_id}" to open the order form for this item.`
+                `One catalog item clearly matches "${query}": ${soleTarget.name} ` +
+                `(sys_id ${soleTarget.sys_id}). Do not show a selection or ask the ` +
+                `user to choose. Immediately call get_catalog_item_form with ` +
+                `itemSysId="${soleTarget.sys_id}" to open the order form for this item.`
             }
           ];
           return result;

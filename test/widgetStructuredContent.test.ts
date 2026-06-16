@@ -143,6 +143,34 @@ describe("structuredContent gating: flag on", () => {
     expect(text.toLowerCase()).not.toContain("selectable cards");
   });
 
+  it("auto-advances to the sole item whose NAME matches, even with extra loose results", async () => {
+    // Mirrors the dev310193 Pixel case: searching for a "white Pixel 4a 256GB"
+    // also returns 2 monitors that merely mention "pixel" resolution. Only
+    // "Pixel 4a" has a name contained in the query, so we skip the selection.
+    const pixelClient = {
+      searchCatalogItems: async () => [
+        { sys_id: "pix1", name: "Pixel 4a", short_description: "Google phone",
+          category: { sys_id: "c", title: "Mobiles", name: "mobiles" },
+          sc_catalog: { sys_id: "s", title: "Service Catalog", name: "service_catalog" } },
+        { sys_id: "mon27", name: "Standard 27\" Monitor", short_description: "Display",
+          category: { sys_id: "c", title: "Peripherals", name: "peripherals" },
+          sc_catalog: { sys_id: "s", title: "Service Catalog", name: "service_catalog" } },
+        { sys_id: "mon24", name: "Standard 24\" Monitor", short_description: "Display",
+          category: { sys_id: "c", title: "Peripherals", name: "peripherals" },
+          sc_catalog: { sys_id: "s", title: "Service Catalog", name: "service_catalog" } }
+      ]
+    } as unknown as import("../src/services/servicenowClient").ServiceNowClient;
+
+    const fake = createFakeServer();
+    mods.search.registerSearchCatalogItemsTool(fake.server as never, pixelClient);
+    const result = await fake.tools[0].handler({ query: "white Pixel 4a with 256GB storage" }) as Record<string, unknown>;
+    // Sole name match -> skip browse, go to the form for Pixel 4a.
+    expect(result.structuredContent).toBeUndefined();
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    expect(text).toContain("get_catalog_item_form");
+    expect(text).toContain("pix1");
+  });
+
   it("list_user_orders emits compact structuredContent (drops requestItems) under 64 KiB", async () => {
     const fake = createFakeServer();
     mods.list.registerListUserOrdersTool(fake.server as never, fakeListClient);
