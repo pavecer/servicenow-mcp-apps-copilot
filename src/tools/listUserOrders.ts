@@ -79,7 +79,7 @@ export function registerListUserOrdersTool(server: McpServer, client: ServiceNow
             emptyResult.content = [
               {
                 type: "text" as const,
-                text: "The user has no open orders. The empty state is shown above."
+                text: "No open orders."
               }
             ];
           }
@@ -116,7 +116,7 @@ export function registerListUserOrdersTool(server: McpServer, client: ServiceNow
           result.content = [
             {
               type: "text" as const,
-              text: `Found ${orders.length} open order(s) for the user. They are shown above as a selectable list.`
+              text: `${orders.length} open order(s).`
             }
           ];
         }

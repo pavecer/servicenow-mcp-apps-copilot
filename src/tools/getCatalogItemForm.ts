@@ -268,7 +268,7 @@ export function registerGetCatalogItemFormTool(server: McpServer, client: Servic
         result.content = [
           {
             type: "text" as const,
-            text: `Opened the order form for "${item.name}" with ${fields.length} field(s). The interactive form is shown above for the user to complete and submit.`
+            text: `Order form for "${item.name}" (${fields.length} field(s)).`
           }
         ];
       }

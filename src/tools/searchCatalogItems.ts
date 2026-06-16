@@ -153,15 +153,17 @@ export function registerSearchCatalogItemsTool(server: McpServer, client: Servic
 
         // MCP Apps: `content` must be a concise, neutral model-facing summary.
         // The matching items travel in structuredContent and are rendered by
-        // the catalog-browse widget. Returning the full JSON list (plus the
-        // Adaptive Card) in `content` makes Microsoft 365 Copilot render a
-        // verbose text fallback instead of mounting the widget.
+        // the catalog-browse widget. Keep it to a short data anchor only — no
+        // UI narration ("shown above as cards…") that just duplicates the
+        // widget; the widget already shows the results. Returning the full JSON
+        // list (plus the Adaptive Card) here makes Microsoft 365 Copilot render
+        // a verbose text fallback instead of mounting the widget.
         result.content = [
           {
             type: "text" as const,
             text: soleTarget
-              ? `Found the catalog item matching "${query}": ${soleTarget.name}. Opening its order form.`
-              : `Found ${items.length} catalog item(s) matching "${query}". The results are shown above as selectable cards for the user to choose from.`
+              ? `${soleTarget.name} matches "${query}".`
+              : `${items.length} catalog item(s) match "${query}".`
           }
         ];
       }

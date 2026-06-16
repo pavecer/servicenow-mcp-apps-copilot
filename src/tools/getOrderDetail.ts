@@ -73,7 +73,7 @@ export function registerGetOrderDetailTool(server: McpServer, client: ServiceNow
           result.content = [
             {
               type: "text" as const,
-              text: `Loaded order ${orderNumber} with ${detail.items.length} item(s) and ${detail.approvals.length} approval(s). The details are shown above for the user.`
+              text: `Order ${orderNumber}: ${detail.items.length} item(s), ${detail.approvals.length} approval(s).`
             }
           ];
         }

@@ -127,7 +127,7 @@ export function registerPlaceOrderTool(server: McpServer, client: ServiceNowClie
         result.content = [
           {
             type: "text" as const,
-            text: `Order ${requestNumber} was submitted to ServiceNow. The confirmation is shown above for the user.`
+            text: `Order ${requestNumber} submitted to ServiceNow.`
           }
         ];
       }
