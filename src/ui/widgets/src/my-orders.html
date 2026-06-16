@@ -19,6 +19,7 @@
   }
   body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
   h1 { font-size: 16px; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 16px 0 6px; }
   .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
   .toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
   button {
@@ -26,17 +27,54 @@
     padding: 6px 12px; border-radius: 4px; font: inherit; cursor: pointer;
   }
   button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button.link { background: none; border: none; color: var(--accent); padding: 6px 4px; text-decoration: underline; }
   button:disabled { opacity: 0.6; cursor: progress; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  th { color: var(--muted); font-weight: 600; }
-  tr.row:hover { background: var(--row-hover); cursor: pointer; }
+  /* Order list rendered as cards (one widget: list -> click -> detail in place) */
+  .cards { display: flex; flex-direction: column; gap: 8px; }
+  .card {
+    border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+    display: flex; flex-direction: column; gap: 4px; cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card .num { font-weight: 600; font-size: 14px; }
+  .card .sd { font-size: 13px; }
+  .card .desc { color: var(--muted); font-size: 12px; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .when { color: var(--muted); font-size: 11px; }
   .chip {
-    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    display: inline-block; padding: 2px 8px; border-radius: 12px; white-space: nowrap;
     background: var(--chip-bg); color: var(--chip-fg); font-size: 12px;
   }
   .empty { color: var(--muted); padding: 12px 0; }
-  .desc { color: var(--muted); margin-top: 2px; font-size: 12px; }
+  /* Detail view (ported from order-detail.html) */
+  .grid {
+    display: grid; grid-template-columns: max-content 1fr;
+    gap: 6px 12px; font-size: 13px; margin-bottom: 16px;
+  }
+  .grid .k { color: var(--muted); }
+  .grid .v { word-break: break-word; }
+  .items, .approvals { display: flex; flex-direction: column; gap: 8px; }
+  .item, .approval { border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+  .item .name { font-weight: 600; font-size: 13px; }
+  .item .desc { font-size: 12px; color: var(--muted); }
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .btn-link {
+    display: inline-block; text-decoration: none; border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  .btn-link.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .banner-ok {
+    background: #107c10; color: #fff; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  textarea {
+    width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px; font: inherit;
+    min-height: 60px; margin-top: 8px;
+  }
 </style>
 <!-- MCP_HOST_BRIDGE -->
 </head>
@@ -58,6 +96,15 @@
     var h = host();
     if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
   }
+  // Open an external URL through the host bridge (sandbox blocks window.open /
+  // <a target=_blank> inside the widget iframe).
+  function openExternal(url) {
+    var h = host();
+    if (h && typeof h.openExternal === "function") {
+      try { if (h.openExternal(url)) return; } catch (_) {}
+    }
+    try { window.open(url, "_blank", "noopener"); } catch (_) {}
+  }
   function subscribe(cb) {
     var h = host();
     if (h && typeof h.onData === "function") { h.onData(cb); return true; }
@@ -68,31 +115,190 @@
     var p = document.createElement("p"); p.className = "empty";
     p.textContent = msg || "Loading\u2026"; el.appendChild(p);
   }
-
-  var root = document.getElementById("root");
-  applyTheme();
-
   function readStr(v) {
     if (v == null) return "";
     if (typeof v === "string") return v;
     if (typeof v === "object") return v.display_value || v.value || "";
     return String(v);
   }
-
-  function render(payload) {
-    root.innerHTML = "";
-    var data = payload || getData();
-    if (!data || typeof data !== "object") {
-      var e = document.createElement("p"); e.className = "empty";
-      e.textContent = "No orders to display.";
-      root.appendChild(e); return;
+  // Extract structuredContent from whatever shape the host's callTool returns
+  // (OpenAI returns it directly; ext-apps returns { content, structuredContent }).
+  function unwrapResult(result) {
+    if (result && typeof result === "object") {
+      var r = result;
+      if (r.structuredContent) return r.structuredContent;
+      if (r.result && r.result.structuredContent) return r.result.structuredContent;
     }
+    return result || {};
+  }
+
+  var root = document.getElementById("root");
+  applyTheme();
+
+  // This widget is a 2-state flow rendered IN PLACE in one widget instance:
+  // (1) the orders list, (2) a selected order's full detail. Clicking an order
+  // calls get_order_detail via the host bridge and re-renders THIS widget as
+  // the detail (the same in-place pattern catalog-browse uses for the order
+  // form). No follow-up chat message and no separate widget mount. If the host
+  // gates widget-initiated tools/call, we fall back to a follow-up so the agent
+  // mounts the standalone order-detail widget.
+  var lastListData = null;
+
+  function backToList() {
+    if (lastListData) { renderList(lastListData); }
+    else { showLoading(root, "Loading your orders\u2026"); }
+  }
+
+  // --- State 2: order detail (ported from order-detail.html) --------------
+  function selectOrder(order) {
+    var sysId = readStr(order.sys_id);
+    var number = readStr(order.number) || sysId.slice(0, 8);
+    showLoading(root, "Loading order " + (number || "") + "\u2026");
+
+    function fallback() {
+      sendFollowUp("Show the details for order " + (number || sysId) +
+        (sysId ? " (sys_id " + sysId + ")" : "") + ".");
+      showLoading(root, "Loading order " + (number || "") + " in chat\u2026");
+    }
+    if (!sysId) { fallback(); return; }
+
+    var p;
+    try { p = callTool("get_order_detail", { orderSysId: sysId }); }
+    catch (e) { fallback(); return; }
+    if (!p || typeof p.then !== "function") { fallback(); return; }
+    p.then(function (result) {
+      var detail = unwrapResult(result);
+      // Backstop the header from the list row if the detail omitted it.
+      if (!detail.order) detail.order = order;
+      renderDetail(detail);
+    }).catch(function () { fallback(); });
+  }
+
+  function renderDetail(data) {
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var order = data.order || data;
+    var items = Array.isArray(data.items) ? data.items
+      : (Array.isArray(order.requestItems) ? order.requestItems : []);
+    var approvals = Array.isArray(data.approvals) ? data.approvals : [];
+
+    var number = readStr(order.number) || readStr(order.sys_id).slice(0, 8);
+    var orderSysId = readStr(order.sys_id);
+    var state = readStr(order.state) || readStr(order.request_status);
+    var sd = readStr(order.short_description);
+    var desc = readStr(order.description);
+    var created = readStr(order.created_on) || readStr(order.sys_created_on);
+    var updated = readStr(order.updated_on) || readStr(order.sys_updated_on);
+
+    var h1 = document.createElement("h1"); h1.textContent = "Order " + number; root.appendChild(h1);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = sd || "ServiceNow request"; root.appendChild(meta);
+
+    var grid = document.createElement("div"); grid.className = "grid";
+    function row(k, v) {
+      if (!v) return;
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = k;
+      var vEl = document.createElement("div"); vEl.className = "v"; vEl.textContent = v;
+      grid.appendChild(kEl); grid.appendChild(vEl);
+    }
+    if (state) {
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = "State";
+      var vEl = document.createElement("div"); vEl.className = "v";
+      var chip = document.createElement("span"); chip.className = "chip"; chip.textContent = state;
+      vEl.appendChild(chip); grid.appendChild(kEl); grid.appendChild(vEl);
+    }
+    row("Created", created);
+    row("Updated", updated);
+    row("Requested for", readStr(order.requested_for));
+    row("Assigned to", readStr(order.assigned_to));
+    if (desc && desc !== sd) row("Description", desc);
+    root.appendChild(grid);
+
+    if (items.length > 0) {
+      var ih = document.createElement("h2"); ih.textContent = "Items"; root.appendChild(ih);
+      var list = document.createElement("div"); list.className = "items";
+      items.forEach(function (it) {
+        var card = document.createElement("div"); card.className = "item";
+        var name = document.createElement("div"); name.className = "name";
+        var catName = (it.catalogItem && (it.catalogItem.name || it.catalogItem.short_description)) || "";
+        name.textContent = catName || readStr(it.short_description) || readStr(it.number);
+        card.appendChild(name);
+        var d = readStr(it.short_description) || readStr(it.description);
+        if (d && d !== name.textContent) {
+          var dd = document.createElement("div"); dd.className = "desc"; dd.textContent = d; card.appendChild(dd);
+        }
+        list.appendChild(card);
+      });
+      root.appendChild(list);
+    }
+
+    if (approvals.length > 0) {
+      var ah = document.createElement("h2"); ah.textContent = "Approvals"; root.appendChild(ah);
+      var alist = document.createElement("div"); alist.className = "approvals";
+      approvals.forEach(function (ap) {
+        var a = document.createElement("div"); a.className = "approval";
+        a.textContent = (readStr(ap.approver) || readStr(ap.sys_id)) + " \u2014 " + (readStr(ap.state) || "pending");
+        alist.appendChild(a);
+      });
+      root.appendChild(alist);
+    }
+
+    var notesLabel = document.createElement("h2"); notesLabel.textContent = "Add a comment"; root.appendChild(notesLabel);
+    var ta = document.createElement("textarea");
+    ta.placeholder = "Comment (visible to the fulfilment team)";
+    root.appendChild(ta);
+
+    var actions = document.createElement("div"); actions.className = "actions";
+
+    var snLink = readStr(data.link);
+    if (snLink) {
+      var view = document.createElement("a");
+      view.className = "btn-link primary";
+      view.textContent = "View in ServiceNow";
+      view.href = snLink; view.target = "_blank"; view.rel = "noopener noreferrer";
+      view.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(snLink); });
+      actions.appendChild(view);
+    }
+
+    // Comment / cancel drive the conversation via a follow-up message so the
+    // already-authenticated agent runs update_order. Widget-initiated callTool
+    // would trigger a fresh per-tool auth prompt in Microsoft 365 Copilot.
+    var commentBtn = document.createElement("button"); commentBtn.textContent = "Post comment";
+    commentBtn.addEventListener("click", function () {
+      var text = ta.value.trim(); if (!text) return;
+      commentBtn.disabled = true; commentBtn.textContent = "Posting\u2026";
+      sendFollowUp("Add this comment to order " + number + " (sys_id " + orderSysId + "): " + text);
+      ta.value = "";
+      commentBtn.disabled = false; commentBtn.textContent = "Post comment";
+    });
+    var cancelBtn = document.createElement("button"); cancelBtn.textContent = "Request cancellation";
+    cancelBtn.title = "Asks fulfillment to cancel \u2014 does not change order state directly.";
+    cancelBtn.addEventListener("click", function () {
+      cancelBtn.disabled = true; cancelBtn.textContent = "Requesting\u2026";
+      sendFollowUp("Please request cancellation of order " + number + " (sys_id " + orderSysId + ").");
+      cancelBtn.disabled = false; cancelBtn.textContent = "Request cancellation";
+    });
+    actions.appendChild(commentBtn);
+    actions.appendChild(cancelBtn);
+
+    var back = document.createElement("button"); back.type = "button"; back.className = "link";
+    back.textContent = "\u2190 Back to orders";
+    back.addEventListener("click", function () { backToList(); });
+    actions.appendChild(back);
+
+    root.appendChild(actions);
+  }
+
+  // --- State 1: orders list ------------------------------------------------
+  function renderList(data) {
+    root.innerHTML = "";
     if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
     var orders = Array.isArray(data.orders) ? data.orders : [];
 
     var h1 = document.createElement("h1"); h1.textContent = "My open ServiceNow orders"; root.appendChild(h1);
     var meta = document.createElement("div"); meta.className = "meta";
-    meta.textContent = orders.length + " open order" + (orders.length === 1 ? "" : "s");
+    meta.textContent = orders.length + " open order" + (orders.length === 1 ? "" : "s") +
+      (orders.length ? " \u2022 newest first" : "");
     root.appendChild(meta);
 
     var toolbar = document.createElement("div"); toolbar.className = "toolbar";
@@ -100,56 +306,56 @@
     refresh.addEventListener("click", function () {
       refresh.disabled = true; refresh.textContent = "Refreshing\u2026";
       callTool("list_user_orders", {}).then(function (res) {
-        var next = (res && res.structuredContent) || null;
-        if (next) { render(next); }
+        var next = unwrapResult(res);
+        if (next && Array.isArray(next.orders)) { lastListData = next; renderList(next); }
         else { sendFollowUp("Refresh my open orders."); }
-        refresh.disabled = false; refresh.textContent = "Refresh";
       }).catch(function () {
         sendFollowUp("Refresh my open orders.");
-        refresh.disabled = false; refresh.textContent = "Refresh";
       });
     });
     toolbar.appendChild(refresh);
     root.appendChild(toolbar);
 
     if (orders.length === 0) {
-      var empty = document.createElement("p"); empty.className = "empty"; empty.textContent = "You don't have any open orders.";
+      var empty = document.createElement("p"); empty.className = "empty";
+      empty.textContent = "You don't have any open orders.";
       root.appendChild(empty); return;
     }
 
-    var table = document.createElement("table");
-    var thead = document.createElement("thead");
-    thead.innerHTML = "<tr><th>Number</th><th>Description</th><th>State</th><th>Updated</th></tr>";
-    table.appendChild(thead);
-    var tbody = document.createElement("tbody");
+    var cards = document.createElement("div"); cards.className = "cards";
     orders.forEach(function (order) {
-      var tr = document.createElement("tr"); tr.className = "row";
       var number = readStr(order.number) || readStr(order.sys_id).slice(0, 8);
       var sd = readStr(order.short_description);
       var desc = readStr(order.description);
-      var state = readStr(order.state) || readStr(order.request_status) || "";
-      var updated = readStr(order.updated_on) || readStr(order.sys_updated_on) || "";
-      tr.innerHTML =
-        "<td><strong></strong></td>" +
-        "<td><div class=\"sd\"></div><div class=\"desc\"></div></td>" +
-        "<td><span class=\"chip\"></span></td>" +
-        "<td></td>";
-      tr.children[0].firstChild.textContent = number;
-      tr.children[1].firstChild.textContent = sd;
-      tr.children[1].lastChild.textContent = desc;
-      tr.children[2].firstChild.textContent = state || "open";
-      tr.children[3].textContent = updated;
-      tr.addEventListener("click", function () {
-        var sysId = readStr(order.sys_id);
-        // Mounting the order-detail widget requires the agent to call
-        // get_order_detail as a tool — drive it via a follow-up message rather
-        // than a widget-initiated callTool (which only returns data here).
-        sendFollowUp("Show the details for order " + (number || sysId) + (sysId ? " (sys_id " + sysId + ")" : "") + ".");
-      });
-      tbody.appendChild(tr);
+      var state = readStr(order.state) || readStr(order.request_status) || "open";
+      var updated = readStr(order.updated_on) || readStr(order.sys_updated_on) ||
+        readStr(order.created_on) || readStr(order.sys_created_on);
+
+      var card = document.createElement("div"); card.className = "card";
+      var top = document.createElement("div"); top.className = "top";
+      var num = document.createElement("span"); num.className = "num"; num.textContent = number;
+      var chip = document.createElement("span"); chip.className = "chip"; chip.textContent = state;
+      top.appendChild(num); top.appendChild(chip);
+      card.appendChild(top);
+      if (sd) { var sdEl = document.createElement("div"); sdEl.className = "sd"; sdEl.textContent = sd; card.appendChild(sdEl); }
+      if (desc && desc !== sd) { var dEl = document.createElement("div"); dEl.className = "desc"; dEl.textContent = desc; card.appendChild(dEl); }
+      if (updated) { var w = document.createElement("div"); w.className = "when"; w.textContent = "Updated " + updated; card.appendChild(w); }
+      card.addEventListener("click", function () { selectOrder(order); });
+      cards.appendChild(card);
     });
-    table.appendChild(tbody);
-    root.appendChild(table);
+    root.appendChild(cards);
+  }
+
+  // Entry point: receive the list_user_orders payload.
+  function render(payload) {
+    var data = payload || getData();
+    if (!data || typeof data !== "object") {
+      root.innerHTML = "";
+      var e = document.createElement("p"); e.className = "empty";
+      e.textContent = "No orders to display."; root.appendChild(e); return;
+    }
+    lastListData = data;
+    renderList(data);
   }
 
   showLoading(root, "Loading your orders\u2026");

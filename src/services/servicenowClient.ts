@@ -927,8 +927,11 @@ export class ServiceNowClient {
       return [];
     }
 
-    // Build query for non-closed orders where the requesting user is the requester
-    const sysparmQuery = `requested_for=${currentUserSysId}^state!=7^state!=6^state!=9`;
+    // Build query for non-closed orders where the requesting user is the
+    // requester, newest activity first (ORDERBYDESC on sys_updated_on so the
+    // most recently created OR changed requests surface at the top of the
+    // widget's top-N list).
+    const sysparmQuery = `requested_for=${currentUserSysId}^state!=7^state!=6^state!=9^ORDERBYDESCsys_updated_on`;
 
     const params: Record<string, string | number> = {
       sysparm_query: sysparmQuery,

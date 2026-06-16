@@ -44,8 +44,8 @@ export function registerListUserOrdersTool(server: McpServer, client: ServiceNow
         .int()
         .positive()
         .optional()
-        .default(50)
-        .describe("Maximum number of orders to return (default: 50)"),
+        .default(10)
+        .describe("Maximum number of orders to return, newest activity first (default: 10)"),
       fields: z
         .array(z.string())
         .optional()
