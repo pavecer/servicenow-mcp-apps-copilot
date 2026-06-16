@@ -9,12 +9,12 @@
     color-scheme: light dark;
     --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b;
     --border: #e0e0e0; --accent: #0078d4; --accent-fg: #ffffff;
-    --card-bg: #fafafa;
+    --card-bg: #fafafa; --field-bg: #fafafa; --error: #c50f1f; --required: #c50f1f;
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   }
   html[data-theme="dark"] {
     --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3;
-    --border: #3b3a39; --accent: #2899f5; --card-bg: #2a2a2a;
+    --border: #3b3a39; --accent: #2899f5; --card-bg: #2a2a2a; --field-bg: #2a2a2a;
   }
   body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
   h1 { font-size: 16px; margin: 0 0 4px; }
@@ -31,6 +31,40 @@
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .card .cat { font-size: 11px; color: var(--muted); margin-top: auto; }
   .empty { color: var(--muted); padding: 12px 0; }
+  /* Inline order form (mirrors order-form.html so a selected item renders the
+     fill-in form in place, then the confirmation, without leaving the widget). */
+  form { display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 13px; font-weight: 600; }
+  .field .help { font-size: 12px; color: var(--muted); }
+  .section { font-size: 13px; font-weight: 700; color: var(--fg);
+    margin: 10px 0 -2px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .checkbox-row { flex-direction: row; align-items: center; gap: 8px; }
+  .checkbox-row input[type=checkbox] { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; }
+  .checkbox-row label { font-weight: 400; }
+  .req { color: var(--required); margin-left: 4px; }
+  input[type=text], input[type=number], input[type=email], input[type=date],
+  input[type=datetime-local], textarea, select {
+    background: var(--field-bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; font: inherit;
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea { min-height: 80px; resize: vertical; }
+  .actions { display: flex; gap: 8px; margin-top: 8px; }
+  button {
+    border: 1px solid var(--border); background: var(--field-bg); color: var(--fg);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button.link { background: none; border: none; color: var(--accent); padding: 8px 4px; text-decoration: underline; }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  .btn-link { display: inline-block; text-decoration: none; border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer; }
+  .btn-link.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .banner-ok { background: #107c10; color: #fff; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  .error { color: var(--error); font-size: 13px; }
 </style>
 <!-- MCP_HOST_BRIDGE -->
 </head>
@@ -55,6 +89,15 @@
     var h = host();
     if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
   }
+  // Open an external URL through the host bridge (the sandbox blocks
+  // window.open / <a target=_blank> inside the widget iframe).
+  function openExternal(url) {
+    var h = host();
+    if (h && typeof h.openExternal === "function") {
+      try { if (h.openExternal(url)) return; } catch (_) {}
+    }
+    try { window.open(url, "_blank", "noopener"); } catch (_) {}
+  }
   function subscribe(cb) {
     var h = host();
     if (h && typeof h.onData === "function") { h.onData(cb); return true; }
@@ -69,46 +112,266 @@
   var root = document.getElementById("root");
   applyTheme();
 
-  // Auto-advance guard: a sole-match search collapses to one card and we open
-  // its order form automatically (one less click). Driven entirely client-side
-  // via sendFollowUp — the SAME mechanism a manual card click uses — so no
-  // model-directed instructions live in tool output (those trip Microsoft 365
-  // Copilot's prompt-injection filter and abort the turn). Fire at most once.
-  var autoAdvanced = false;
-  function openOrderForm(item) {
+  // The catalog-browse widget is a 3-state flow rendered IN PLACE in this one
+  // widget instance: (1) the results list, (2) the selected item's order form,
+  // (3) the order confirmation. Selecting an item calls get_catalog_item_form
+  // via the host bridge and re-renders THIS widget as the form (the same way
+  // order-form.html re-renders itself as the confirmation after place_order).
+  // No new widget is mounted and no model round-trip is needed. If the host
+  // gates widget-initiated tools/call, we fall back to a follow-up message so
+  // the agent mounts the standalone order-form widget instead.
+  var lastListData = null;       // remembers the results so "Back" can restore them
+  var autoAdvanced = false;      // sole-match auto-open fires at most once
+
+  // Extract a tool's structuredContent from whatever shape the host's callTool
+  // returns (OpenAI returns the structured value directly; ext-apps returns
+  // { content, structuredContent }).
+  function unwrapResult(result) {
+    if (result && typeof result === "object") {
+      var r = result;
+      if (r.structuredContent) return r.structuredContent;
+      if (r.result && r.result.structuredContent) return r.result.structuredContent;
+    }
+    return result || {};
+  }
+
+  function backToResults() {
+    if (lastListData) { renderList(lastListData); }
+  }
+
+  function addBackLink(container) {
+    // Only meaningful when the user came from a multi-item list.
+    if (!lastListData || !Array.isArray(lastListData.items) || lastListData.items.length < 2) return;
+    var back = document.createElement("button");
+    back.type = "button"; back.className = "link"; back.textContent = "\u2190 Back to results";
+    back.addEventListener("click", function () { backToResults(); });
+    container.appendChild(back);
+  }
+
+  // --- State 2: order form (selected item) --------------------------------
+  // Fetch the item's form and render it in place. Mirrors order-form.html.
+  function selectItem(item) {
     var sysId = item.sys_id || "";
     var itemName = item.name || sysId;
     if (!sysId && !itemName) return;
-    // Opening the order-form widget requires the AGENT to call
-    // get_catalog_item_form as a tool in the conversation. A widget-initiated
-    // callTool only returns data to THIS widget; it does not mount a new
-    // widget. So we drive it via a follow-up message the model acts on.
-    sendFollowUp("Open the order form for \"" + itemName + "\"" + (sysId ? " (catalog item sys_id " + sysId + ")" : "") + ".");
+    showLoading(root, "Opening order form for \u201c" + itemName + "\u201d\u2026");
+
+    // Without a sys_id we can't fetch the form directly; ask the agent.
+    function fallback() {
+      sendFollowUp("Open the order form for \"" + itemName + "\"" +
+        (sysId ? " (catalog item sys_id " + sysId + ")" : "") + ".");
+      showLoading(root, "Opening order form for \u201c" + itemName + "\u201d in chat\u2026");
+    }
+    if (!sysId) { fallback(); return; }
+
+    var p;
+    try { p = callTool("get_catalog_item_form", { itemSysId: sysId }); }
+    catch (e) { fallback(); return; }
+    if (!p || typeof p.then !== "function") { fallback(); return; }
+    p.then(function (result) {
+      var formData = unwrapResult(result);
+      // The form tool echoes the item name/sys_id; keep our list values as a
+      // backstop so the heading is always populated.
+      if (!formData.itemName) formData.itemName = itemName;
+      if (!formData.itemSysId) formData.itemSysId = sysId;
+      renderForm(formData);
+    }).catch(function () { fallback(); });
   }
 
-  function render(payload) {
-    root.innerHTML = "";
-    var data = payload || getData();
-    if (!data || typeof data !== "object") {
-      var e = document.createElement("p"); e.className = "empty";
-      e.textContent = "No catalog results to display."; root.appendChild(e); return;
+  function inputFor(field, currentValue) {
+    var type = field.type || "string";
+    var el;
+    if (Array.isArray(field.choices) && field.choices.length > 0) {
+      el = document.createElement("select");
+      if (!field.required) {
+        var blank = document.createElement("option"); blank.value = ""; blank.textContent = "\u2014";
+        el.appendChild(blank);
+      }
+      field.choices.forEach(function (c) {
+        var o = document.createElement("option");
+        o.value = c.value != null ? String(c.value) : "";
+        o.textContent = c.title || c.label || o.value;
+        if (currentValue != null && String(currentValue) === o.value) o.selected = true;
+        el.appendChild(o);
+      });
+    } else if (type === "boolean") {
+      el = document.createElement("input"); el.type = "checkbox";
+      el.checked = currentValue === true || currentValue === "true";
+    } else if (type === "number" || type === "integer") {
+      el = document.createElement("input"); el.type = "number";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "email") {
+      el = document.createElement("input"); el.type = "email";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "date") {
+      el = document.createElement("input"); el.type = "date";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "datetime") {
+      el = document.createElement("input"); el.type = "datetime-local";
+      if (currentValue != null) el.value = String(currentValue);
+    } else if (type === "longtext" || type === "multiline") {
+      el = document.createElement("textarea");
+      if (currentValue != null) el.value = String(currentValue);
+    } else {
+      el = document.createElement("input"); el.type = "text";
+      if (currentValue != null) el.value = String(currentValue);
     }
-    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
-    var items = Array.isArray(data.items) ? data.items : [];
+    el.name = field.name; el.id = "f_" + field.name;
+    if (field.required) el.required = true;
+    return el;
+  }
 
-    // Sole strong match: the server sent exactly one item plus an autoSelect
-    // sys_id. Skip the selection entirely and open the order form for the user.
-    var autoSelect = data.autoSelect;
-    if (!autoAdvanced && autoSelect && items.length === 1 &&
-        (items[0].sys_id === autoSelect || !items[0].sys_id)) {
-      autoAdvanced = true;
-      var h1a = document.createElement("h1");
-      h1a.textContent = "Opening order form\u2026"; root.appendChild(h1a);
-      var metaA = document.createElement("div"); metaA.className = "meta";
-      metaA.textContent = items[0].name || ""; root.appendChild(metaA);
-      openOrderForm(items[0]);
+  function renderForm(data) {
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var itemName = data.itemName || data.name || "Catalog item";
+    var itemSysId = data.itemSysId || data.sys_id || "";
+    var fields = Array.isArray(data.fields) ? data.fields : [];
+    var prefilled = (data.prefilledValues && typeof data.prefilledValues === "object") ? data.prefilledValues : {};
+
+    var h1 = document.createElement("h1"); h1.textContent = itemName; root.appendChild(h1);
+
+    if (fields.length === 0) {
+      // No configurable options — friendly "ready to order" state.
+      var p0 = document.createElement("p"); p0.className = "empty";
+      p0.textContent = "No options to configure for this item \u2014 it's ready to order.";
+      root.appendChild(p0);
+      var act0 = document.createElement("div"); act0.className = "actions";
+      var b0 = document.createElement("button");
+      b0.type = "button"; b0.className = "primary"; b0.textContent = "Place order";
+      b0.addEventListener("click", function () {
+        b0.disabled = true; b0.textContent = "Submitting\u2026";
+        placeOrder(itemName, itemSysId, {}, b0, null);
+      });
+      act0.appendChild(b0);
+      addBackLink(act0);
+      root.appendChild(act0);
       return;
     }
+
+    if (itemSysId) {
+      var meta = document.createElement("div"); meta.className = "meta";
+      meta.textContent = "Item " + itemSysId.slice(0, 8) + "\u2026 \u2022 Review and submit your order";
+      root.appendChild(meta);
+    }
+
+    var form = document.createElement("form");
+    form.addEventListener("submit", function (ev) { ev.preventDefault(); submit(); });
+    var inputs = {};
+
+    fields.forEach(function (field) {
+      if (field.type === "label") {
+        var head = document.createElement("div"); head.className = "section";
+        head.textContent = field.label || field.name; form.appendChild(head); return;
+      }
+      var input = inputFor(field, prefilled[field.name]);
+      if (field.type === "boolean") {
+        var crow = document.createElement("div"); crow.className = "field checkbox-row";
+        var clabel = document.createElement("label"); clabel.htmlFor = "f_" + field.name;
+        clabel.textContent = field.label || field.name;
+        if (field.required) { var cr = document.createElement("span"); cr.className = "req"; cr.textContent = "*"; clabel.appendChild(cr); }
+        crow.appendChild(input); crow.appendChild(clabel);
+        if (field.help) { var ch = document.createElement("div"); ch.className = "help"; ch.textContent = field.help; crow.appendChild(ch); }
+        inputs[field.name] = input; form.appendChild(crow); return;
+      }
+      var wrap = document.createElement("div"); wrap.className = "field";
+      var label = document.createElement("label"); label.htmlFor = "f_" + field.name;
+      label.textContent = field.label || field.name;
+      if (field.required) { var r = document.createElement("span"); r.className = "req"; r.textContent = "*"; label.appendChild(r); }
+      wrap.appendChild(label); wrap.appendChild(input);
+      if (field.help) { var hp = document.createElement("div"); hp.className = "help"; hp.textContent = field.help; wrap.appendChild(hp); }
+      inputs[field.name] = input; form.appendChild(wrap);
+    });
+
+    var error = document.createElement("div"); error.className = "error"; error.style.display = "none";
+    form.appendChild(error);
+
+    var actions = document.createElement("div"); actions.className = "actions";
+    var submitBtn = document.createElement("button");
+    submitBtn.type = "submit"; submitBtn.className = "primary"; submitBtn.textContent = "Submit order";
+    actions.appendChild(submitBtn);
+    addBackLink(actions);
+    form.appendChild(actions);
+    root.appendChild(form);
+
+    function gatherVariables() {
+      var vars = {};
+      Object.keys(inputs).forEach(function (k) {
+        var el = inputs[k]; var v;
+        if (el.type === "checkbox") v = el.checked;
+        else if (el.type === "number") v = el.value === "" ? "" : Number(el.value);
+        else v = el.value;
+        if (v !== "" && v !== null && v !== undefined) vars[k] = v;
+      });
+      return vars;
+    }
+    function submit() {
+      error.style.display = "none"; error.textContent = "";
+      var vars = gatherVariables();
+      submitBtn.disabled = true; submitBtn.textContent = "Submitting\u2026";
+      placeOrder(itemName, itemSysId, vars, submitBtn, error);
+    }
+  }
+
+  // --- State 3: place order + confirmation --------------------------------
+  // PRIMARY: place_order over the authenticated host bridge (traceable, no
+  // re-auth). On success re-render THIS widget as the confirmation. FALLBACK:
+  // if the host gates widget tools/call, drive it through the conversation so
+  // the agent runs place_order. Never both, so an order is placed once.
+  function placeOrder(name, sysId, vars, btn, errEl) {
+    var settled = false;
+    function fallback() {
+      if (settled) return; settled = true;
+      sendFollowUp(
+        "Place the order for \"" + name + "\"" +
+        (sysId ? " (catalog item sys_id " + sysId + ")" : "") +
+        " using exactly these field values (do not change them): " +
+        JSON.stringify(vars) + "."
+      );
+      if (btn) btn.textContent = "Submitting in chat\u2026";
+    }
+    var p;
+    try { p = callTool("place_order", { itemSysId: sysId, variables: vars }); }
+    catch (e) { fallback(); return; }
+    if (!p || typeof p.then !== "function") { fallback(); return; }
+    p.then(function (result) {
+      if (settled) return; settled = true;
+      renderConfirmation(unwrapResult(result), name);
+    }).catch(function () { fallback(); });
+  }
+
+  function renderConfirmation(data, name) {
+    data = data || {};
+    var order = data.order || {};
+    var reqNum = data.requestNumber || order.number || "";
+    var link = data.link || "";
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var banner = document.createElement("div"); banner.className = "banner-ok";
+    banner.textContent = "\u2713 Order " + (reqNum || "submitted") + " submitted to ServiceNow";
+    root.appendChild(banner);
+    var h = document.createElement("h1"); h.textContent = name; root.appendChild(h);
+    if (reqNum) {
+      var meta = document.createElement("div"); meta.className = "meta";
+      meta.textContent = "Request " + reqNum + " \u2022 submitted"; root.appendChild(meta);
+    }
+    var act = document.createElement("div"); act.className = "actions";
+    if (link) {
+      var a = document.createElement("a");
+      a.className = "btn-link primary"; a.textContent = "View in ServiceNow";
+      a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(link); });
+      act.appendChild(a);
+    }
+    addBackLink(act);
+    if (act.childNodes.length) root.appendChild(act);
+  }
+
+  // --- State 1: results list ----------------------------------------------
+  function renderList(data) {
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var items = Array.isArray(data.items) ? data.items : [];
 
     var h1 = document.createElement("h1"); h1.textContent = "ServiceNow catalog results"; root.appendChild(h1);
     var meta = document.createElement("div"); meta.className = "meta";
@@ -131,10 +394,34 @@
       card.appendChild(name);
       if (item.short_description) card.appendChild(desc);
       if (item.category || item.catalog) card.appendChild(cat);
-      card.addEventListener("click", function () { openOrderForm(item); });
+      card.addEventListener("click", function () { selectItem(item); });
       grid.appendChild(card);
     });
     root.appendChild(grid);
+  }
+
+  // Entry point: receive the search_catalog_items payload.
+  function render(payload) {
+    var data = payload || getData();
+    if (!data || typeof data !== "object") {
+      root.innerHTML = "";
+      var e = document.createElement("p"); e.className = "empty";
+      e.textContent = "No catalog results to display."; root.appendChild(e); return;
+    }
+    lastListData = data;
+    var items = Array.isArray(data.items) ? data.items : [];
+
+    // Sole strong match: the server sent exactly one item plus an autoSelect
+    // sys_id. Skip the list entirely and open the order form for the user.
+    var autoSelect = data.autoSelect;
+    if (!autoAdvanced && autoSelect && items.length === 1 &&
+        (items[0].sys_id === autoSelect || !items[0].sys_id)) {
+      autoAdvanced = true;
+      selectItem(items[0]);
+      return;
+    }
+
+    renderList(data);
   }
 
   showLoading(root, "Loading catalog\u2026");
