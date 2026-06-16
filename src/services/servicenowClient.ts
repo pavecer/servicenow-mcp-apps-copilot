@@ -938,7 +938,10 @@ export class ServiceNowClient {
       sysparm_limit: limit ?? 50
     };
 
-    // Include specific fields if provided, otherwise return common fields
+    // Include specific fields if provided, otherwise return common fields.
+    // sc_request stores its timestamps in sys_created_on / sys_updated_on (the
+    // plain created_on/updated_on columns are usually empty), so fetch both —
+    // the widget projection falls back to the sys_* variants.
     const defaultFields = [
       "sys_id",
       "number",
@@ -949,6 +952,8 @@ export class ServiceNowClient {
       "assigned_to",
       "created_on",
       "updated_on",
+      "sys_created_on",
+      "sys_updated_on",
       "request_status",
       "requested_for"
     ];
@@ -978,7 +983,7 @@ export class ServiceNowClient {
                   sysparm_fields: [
                     "sys_id",
                     "number",
-                    "cat_item_id",
+                    "cat_item",
                     "quantity",
                     "state",
                     "short_description",
@@ -991,9 +996,11 @@ export class ServiceNowClient {
             const requestItems = itemsResponse.data.result || [];
 
             // Enrich each item with catalog item details (also concurrency-capped).
+            // The catalog item is referenced by sc_req_item.cat_item (a reference
+            // field), not cat_item_id.
             const enrichedItems = await mapWithConcurrency(requestItems, SERVICENOW_FANOUT_CONCURRENCY, async (item) => {
-                const catItemId = item.cat_item_id as Record<string, unknown> | string | undefined;
-                const catItemSysId = typeof catItemId === "object" ? catItemId.value : catItemId;
+                const catItemRef = item.cat_item as Record<string, unknown> | string | undefined;
+                const catItemSysId = typeof catItemRef === "object" ? catItemRef.value : catItemRef;
 
                 if (!catItemSysId) {
                   return item;

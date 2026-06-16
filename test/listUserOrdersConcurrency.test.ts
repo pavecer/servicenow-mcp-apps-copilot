@@ -58,7 +58,7 @@ describe("listUserOrders concurrency cap", () => {
           data: {
             result: Array.from({ length: NUM_ITEMS_PER_REQUEST }, (_, i) => ({
               sys_id: `item-${i}`,
-              cat_item_id: { value: `cat-${i}` }
+              cat_item: { value: `cat-${i}` }
             }))
           }
         });
