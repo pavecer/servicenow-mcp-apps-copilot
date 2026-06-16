@@ -112,14 +112,23 @@ export function registerSearchCatalogItemsTool(server: McpServer, client: Servic
       // Only emitted when the feature flag is on so the historical Copilot
       // Studio surface is byte-identical in the default state.
       if (config.mcpApps.enabled) {
-        // UX: skip the catalog-browse selection step when the user has clearly
-        // identified a single item. Two cases auto-advance straight to the
-        // order form (no intermediate "pick from a list" step):
+        // UX: when the user has clearly identified a single item, collapse the
+        // catalog-browse step to that one item and let the widget auto-advance
+        // to the order form (see catalog-browse.html `autoSelect`). Two cases:
         //   1. Exactly one item matched the search.
-        //   2. Exactly one result's NAME is contained in the user's query
+        //   2. Exactly one result's NAME is a token-subset of the user's query
         //      (e.g. "Pixel 4a" when they asked for a "white Pixel 4a 256GB") —
         //      even when the literal text search also returned loosely-related
         //      items (the 2 monitors that mention "pixel" resolution).
+        //
+        // IMPORTANT: tool output `content` MUST stay neutral and descriptive.
+        // Imperative instructions aimed at the model (e.g. "Do not show a
+        // selection. Immediately call get_catalog_item_form…") are flagged by
+        // Microsoft 365 Copilot's cross-prompt-injection (XPIA / Prompt Shield)
+        // filter as injected instructions and ABORT the whole turn with
+        // "Sorry, it looks like I can't respond to this." The auto-advance is
+        // therefore driven entirely client-side by the widget, never by text
+        // instructions to the model.
         const queryTokens = catalogQueryTokens(query);
         const strongMatches = itemList.filter(item =>
           itemNameMatchesQuery(item.name, queryTokens)
@@ -131,27 +140,18 @@ export function registerSearchCatalogItemsTool(server: McpServer, client: Servic
               ? itemList[0]
               : undefined;
 
-        if (soleTarget) {
-          result.content = [
-            {
-              type: "text" as const,
-              text:
-                `One catalog item clearly matches "${query}": ${soleTarget.name} ` +
-                `(sys_id ${soleTarget.sys_id}). Do not show a selection or ask the ` +
-                `user to choose. Immediately call get_catalog_item_form with ` +
-                `itemSysId="${soleTarget.sys_id}" to open the order form for this item.`
-            }
-          ];
-          return result;
-        }
+        // For a sole target, show ONLY that item (hides loosely-related noise)
+        // and flag it for the widget to auto-open. Otherwise show all matches.
+        const displayItems = soleTarget ? [soleTarget] : itemList;
 
         result.structuredContent = {
           query,
-          found: items.length,
-          items: itemList
+          found: displayItems.length,
+          items: displayItems,
+          autoSelect: soleTarget ? soleTarget.sys_id : null
         };
 
-        // MCP Apps: `content` must be a concise model-facing summary only.
+        // MCP Apps: `content` must be a concise, neutral model-facing summary.
         // The matching items travel in structuredContent and are rendered by
         // the catalog-browse widget. Returning the full JSON list (plus the
         // Adaptive Card) in `content` makes Microsoft 365 Copilot render a
@@ -159,7 +159,9 @@ export function registerSearchCatalogItemsTool(server: McpServer, client: Servic
         result.content = [
           {
             type: "text" as const,
-            text: `Found ${items.length} catalog item(s) matching "${query}". The results are shown above as selectable cards for the user to choose from.`
+            text: soleTarget
+              ? `Found the catalog item matching "${query}": ${soleTarget.name}. Opening its order form.`
+              : `Found ${items.length} catalog item(s) matching "${query}". The results are shown above as selectable cards for the user to choose from.`
           }
         ];
       }

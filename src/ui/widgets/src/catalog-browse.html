@@ -69,6 +69,23 @@
   var root = document.getElementById("root");
   applyTheme();
 
+  // Auto-advance guard: a sole-match search collapses to one card and we open
+  // its order form automatically (one less click). Driven entirely client-side
+  // via sendFollowUp — the SAME mechanism a manual card click uses — so no
+  // model-directed instructions live in tool output (those trip Microsoft 365
+  // Copilot's prompt-injection filter and abort the turn). Fire at most once.
+  var autoAdvanced = false;
+  function openOrderForm(item) {
+    var sysId = item.sys_id || "";
+    var itemName = item.name || sysId;
+    if (!sysId && !itemName) return;
+    // Opening the order-form widget requires the AGENT to call
+    // get_catalog_item_form as a tool in the conversation. A widget-initiated
+    // callTool only returns data to THIS widget; it does not mount a new
+    // widget. So we drive it via a follow-up message the model acts on.
+    sendFollowUp("Open the order form for \"" + itemName + "\"" + (sysId ? " (catalog item sys_id " + sysId + ")" : "") + ".");
+  }
+
   function render(payload) {
     root.innerHTML = "";
     var data = payload || getData();
@@ -78,6 +95,20 @@
     }
     if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
     var items = Array.isArray(data.items) ? data.items : [];
+
+    // Sole strong match: the server sent exactly one item plus an autoSelect
+    // sys_id. Skip the selection entirely and open the order form for the user.
+    var autoSelect = data.autoSelect;
+    if (!autoAdvanced && autoSelect && items.length === 1 &&
+        (items[0].sys_id === autoSelect || !items[0].sys_id)) {
+      autoAdvanced = true;
+      var h1a = document.createElement("h1");
+      h1a.textContent = "Opening order form\u2026"; root.appendChild(h1a);
+      var metaA = document.createElement("div"); metaA.className = "meta";
+      metaA.textContent = items[0].name || ""; root.appendChild(metaA);
+      openOrderForm(items[0]);
+      return;
+    }
 
     var h1 = document.createElement("h1"); h1.textContent = "ServiceNow catalog results"; root.appendChild(h1);
     var meta = document.createElement("div"); meta.className = "meta";
@@ -100,16 +131,7 @@
       card.appendChild(name);
       if (item.short_description) card.appendChild(desc);
       if (item.category || item.catalog) card.appendChild(cat);
-      card.addEventListener("click", function () {
-        var sysId = item.sys_id || "";
-        var itemName = item.name || sysId;
-        if (!sysId && !itemName) return;
-        // Opening the order-form widget requires the AGENT to call
-        // get_catalog_item_form as a tool in the conversation. A widget-initiated
-        // callTool only returns data to THIS widget; it does not mount a new
-        // widget. So we drive it via a follow-up message the model acts on.
-        sendFollowUp("Open the order form for \"" + itemName + "\"" + (sysId ? " (catalog item sys_id " + sysId + ")" : "") + ".");
-      });
+      card.addEventListener("click", function () { openOrderForm(item); });
       grid.appendChild(card);
     });
     root.appendChild(grid);

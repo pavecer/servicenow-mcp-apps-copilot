@@ -130,17 +130,21 @@ describe("structuredContent gating: flag on", () => {
     expect((result.content as unknown[]).length).toBe(1);
   });
 
-  it("search_catalog_items with a SINGLE match skips the browse widget and directs to the form", async () => {
+  it("search_catalog_items with a SINGLE match collapses to one auto-select card (neutral content)", async () => {
     const fake = createFakeServer();
     mods.search.registerSearchCatalogItemsTool(fake.server as never, fakeSearchClient);
     const result = await fake.tools[0].handler({ query: "laptop" }) as Record<string, unknown>;
-    // No structuredContent -> catalog-browse widget does not mount.
-    expect(result.structuredContent).toBeUndefined();
-    // Content directs the model straight to get_catalog_item_form with the sys_id.
+    // structuredContent IS emitted so the browse widget mounts and auto-advances.
+    const sc = result.structuredContent as Record<string, unknown>;
+    expect(sc).toBeDefined();
+    expect(sc.found).toBe(1);
+    expect(sc.autoSelect).toBe("item1");
+    expect((sc.items as Array<{ sys_id: string }>)).toHaveLength(1);
+    // Content stays NEUTRAL -> no imperative instructions that trip Prompt Shield.
     const text = (result.content as Array<{ text: string }>)[0].text;
-    expect(text).toContain("get_catalog_item_form");
-    expect(text).toContain("item1");
-    expect(text.toLowerCase()).not.toContain("selectable cards");
+    expect(text.toLowerCase()).not.toContain("do not show");
+    expect(text.toLowerCase()).not.toContain("immediately call");
+    expect(text).not.toContain("get_catalog_item_form");
   });
 
   it("auto-advances to the sole item whose NAME matches, even with extra loose results", async () => {
@@ -164,11 +168,18 @@ describe("structuredContent gating: flag on", () => {
     const fake = createFakeServer();
     mods.search.registerSearchCatalogItemsTool(fake.server as never, pixelClient);
     const result = await fake.tools[0].handler({ query: "white Pixel 4a with 256GB storage" }) as Record<string, unknown>;
-    // Sole name match -> skip browse, go to the form for Pixel 4a.
-    expect(result.structuredContent).toBeUndefined();
+    // Sole name match -> collapse to the Pixel 4a card only, flagged autoSelect.
+    const sc = result.structuredContent as Record<string, unknown>;
+    expect(sc).toBeDefined();
+    expect(sc.found).toBe(1);
+    expect(sc.autoSelect).toBe("pix1");
+    const scItems = sc.items as Array<{ sys_id: string; name: string }>;
+    expect(scItems).toHaveLength(1);
+    expect(scItems[0].sys_id).toBe("pix1");
+    // Neutral content only -> no model-directed imperative instructions.
     const text = (result.content as Array<{ text: string }>)[0].text;
-    expect(text).toContain("get_catalog_item_form");
-    expect(text).toContain("pix1");
+    expect(text).not.toContain("get_catalog_item_form");
+    expect(text.toLowerCase()).not.toContain("immediately call");
   });
 
   it("list_user_orders emits compact structuredContent (drops requestItems) under 64 KiB", async () => {
