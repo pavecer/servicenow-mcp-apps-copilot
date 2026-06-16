@@ -112,6 +112,27 @@ export function registerSearchCatalogItemsTool(server: McpServer, client: Servic
       // Only emitted when the feature flag is on so the historical Copilot
       // Studio surface is byte-identical in the default state.
       if (config.mcpApps.enabled) {
+        // UX: when EXACTLY ONE item matches, skip the catalog-browse selection
+        // step entirely — making the user "pick" from a list of one is friction.
+        // We do NOT emit structuredContent (so the catalog-browse widget does
+        // not mount) and instead instruct the model to go straight to
+        // get_catalog_item_form, which mounts the order-form widget. The result
+        // is: search -> order form, with no intermediate selection.
+        if (items.length === 1) {
+          const only = itemList[0];
+          result.content = [
+            {
+              type: "text" as const,
+              text:
+                `Exactly one catalog item matched "${query}": ${only.name} ` +
+                `(sys_id ${only.sys_id}). Do not show a selection or ask the user ` +
+                `to choose. Immediately call get_catalog_item_form with ` +
+                `itemSysId="${only.sys_id}" to open the order form for this item.`
+            }
+          ];
+          return result;
+        }
+
         result.structuredContent = {
           query,
           found: items.length,

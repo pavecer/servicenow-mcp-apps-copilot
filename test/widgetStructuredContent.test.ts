@@ -37,6 +37,28 @@ const fakeSearchClient = {
   ]
 } as unknown as import("../src/services/servicenowClient").ServiceNowClient;
 
+// Two results — the single-item case short-circuits straight to the order form
+// (no structuredContent), so the catalog-browse structuredContent assertion
+// needs two or more matches.
+const fakeMultiSearchClient = {
+  searchCatalogItems: async () => [
+    {
+      sys_id: "item1",
+      name: "Test laptop",
+      short_description: "A laptop",
+      category: { sys_id: "cat1", title: "Hardware", name: "hardware" },
+      sc_catalog: { sys_id: "scat1", title: "Service Catalog", name: "service_catalog" }
+    },
+    {
+      sys_id: "item2",
+      name: "Test monitor",
+      short_description: "A monitor",
+      category: { sys_id: "cat1", title: "Hardware", name: "hardware" },
+      sc_catalog: { sys_id: "scat1", title: "Service Catalog", name: "service_catalog" }
+    }
+  ]
+} as unknown as import("../src/services/servicenowClient").ServiceNowClient;
+
 const fakeListClient = {
   listUserOrders: async () => Array.from({ length: 25 }, (_, i) => ({
     sys_id: `sys${i}`,
@@ -96,16 +118,29 @@ describe("structuredContent gating: flag on", () => {
     else process.env.MCP_APPS_ENABLED = originalFlag;
   });
 
-  it("search_catalog_items emits compact structuredContent under 64 KiB", async () => {
+  it("search_catalog_items emits compact structuredContent for 2+ matches under 64 KiB", async () => {
+    const fake = createFakeServer();
+    mods.search.registerSearchCatalogItemsTool(fake.server as never, fakeMultiSearchClient);
+    const result = await fake.tools[0].handler({ query: "hardware" }) as Record<string, unknown>;
+    const sc = result.structuredContent as Record<string, unknown>;
+    expect(sc).toBeDefined();
+    expect(sc.query).toBe("hardware");
+    expect(sc.found).toBe(2);
+    expect(JSON.stringify(sc).length).toBeLessThan(64 * 1024);
+    expect((result.content as unknown[]).length).toBe(1);
+  });
+
+  it("search_catalog_items with a SINGLE match skips the browse widget and directs to the form", async () => {
     const fake = createFakeServer();
     mods.search.registerSearchCatalogItemsTool(fake.server as never, fakeSearchClient);
     const result = await fake.tools[0].handler({ query: "laptop" }) as Record<string, unknown>;
-    const sc = result.structuredContent as Record<string, unknown>;
-    expect(sc).toBeDefined();
-    expect(sc.query).toBe("laptop");
-    expect(sc.found).toBe(1);
-    expect(JSON.stringify(sc).length).toBeLessThan(64 * 1024);
-    expect((result.content as unknown[]).length).toBe(1);
+    // No structuredContent -> catalog-browse widget does not mount.
+    expect(result.structuredContent).toBeUndefined();
+    // Content directs the model straight to get_catalog_item_form with the sys_id.
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    expect(text).toContain("get_catalog_item_form");
+    expect(text).toContain("item1");
+    expect(text.toLowerCase()).not.toContain("selectable cards");
   });
 
   it("list_user_orders emits compact structuredContent (drops requestItems) under 64 KiB", async () => {
