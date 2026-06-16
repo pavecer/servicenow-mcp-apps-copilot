@@ -935,7 +935,12 @@ export class ServiceNowClient {
 
     const params: Record<string, string | number> = {
       sysparm_query: sysparmQuery,
-      sysparm_limit: limit ?? 50
+      sysparm_limit: limit ?? 50,
+      // Return display values so choice/reference fields resolve to labels
+      // ("Open" instead of the raw state code "1", "David Vecer" instead of a
+      // sys_user sys_id). sys_id itself stays the raw GUID under this mode, so
+      // the per-request sc_req_item enrichment query below still works.
+      sysparm_display_value: "true"
     };
 
     // Include specific fields if provided, otherwise return common fields.
