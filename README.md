@@ -9,6 +9,11 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 | `search_catalog_items` | Full-text catalog search with Adaptive Card item picker |
 | `get_catalog_item_form` | Returns an Adaptive Card form for the selected item |
 | `place_order` | Submits the order and returns a confirmation Adaptive Card |
+| `add_to_cart` | Adds an item to the user's ServiceNow cart (basket) without ordering — MCP Apps only |
+| `view_cart` | Returns the current cart contents, rendered in the cart widget — MCP Apps only |
+| `update_cart_item` | Changes a cart line's quantity/variables — MCP Apps only |
+| `remove_cart_item` | Removes a single cart line — MCP Apps only |
+| `submit_cart` | Submits the whole cart as one `sc_request` with multiple items — MCP Apps only |
 | `list_user_orders` | Lists the caller's open (non-closed) catalog orders, enriched with their request items |
 | `get_order_detail` | Retrieves a single `sc_request` with its items and approvals (used by the M365 Copilot "MCP Apps" detail widget) |
 | `update_order` | Updates a small allowlist of requestor-mutable fields on the caller's order (`short_description`, `description`, `comments`, `urgency`, `priority`) |
@@ -16,7 +21,7 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 
 > **This repo is dedicated to the MCP Apps capability** — delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. The full build-and-debug story, the deployment map, and the per-user-identity (OBO) research are in [`DEVELOPMENT_JOURNAL.md`](DEVELOPMENT_JOURNAL.md).
 
-**Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and four `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, my orders, order detail). When the flag is **off**, tool results fall back to a legacy Adaptive Card surface in `content[0].text` (still consumable by an MCP client such as a Copilot Studio agent). Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
+**Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and five `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, cart, my orders, order detail). The cart tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`) are registered **only** when this flag is on, so the flag-off default surface is unchanged. When the flag is **off**, tool results fall back to a legacy Adaptive Card surface in `content[0].text` (still consumable by any standard MCP client). Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
 
 **Related documentation:**
 
@@ -65,7 +70,7 @@ What you need from ServiceNow:
 
 ### Step 2 -- Register an Entra ID Application
 
-This enables per-user OAuth 2.0 authentication in Copilot Studio.
+This enables per-user OAuth 2.0 authentication for MCP clients.
 
 1. [Azure Portal](https://portal.azure.com) > **Entra ID > App registrations > New registration**
    - Name: `ServiceNow MCP Server`
@@ -83,7 +88,6 @@ This enables per-user OAuth 2.0 authentication in Copilot Studio.
    ```
    https://oauth.botframework.com/callback
    https://global.consent.azure-apim.net/redirect
-   https://copilotstudio.preview.microsoft.com/connection/oauth/redirect
    ```
    Enable **Access tokens** and **ID tokens** > **Save**
 
@@ -100,7 +104,7 @@ This enables per-user OAuth 2.0 authentication in Copilot Studio.
 npm run deploy:azure
 ```
 
-The script prompts for all values, provisions Azure resources (Function App, Key Vault, Application Insights), deploys the function, and prints Copilot Studio setup instructions.
+The script prompts for all values, provisions Azure resources (Function App, Key Vault, Application Insights), deploys the function, and prints client setup instructions.
 
 **Non-interactive (CI/CD):**
 
@@ -161,7 +165,7 @@ See [docs/M365_COPILOT_MCP_APPS.md](docs/M365_COPILOT_MCP_APPS.md) for the full 
 
 ### Step 5 -- (Optional) Register with Microsoft Agent 365 (BYO MCP)
 
-To make this MCP server tenant-governed (visible in **Microsoft 365 admin center > Agents > Tools > Registry**, monitored in Defender XDR, and discoverable from Copilot Studio, VS Code, Claude Code, and GitHub Copilot CLI), register it as a Bring-Your-Own MCP server with [Microsoft Agent 365](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/manage-tools-for-agent?view=o365-worldwide#bring-your-own-byo-mcp-server).
+To make this MCP server tenant-governed (visible in **Microsoft 365 admin center > Agents > Tools > Registry**, monitored in Defender XDR, and discoverable from MCP clients such as VS Code, Claude Code, and GitHub Copilot CLI), register it as a Bring-Your-Own MCP server with [Microsoft Agent 365](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/manage-tools-for-agent?view=o365-worldwide#bring-your-own-byo-mcp-server).
 
 The server already speaks `EntraOAuth` end-to-end, so no code changes are required. Use the helper script:
 
@@ -201,8 +205,6 @@ applied beyond what's documented here.
 | `GET /mcp` | SSE readiness probe (Streamable HTTP transport) | Anonymous |
 | `DELETE /mcp` | Session cleanup (stateless mode no-op) | Anonymous |
 | `OPTIONS /mcp` | CORS preflight | Anonymous |
-| `POST /api/catalog/search` · `GET /api/catalog/form/:sysId` · `POST /api/catalog/order` | Deterministic REST surface for Copilot Studio topics | **Entra Bearer required** |
-| `OPTIONS /api/catalog/*` | CORS preflight | Anonymous |
 | `GET /health` | Liveness/readiness probe — returns `{"status":"ok","server":"servicenow-mcp"}` | Anonymous |
 | `GET /.well-known/openid-configuration` · `oauth-authorization-server` · `oauth-protected-resource` | OIDC discovery and RFC 8414/9728 metadata | Anonymous |
 | `POST /oauth/register` | RFC 7591 Dynamic Client Registration | Gated — see below |
@@ -210,7 +212,7 @@ applied beyond what's documented here.
 
 `POST /oauth/register` is **closed by default**: when no `ENTRA_DCR_REGISTRATION_TOKEN` is set and `ENTRA_DCR_ALLOW_UNAUTHENTICATED` is not `"true"`, the endpoint returns **403**. With a registration token configured the request must include `Authorization: Bearer <token>` (constant-time comparison); set `ENTRA_DCR_ALLOW_UNAUTHENTICATED=true` to opt in to anonymous DCR.
 
-When `ENTRA_AUTH_DISABLED=true` (intended for local dev only), Bearer validation is bypassed on `POST /mcp` and `/api/catalog/*`. The startup log emits a `WARN` line stating the effective tenant policy at every cold start so this is visible in App Insights.
+When `ENTRA_AUTH_DISABLED=true` (intended for local dev only), Bearer validation is bypassed on `POST /mcp`. The startup log emits a `WARN` line stating the effective tenant policy at every cold start so this is visible in App Insights.
 
 ### Delegated Identity Flow
 
@@ -268,7 +270,7 @@ npm run smoke:test
 | `SERVICENOW_USERNAME` | Integration user login |
 | `SERVICENOW_PASSWORD` | Integration user password |
 
-### Entra ID (required for Copilot Studio OAuth)
+### Entra ID (required for MCP client OAuth)
 
 | Variable | Description |
 |----------|-------------|
@@ -288,6 +290,8 @@ npm run smoke:test
 | `ENTRA_DCR_REGISTRATION_TOKEN` | _(unset)_ | Bearer token required on `POST /oauth/register` |
 | `ENTRA_DCR_ALLOW_UNAUTHENTICATED` | `false` | Allow open Dynamic Client Registration when no token is configured |
 | `ENTRA_ALLOWED_AUDIENCES` | _(empty)_ | Comma-separated extra `aud` values to accept (custom App ID URIs) |
+| `ENTRA_OBO_ENABLED` | `false` | Exchange the inbound user token for a downstream ServiceNow token via MSAL On-Behalf-Of (see [docs/AUTH_ENTRA_OBO_OKTA.md](docs/AUTH_ENTRA_OBO_OKTA.md)). Default keeps the integration-user grant path |
+| `ENTRA_OBO_DOWNSTREAM_SCOPE` | _(unset)_ | Downstream scope requested in the OBO exchange (e.g. `api://<server-app-id>/.default`). Required when `ENTRA_OBO_ENABLED=true` |
 | `CORS_ALLOWED_ORIGINS` | _(empty)_ | Comma-separated browser origins for CORS-enabled endpoints |
 | `SERVICENOW_OAUTH_TOKEN_PATH` | `/oauth_token.do` | ServiceNow token endpoint path |
 | `SERVICENOW_OAUTH_GRANT_TYPE` | `auto` | Override grant type: `password` or `client_credentials` |
@@ -303,11 +307,18 @@ npm run smoke:test
 | `LOG_INCLUDE_CALLER_IDENTITY` | `false` | Attach caller `oid`/`upn` to every log entry. Off by default to keep PII out of App Insights |
 | `LOG_INCLUDE_ERROR_STACK` | `false` | Include error stack traces in error log entries |
 
+### Microsoft 365 Copilot MCP Apps (SEP-1865)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_APPS_ENABLED` | `false` | Enable SEP-1865 widget rendering: registers the four `ui://servicenow-mcp/*.html` resources, decorates widget-backed tools with `_meta.ui.resourceUri`, and adds compact `structuredContent`. When off, tool results stay byte-identical to the legacy Adaptive Card surface |
+| `MCP_APPS_PUBLIC_ORIGIN` | _(unset)_ | Public origin where this server is reachable from the M365 Copilot widget host. Documentation only — not consumed by any runtime code path |
+
 ---
 
 ## Local Testing Against ServiceNow
 
-Two ways to verify ServiceNow responses without going through Copilot Studio:
+Two ways to verify ServiceNow responses without going through an MCP client:
 
 ### Option A — Run the full MCP server locally and call it via JSON-RPC
 
@@ -379,14 +390,14 @@ az account get-access-token --resource api://<ENTRA_CLIENT_ID> --query accessTok
 
 ## Troubleshooting
 
-**401 on MCP endpoint** -- Entra auth is active and no valid Bearer token was sent. Check the Copilot Studio connection (user must have signed in). For local testing, set `ENTRA_AUTH_DISABLED=true`.
+**401 on MCP endpoint** -- Entra auth is active and no valid Bearer token was sent. Check the MCP client connection (user must have signed in). For local testing, set `ENTRA_AUTH_DISABLED=true`.
 
 **Orders created but `requested_for` is wrong** -- The post-order PATCH failed. Verify:
 - Integration user has **write** on `sc_request` in ServiceNow.
 - Caller's Entra email matches `sys_user.email` or `sys_user.user_name`.
 - Application Insights traces for `[ServiceNowClient.placeOrder.requestedForPatchFailed]`.
 
-**Dynamic discovery fails in Copilot Studio** -- Verify `ENTRA_TENANT_ID` and `ENTRA_CLIENT_ID` are set. Confirm the OIDC endpoint returns 200. If you changed OAuth settings after the MCP tool was added, **delete and re-add the connection** -- Power Platform caches OIDC metadata on first connect.
+**Dynamic discovery fails in the MCP client** -- Verify `ENTRA_TENANT_ID` and `ENTRA_CLIENT_ID` are set. Confirm the OIDC endpoint returns 200. If you changed OAuth settings after the MCP tool was added, **delete and re-add the connection** -- Power Platform caches OIDC metadata on first connect.
 
 **validate_servicenow_config errors** -- Run with `probeOrderNow: false` first to isolate auth vs. catalog access issues.
 

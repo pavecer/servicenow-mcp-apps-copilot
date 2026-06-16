@@ -20,7 +20,7 @@ export interface BuildCorsHeadersOptions {
   methods?: string;
   /**
    * Headers the browser is allowed to send. Callers may extend the default
-   * set (e.g. catalogApi adds `x-functions-key` and `x-servicenow-access-token`).
+   * set (e.g. with `x-functions-key` and `x-servicenow-access-token`).
    */
   allowedHeaders?: string;
 }

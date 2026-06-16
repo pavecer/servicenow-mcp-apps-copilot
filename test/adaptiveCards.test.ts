@@ -41,8 +41,8 @@ describe("buildCatalogItemSelectionAdaptiveCard", () => {
     expect(descriptionBlock.text).not.toContain("&quot;");
   });
 
-  it("emits explicit Action.Submit buttons per item so Copilot Studio renderers always show a clickable control", () => {
-    // Some Copilot Studio renderers (notably the web test pane) silently
+  it("emits explicit Action.Submit buttons per item so Adaptive Card renderers always show a clickable control", () => {
+    // Some Adaptive Card renderers silently
     // ignore Container.selectAction — the card looks like static text and
     // the user has no way to pick an item. Top-level actions[] are always
     // rendered as buttons, so verify each item gets one.

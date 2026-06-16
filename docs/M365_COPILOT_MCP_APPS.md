@@ -9,8 +9,8 @@
 This server optionally exposes [SEP-1865 "MCP Apps"][sep-1865] widget UIs that
 render inline inside Microsoft 365 Copilot. When you ask the agent to "order a
 laptop" or "show my open ServiceNow orders", Copilot mounts a sandboxed
-HTML iframe right in the chat — backed by the same MCP tools an MCP client
-(such as a Copilot Studio agent) can call.
+HTML iframe right in the chat — backed by the same MCP tools any standard MCP
+client can call.
 
 [sep-1865]: https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx
 
@@ -35,7 +35,7 @@ HTML iframe right in the chat — backed by the same MCP tools an MCP client
 | --- | --- |
 | **Feature flag (server)** | `MCP_APPS_ENABLED=true` on the deployed function app |
 | **Widget resources** | Served at `ui://servicenow-mcp/{name}.html` via MCP `resources/read` |
-| **Tool decoration** | `_meta.ui.resourceUri` injected into `tools/list` for the four widget tools |
+| **Tool decoration** | `_meta.ui.resourceUri` injected into `tools/list` for the widget-backed tools |
 | **Declarative agent** | [`m365-agent/`](../m365-agent/README.md) — sideload with M365 Agents Toolkit |
 | **Spec docs** | [Microsoft Learn: plugin-mcp-apps][learn-plugin], [Cowork host guide][learn-cowork] |
 
@@ -53,11 +53,10 @@ surfaces:
 2. `initialize` advertises the `resources` capability so the host can call
    `resources/list` / `resources/read`.
 
-Existing Copilot Studio agents (`employee-self-service-it`,
-`ess-servicenow-catalog-extension`, `[CTOP] - SnowMCP OrderCat`) only consume
-the `adaptiveCard` field inside `content[0].text` — that text payload is
+Generic MCP clients that only consume
+the `adaptiveCard` field inside `content[0].text` get that text payload
 preserved **byte-for-byte** regardless of the flag. The flag is **off by
-default** so you can deploy this code without disturbing any agent currently
+default** so you can deploy this code without disturbing any client currently
 in production, then flip it after validating in dev.
 
 ## Widgets shipped
@@ -154,15 +153,15 @@ and the journal's *"last task"* section.
 # 1. Local dev — flag on
 export MCP_APPS_ENABLED=true
 npm install       # node_modules is NOT copied into this fork
-npm test          # 177 tests pass; the gating + widget + field suites cover the flag-on path
+npm test          # 188 tests pass; the gating + widget + field suites cover the flag-on path
 npm run build
 npm run smoke:test  # against `func start` if you have one
 
 # 2. Inspect with MCP Inspector
 npx @modelcontextprotocol/inspector http://localhost:8080/mcp
-#   resources/list  → four ui:// resources
+#   resources/list  → five ui:// resources
 #   resources/read  → text/html;profile=mcp-app body
-#   tools/list      → _meta.ui.resourceUri present on the four widget tools
+#   tools/list      → _meta.ui.resourceUri present on the widget-backed tools
 
 # 3. Sideload the declarative agent
 cd m365-agent
@@ -176,7 +175,7 @@ az functionapp config appsettings set \
   --settings MCP_APPS_ENABLED=true
 ```
 
-## Regression — Copilot Studio surface stays byte-identical
+## Regression — default surface stays byte-identical
 
 The repo's vitest suite includes explicit gating tests that prove this:
 
@@ -184,7 +183,7 @@ The repo's vitest suite includes explicit gating tests that prove this:
   flag is off, `getMinimalToolDefinitions()` carries no `_meta` field on any
   tool and `getWidgetForTool()` returns `undefined`.
 - [`test/widgetResources.test.ts`](../test/widgetResources.test.ts) —
-  flag-off registers zero resources; flag-on registers exactly four with the
+  flag-off registers zero resources; flag-on registers exactly five with the
   spec-mandated `text/html;profile=mcp-app` mime.
 - [`test/widgetStructuredContent.test.ts`](../test/widgetStructuredContent.test.ts) —
   flag-off responses do not include `structuredContent`; flag-on responses
@@ -192,7 +191,7 @@ The repo's vitest suite includes explicit gating tests that prove this:
 
 The pre-existing test suite (manifest content parity, prefill,
 adaptive-card emission, update_order, list-orders concurrency, …) continues
-to pass unchanged — **177 tests across 23 files**. Run `npm test` to verify.
+to pass unchanged — **188 tests across 25 files**. Run `npm test` to verify.
 The widget-specific suites also include `test/widgetFieldExploration.test.ts`,
 which maps real catalog-item variable types against the widget field schema
 using captured fixtures in `test/fixtures/catalogItems.json`.

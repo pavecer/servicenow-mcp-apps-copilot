@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 // Asserts the SEP-1865 widget `structuredContent` payload is:
 //   (a) gated behind MCP_APPS_ENABLED — flag-off keeps responses
-//       byte-identical to the historical Copilot Studio surface
+//       byte-identical to the default (non-MCP-Apps) surface
 //   (b) when emitted, comfortably under Cowork's 64 KiB inlined-result cap.
 //
 // We load each flag state once per describe (the src import graph is heavy)

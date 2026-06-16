@@ -3,7 +3,7 @@
 > This repo started as the **MCP Apps fork** of `mcp-server-servicenow` and, on
 > 2026-06-15, was promoted to a **standalone private repo**
 > (`github.com/pavecer/mcp-server-servicenow-mcp-apps`) with its own fresh git
-> history. The legacy Copilot Studio agent exports and connector docs were
+> history. The legacy agent exports and connector docs were
 > removed at that point so the repo is dedicated to delivering ServiceNow
 > catalog ordering to Microsoft 365 Copilot / Cowork via MCP Apps. This file is
 > the "lab notebook" for that work — what we built, the bugs we hit, and how each
@@ -23,7 +23,7 @@
 | ServiceNow dev instance | `https://dev310193.service-now.com` (admin / password grant) |
 | Deploy command | `azd deploy api -e snowmcpwidg-dev` (~1m30s) |
 | Build widgets | `npm run build:widgets` (regenerates `src/ui/widgets/generated/*.ts`) |
-| Tests | `npx vitest run` — 177 passing (23 files) |
+| Tests | `npx vitest run` — 188 passing (25 files) |
 
 > `node_modules/` was **not** copied into this fork to save space. Run
 > `npm install` before building or testing.
@@ -40,16 +40,18 @@ rendering inline inside Microsoft 365 Copilot:
   `openExternal`, `applyTheme`, `diagnostics`). It works with **both** the
   OpenAI Apps SDK (`window.openai.*`) and the MCP Apps `App` postMessage bridge,
   and falls back to a visible diagnostic if neither delivers data within 5s.
-- **Four widgets** — `src/ui/widgets/src/`:
-  - `catalog-browse.html` — grid of catalog items; click a card → opens the order form.
+- **Five widgets** — `src/ui/widgets/src/`:
+  - `catalog-browse.html` — grid of catalog items; click a card → opens the order form. Each item can be ordered now or **added to cart**.
   - `order-form.html` — typed form (checkboxes, dropdowns, textareas, section
-    headers, email) with submit → `place_order` → in-place confirmation.
+    headers, email) with submit → `place_order` → in-place confirmation, plus an **Add to cart** action.
+  - `cart.html` — the user's basket: line items with quantity steppers, remove,
+    running subtotal, and **Submit order** → `submit_cart` → one request.
   - `my-orders.html` — table of the user's open orders; click a row → order detail.
   - `order-detail.html` — one request with items, approvals, comment / cancel, and
-    a "View in ServiceNow" deep link.
+    a "View in ServiceNow" deep link (also the confirmation for `place_order` and `submit_cart`).
 - **`get_order_detail` tool** + per-tool widget binding (`_meta.ui.resourceUri`),
   gated behind `MCP_APPS_ENABLED` (off by default → byte-identical to the
-  Copilot Studio surface).
+  default non-MCP-Apps surface).
 - **`m365-agent/`** — the declarative-agent package for sideloading.
 
 ## The journey (bugs & fixes, in order)

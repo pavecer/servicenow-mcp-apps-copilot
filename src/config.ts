@@ -46,7 +46,8 @@ export const config = {
   // a valid Entra Bearer token on every request. Set ENTRA_AUTH_DISABLED=true
   // to skip validation during local development.
   //
-  // For cross-tenant scenarios (Copilot Studio in different tenant than Azure Function):
+  // For cross-tenant scenarios (the calling agent host signs in users in a
+  // different tenant than the Azure Function):
   // - Sets Entra app to multi-tenant (signInAudience: AzureADMultipleOrgs) in portal
   // - Obtain admin consent in remote tenant
   // - Set ENTRA_TRUSTED_TENANT_IDS to comma-separated list of allowed remote tenant GUIDs
@@ -54,11 +55,11 @@ export const config = {
   entraAuth: {
     tenantId: process.env.ENTRA_TENANT_ID,
     clientId: process.env.ENTRA_CLIENT_ID,
-    // Used in the DCR response so Copilot Studio can use the auth code flow.
+    // Used in the DCR response so an MCP client can use the auth code flow.
     clientSecret: process.env.ENTRA_CLIENT_SECRET,
     // Optional RFC 7591 "initial access token" that must be presented as
     // "Authorization: Bearer <token>" when calling POST /oauth/register.
-    // When unset the endpoint is open (required for automated Copilot Studio DCR).
+    // When unset the endpoint is open (required for automated DCR clients).
     dcrRegistrationToken: process.env.ENTRA_DCR_REGISTRATION_TOKEN,
     // Keep DCR closed by default when no registration token is configured.
     // Set ENTRA_DCR_ALLOW_UNAUTHENTICATED=true only if you explicitly require
@@ -117,9 +118,9 @@ export const config = {
   //   - Adds compact `structuredContent` (alongside the legacy text payload)
   //     so the widget can render immediately on tool result.
   // When disabled (default), the server emits the exact same `tools/list`,
-  // `initialize` capabilities, and tool responses it has historically — so the
-  // existing Copilot Studio agents (ess-servicenow-catalog-extension,
-  // employee-self-service-it, [CTOP] - SnowMCP OrderCat) are unaffected.
+  // `initialize` capabilities, and tool responses it has historically — so any
+  // generic MCP client that consumes the default (non-MCP-Apps) surface is
+  // unaffected.
   // Flip to "true" only in environments validated for the M365 Copilot host.
   mcpApps: {
     enabled: process.env.MCP_APPS_ENABLED === "true",

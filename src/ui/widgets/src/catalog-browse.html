@@ -244,6 +244,13 @@
         placeOrder(itemName, itemSysId, {}, b0, null);
       });
       act0.appendChild(b0);
+      var c0 = document.createElement("button");
+      c0.type = "button"; c0.textContent = "Add to cart";
+      c0.addEventListener("click", function () {
+        c0.disabled = true; c0.textContent = "Adding\u2026";
+        addToCart(itemName, itemSysId, {}, c0, null);
+      });
+      act0.appendChild(c0);
       addBackLink(act0);
       root.appendChild(act0);
       return;
@@ -290,6 +297,15 @@
     var submitBtn = document.createElement("button");
     submitBtn.type = "submit"; submitBtn.className = "primary"; submitBtn.textContent = "Submit order";
     actions.appendChild(submitBtn);
+    var cartBtn = document.createElement("button");
+    cartBtn.type = "button"; cartBtn.textContent = "Add to cart";
+    cartBtn.addEventListener("click", function () {
+      error.style.display = "none"; error.textContent = "";
+      var vars = gatherVariables();
+      cartBtn.disabled = true; cartBtn.textContent = "Adding\u2026";
+      addToCart(itemName, itemSysId, vars, cartBtn, error);
+    });
+    actions.appendChild(cartBtn);
     addBackLink(actions);
     form.appendChild(actions);
     root.appendChild(form);
@@ -338,6 +354,58 @@
       if (settled) return; settled = true;
       renderConfirmation(unwrapResult(result), name);
     }).catch(function () { fallback(); });
+  }
+
+  // --- Add to cart (basket) -----------------------------------------------
+  // Adds the item to the ServiceNow cart without ordering, then shows an
+  // "added" panel so the user can keep browsing or go review/submit the basket.
+  function addToCart(name, sysId, vars, btn, errEl) {
+    var settled = false;
+    function fallback() {
+      if (settled) return; settled = true;
+      sendFollowUp(
+        "Add \"" + name + "\"" + (sysId ? " (catalog item sys_id " + sysId + ")" : "") +
+        " to my cart using exactly these field values (do not change them): " +
+        JSON.stringify(vars) + "."
+      );
+      if (btn) btn.textContent = "Adding in chat\u2026";
+    }
+    var p;
+    try { p = callTool("add_to_cart", { itemSysId: sysId, variables: vars }); }
+    catch (e) { fallback(); return; }
+    if (!p || typeof p.then !== "function") { fallback(); return; }
+    p.then(function (result) {
+      if (settled) return; settled = true;
+      var data = unwrapResult(result);
+      if (data && data.success === false) { fallback(); return; }
+      renderAddedToCart(name, data);
+    }).catch(function () { fallback(); });
+  }
+
+  function renderAddedToCart(name, data) {
+    var cart = (data && data.cart) || {};
+    var count = Array.isArray(cart.items) ? cart.items.length : 0;
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var banner = document.createElement("div"); banner.className = "banner-ok";
+    banner.textContent = "\u2713 Added \u201c" + name + "\u201d to your cart";
+    root.appendChild(banner);
+    if (count) {
+      var meta = document.createElement("div"); meta.className = "meta";
+      meta.textContent = "Your basket now has " + count + " item" + (count === 1 ? "" : "s") +
+        (cart.subtotalPrice ? " \u2022 subtotal " + cart.subtotalPrice : "");
+      root.appendChild(meta);
+    }
+    var act = document.createElement("div"); act.className = "actions";
+    var review = document.createElement("button");
+    review.type = "button"; review.className = "primary"; review.textContent = "Review & submit basket";
+    review.addEventListener("click", function () { sendFollowUp("Show my ServiceNow cart so I can review and submit it."); });
+    act.appendChild(review);
+    var more = document.createElement("button");
+    more.type = "button"; more.textContent = "Add more items";
+    more.addEventListener("click", function () { backToResults(); });
+    act.appendChild(more);
+    root.appendChild(act);
   }
 
   function renderConfirmation(data, name) {

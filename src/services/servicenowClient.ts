@@ -6,7 +6,11 @@ import {
   ServiceNowCatalogItem,
   ServiceNowCatalogItemDetail,
   ServiceNowOrderResult,
-  ServiceNowPlaceOrderResponse
+  ServiceNowPlaceOrderResponse,
+  AddToCartInput,
+  ServiceNowCart,
+  ServiceNowCartItem,
+  ServiceNowSubmitCartResponse
 } from "../types/servicenow";
 import { TokenManager } from "./tokenManager";
 import { getDownstreamTokenForCaller, isOboEnabled } from "./oboTokenService";
@@ -1206,6 +1210,286 @@ export class ServiceNowClient {
         operation: "orders.detail_failed",
         requestSysId
       }, error);
+      throw error;
+    }
+  }
+
+  // ── Cart / basket ─────────────────────────────────────────────────────────
+  // ServiceNow maintains a server-side cart keyed to the authenticated user
+  // (sys_cart). Because each MCP request forwards the caller's identity
+  // (caller SN token or OBO), the basket persists across our stateless calls
+  // without any server-side state of our own. submit_order collapses the whole
+  // cart into ONE sc_request with multiple sc_req_item rows — the same shape
+  // get_order_detail already renders.
+
+  /**
+   * Flattens ServiceNow's two cart response shapes into a stable snapshot:
+   *   - GET /cart            → recurring-frequency buckets (yearly/monthly/…)
+   *                            each containing an `items` array
+   *   - POST .../add_to_cart → a flat `result.items` array
+   * Lines are keyed by `cartItemId` (the per-line primary key for update/remove).
+   */
+  private normalizeCart(raw: unknown): ServiceNowCart {
+    const result =
+      raw && typeof raw === "object" && "result" in raw
+        ? (raw as { result: Record<string, unknown> }).result
+        : (raw as Record<string, unknown>) ?? {};
+
+    const toLine = (line: Record<string, unknown>): ServiceNowCartItem => ({
+      cartItemId: String(line.cart_item_id ?? line.sys_id ?? ""),
+      catalogItemId:
+        line.catalog_item_id != null
+          ? String(line.catalog_item_id)
+          : line.item_id != null
+            ? String(line.item_id)
+            : undefined,
+      name: String(line.item_name ?? line.name ?? ""),
+      quantity: Number.parseInt(String(line.quantity ?? "1"), 10) || 1,
+      price: line.price != null ? String(line.price) : undefined,
+      recurringPrice: line.recurring_price != null ? String(line.recurring_price) : undefined,
+      recurringFrequency:
+        line.recurring_frequency != null ? String(line.recurring_frequency) : undefined,
+      shortDescription:
+        line.short_description != null ? String(line.short_description) : undefined,
+      variables:
+        line.variables && typeof line.variables === "object"
+          ? (line.variables as Record<string, unknown>)
+          : undefined
+    });
+
+    const items: ServiceNowCartItem[] = [];
+
+    // Flat shape (add_to_cart / update PUT may echo either form).
+    if (Array.isArray(result.items)) {
+      for (const line of result.items as Array<Record<string, unknown>>) {
+        items.push(toLine(line));
+      }
+    }
+
+    // Bucketed shape (GET /cart). Any nested object carrying an `items` array
+    // is a frequency bucket — collect lines from all of them.
+    for (const value of Object.values(result)) {
+      if (
+        value &&
+        typeof value === "object" &&
+        Array.isArray((value as { items?: unknown }).items)
+      ) {
+        for (const line of (value as { items: Array<Record<string, unknown>> }).items) {
+          items.push(toLine(line));
+        }
+      }
+    }
+
+    // De-duplicate by cartItemId (a line can appear in both a bucket and the
+    // flat array on some shapes).
+    const seen = new Set<string>();
+    const deduped = items.filter(line => {
+      if (!line.cartItemId || seen.has(line.cartItemId)) return false;
+      seen.add(line.cartItemId);
+      return true;
+    });
+
+    return {
+      cartId: result.cart_id != null ? String(result.cart_id) : undefined,
+      subtotalPrice:
+        result.subtotal_price != null
+          ? String(result.subtotal_price)
+          : result.subtotal != null
+            ? String(result.subtotal)
+            : undefined,
+      subtotalRecurringPrice:
+        result.subtotal_recurring_price != null
+          ? String(result.subtotal_recurring_price)
+          : undefined,
+      subtotalRecurringFrequency:
+        result.subtotal_recurring_frequency != null
+          ? String(result.subtotal_recurring_frequency)
+          : undefined,
+      items: deduped
+    };
+  }
+
+  /** Retrieves the authenticated user's current cart as a normalized snapshot. */
+  async getCart(): Promise<ServiceNowCart> {
+    const client = await this.getClient();
+    try {
+      const response = await client.get("/api/sn_sc/servicecatalog/cart");
+      return this.normalizeCart(response.data);
+    } catch (error) {
+      Logger.error("Failed to fetch cart", { operation: "cart.get_failed" }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Adds a catalog item to the cart. Enforces the same mandatory-variable
+   * validation as order_now. Returns the refreshed normalized cart.
+   */
+  async addToCart(itemSysId: string, input: AddToCartInput = {}): Promise<ServiceNowCart> {
+    const client = await this.getClient();
+    const payload: Record<string, unknown> = {
+      sysparm_quantity: String(input.quantity ?? 1)
+    };
+    if (input.variables && Object.keys(input.variables).length > 0) {
+      payload.variables = input.variables;
+    }
+    try {
+      Logger.info("Adding item to ServiceNow cart", {
+        operation: "cart.add",
+        itemSysId,
+        quantity: input.quantity ?? 1,
+        usedCallerServiceNowToken: Boolean(getRequestContext()?.serviceNowAccessToken)
+      });
+      const response = await client.post(
+        `/api/sn_sc/servicecatalog/items/${itemSysId}/add_to_cart`,
+        payload
+      );
+      // add_to_cart returns only the changed lines; re-fetch for the full cart
+      // (including pre-existing lines and the bucketed subtotals).
+      const addResult = response.data as { result?: { cart_id?: unknown } };
+      if (addResult?.result?.cart_id) {
+        return await this.getCart();
+      }
+      return this.normalizeCart(response.data);
+    } catch (error) {
+      Logger.error("Failed to add item to cart", { operation: "cart.add_failed", itemSysId }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates a cart line's quantity and/or variables. Returns the refreshed
+   * normalized cart.
+   */
+  async updateCartItem(
+    cartItemId: string,
+    input: { quantity?: number; variables?: Record<string, string | number | boolean> }
+  ): Promise<ServiceNowCart> {
+    const client = await this.getClient();
+    const payload: Record<string, unknown> = {};
+    if (input.quantity != null) {
+      payload.sysparm_quantity = String(input.quantity);
+    }
+    if (input.variables && Object.keys(input.variables).length > 0) {
+      payload.variables = input.variables;
+    }
+    try {
+      Logger.info("Updating ServiceNow cart line", {
+        operation: "cart.update",
+        cartItemId,
+        quantity: input.quantity ?? null
+      });
+      const response = await client.put(
+        `/api/sn_sc/servicecatalog/cart/${cartItemId}`,
+        payload
+      );
+      return this.normalizeCart(response.data);
+    } catch (error) {
+      Logger.error("Failed to update cart line", { operation: "cart.update_failed", cartItemId }, error);
+      throw error;
+    }
+  }
+
+  /** Removes a single cart line. Returns the refreshed normalized cart. */
+  async removeCartItem(cartItemId: string): Promise<ServiceNowCart> {
+    const client = await this.getClient();
+    try {
+      Logger.info("Removing ServiceNow cart line", { operation: "cart.remove", cartItemId });
+      await client.delete(`/api/sn_sc/servicecatalog/cart/${cartItemId}`);
+      return await this.getCart();
+    } catch (error) {
+      Logger.error("Failed to remove cart line", { operation: "cart.remove_failed", cartItemId }, error);
+      throw error;
+    }
+  }
+
+  /** Empties the entire cart. No-op (returns empty cart) when already empty. */
+  async emptyCart(): Promise<ServiceNowCart> {
+    const client = await this.getClient();
+    try {
+      const current = await this.getCart();
+      if (!current.cartId) {
+        return current;
+      }
+      Logger.info("Emptying ServiceNow cart", { operation: "cart.empty", cartId: current.cartId });
+      await client.delete(`/api/sn_sc/servicecatalog/cart/${current.cartId}/empty`);
+      return { cartId: current.cartId, items: [] };
+    } catch (error) {
+      Logger.error("Failed to empty cart", { operation: "cart.empty_failed" }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submits the cart as a single ServiceNow request. Patches attribution
+   * (requested_for / opened_by) onto the created request and its items the same
+   * way placeOrder does, so a cart checkout is attributed to the real caller.
+   */
+  async submitCart(input: { requestedFor?: string } = {}): Promise<ServiceNowSubmitCartResponse> {
+    const client = await this.getClient();
+    try {
+      const requestedForResolution = await this.resolveRequestedFor(client, input.requestedFor);
+      const resolvedRequestedFor = requestedForResolution.value;
+
+      let ownerSysId: string | undefined;
+      if (config.serviceNow.attributeOwnershipToCaller) {
+        if (
+          !input.requestedFor &&
+          typeof resolvedRequestedFor === "string" &&
+          this.isLikelyServiceNowSysId(resolvedRequestedFor)
+        ) {
+          ownerSysId = resolvedRequestedFor;
+        } else {
+          const resolved = await this.resolveCallerSysId(client);
+          ownerSysId = resolved && this.isLikelyServiceNowSysId(resolved) ? resolved : undefined;
+        }
+      }
+
+      Logger.info("Submitting ServiceNow cart", {
+        operation: "cart.submit",
+        requestedForSource: requestedForResolution.diagnostics.source,
+        usedCallerServiceNowToken: Boolean(getRequestContext()?.serviceNowAccessToken)
+      });
+
+      const response = await client.post<{ result: ServiceNowOrderResult }>(
+        "/api/sn_sc/servicecatalog/cart/submit_order",
+        {}
+      );
+
+      const requestSysId = response.data.result.sys_id ?? response.data.result.request_id;
+      const requestedForSysId =
+        typeof resolvedRequestedFor === "string" && this.isLikelyServiceNowSysId(resolvedRequestedFor)
+          ? resolvedRequestedFor
+          : undefined;
+      if (
+        typeof requestSysId === "string" &&
+        this.isLikelyServiceNowSysId(requestSysId) &&
+        (requestedForSysId || ownerSysId)
+      ) {
+        try {
+          const attribution = { requestedForSysId, ownerSysId };
+          await this.patchRequestAttribution(client, requestSysId, attribution);
+          await this.patchRequestItemsAttribution(client, requestSysId, attribution);
+        } catch (error) {
+          Logger.warn("Failed to patch cart submission attribution", {
+            operation: "cart.submit_attribution_failed",
+            requestSysId
+          }, error);
+        }
+      }
+
+      Logger.info("Cart submitted successfully", {
+        operation: "cart.submitted",
+        requestSysId: response.data.result.sys_id ?? null,
+        requestNumber: response.data.result.request_number
+      });
+
+      return {
+        result: response.data.result,
+        requestedForDiagnostics: requestedForResolution.diagnostics
+      };
+    } catch (error) {
+      Logger.error("Cart submission failed", { operation: "cart.submit_failed" }, error);
       throw error;
     }
   }

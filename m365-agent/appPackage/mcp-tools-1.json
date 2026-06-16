@@ -286,6 +286,175 @@
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
             }
+        },
+        {
+            "name": "add_to_cart",
+            "description": "Add a ServiceNow catalog item to the user's cart (basket) without ordering yet. Use when collecting multiple items before checkout instead of place_order. Renders the cart widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "itemSysId": {
+                        "type": "string",
+                        "description": "Catalog item sys_id"
+                    },
+                    "variables": {
+                        "type": "object",
+                        "description": "Form field values keyed by variable name. Values may be string, number, or boolean.",
+                        "additionalProperties": {
+                            "type": [
+                                "string",
+                                "number",
+                                "boolean"
+                            ]
+                        }
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Optional quantity to add (default 1)"
+                    }
+                },
+                "required": [
+                    "itemSysId"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/cart.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/cart.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/cart.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "view_cart",
+            "description": "Retrieve the authenticated user's current ServiceNow cart (basket) contents. Renders the cart widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/cart.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/cart.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/cart.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "update_cart_item",
+            "description": "Update a line item in the ServiceNow cart \u2014 change its quantity and/or variable values.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cartItemId": {
+                        "type": "string",
+                        "description": "Cart line identifier (cartItemId) from add_to_cart or view_cart"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Optional new quantity for the line item"
+                    },
+                    "variables": {
+                        "type": "object",
+                        "description": "Optional updated form field values keyed by variable name.",
+                        "additionalProperties": {
+                            "type": [
+                                "string",
+                                "number",
+                                "boolean"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "cartItemId"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/cart.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/cart.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/cart.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "remove_cart_item",
+            "description": "Remove a single line item from the ServiceNow cart.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "cartItemId": {
+                        "type": "string",
+                        "description": "Cart line identifier (cartItemId) to remove"
+                    }
+                },
+                "required": [
+                    "cartItemId"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/cart.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/cart.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/cart.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "submit_cart",
+            "description": "Submit the entire ServiceNow cart as a single request (one REQ with multiple requested items). Renders the order-detail confirmation widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "requestedFor": {
+                        "type": "string",
+                        "description": "Optional sys_id or email of the user the order is for (defaults to the authenticated user)"
+                    }
+                }
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/order-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/order-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
         }
     ]
 }

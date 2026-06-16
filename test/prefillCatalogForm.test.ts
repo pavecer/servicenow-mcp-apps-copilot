@@ -612,7 +612,7 @@ describe("extractDuration (natural-language duration inference)", () => {
     };
   }
 
-  it("matches 'one week' against a '1 Week' choice option (real Copilot Studio prompt)", () => {
+  it("matches 'one week' against a '1 Week' choice option (real catalog prompt)", () => {
     const item = loanerLaptopItem();
     const { values } = computePrefillValues(item.variables, {
       userContext:

@@ -67,7 +67,7 @@ export function registerGetOrderDetailTool(server: McpServer, client: ServiceNow
           // structuredContent. Returning the full JSON payload here makes
           // Microsoft 365 Copilot render a verbose text fallback instead of
           // mounting the widget. The full JSON stays in `content` only in the
-          // flag-off Copilot Studio surface.
+          // default (non-MCP-Apps) surface.
           const orderNumber =
             typeof detail.order.number === "string" ? detail.order.number : orderSysId;
           result.content = [

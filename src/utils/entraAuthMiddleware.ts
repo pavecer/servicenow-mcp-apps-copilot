@@ -5,7 +5,7 @@ import Logger from "./logger";
 
 /**
  * Shared Entra ID Bearer token validation middleware.
- * Used by both the MCP endpoint (app.ts) and the Catalog REST API (catalogApi.ts).
+ * Used by the MCP endpoint (app.ts).
  *
  * Returns 401 with RFC 6750-compliant WWW-Authenticate headers on all failures:
  * - Missing token        → standard Bearer challenge with resource_metadata

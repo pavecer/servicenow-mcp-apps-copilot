@@ -3,7 +3,7 @@
 This guide describes how to register the **ServiceNow MCP Server** (this repo) with
 **Microsoft Agent 365** as a Bring-Your-Own (BYO) MCP server, so that it appears
 in the **Microsoft 365 admin center > Agents > Tools** registry and can be
-governed centrally for Copilot Studio, VS Code, Claude Code, and GitHub Copilot CLI.
+governed centrally for MCP clients such as VS Code, Claude Code, and GitHub Copilot CLI.
 
 > Microsoft reference:
 > [Manage tools for agents — Bring your own (BYO) MCP server](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/manage-tools-for-agent?view=o365-worldwide#bring-your-own-byo-mcp-server)
@@ -35,8 +35,8 @@ changes are required.
 
 ```
 +--------------------------+        +-----------------------------+        +-----------------+
-| Copilot Studio / VS Code |        | Agent 365 Tooling Gateway   |        | This MCP Server |
-| Claude Code / GH CLI     | ─────▶ | (governance + telemetry)    | ─────▶ | /mcp on Azure   |
+| VS Code / Claude Code    |        | Agent 365 Tooling Gateway   |        | This MCP Server |
+| GitHub Copilot CLI       | ─────▶ | (governance + telemetry)    | ─────▶ | /mcp on Azure   |
 | (caller signed in)       |  user  | acquires Entra token        |  Bearer| Functions       |
 |                          | token  | for api://<MCP_APP>/.default| token  | + ServiceNow    |
 +--------------------------+        +-----------------------------+        +-----------------+
@@ -105,8 +105,8 @@ add it to `ENTRA_ALLOWED_AUDIENCES` so the matching `aud` claim is accepted.
 ### Cross-tenant note
 
 Agent 365 tokens reaching the server carry the **end user's** tenant in the
-`tid` claim — that is the tenant where the user signed in to Copilot Studio or
-VS Code, not necessarily where the server is hosted.
+`tid` claim — that is the tenant where the user signed in to the MCP client
+(e.g. VS Code), not necessarily where the server is hosted.
 
 - **Single tenant** (server and users in the same tenant): no extra config.
 - **Multi-tenant** (users from other tenants): set
@@ -118,7 +118,7 @@ VS Code, not necessarily where the server is hosted.
 
 ## Step 2 — Disable open Dynamic Client Registration (recommended)
 
-DCR is only useful for the existing Copilot Studio "Dynamic discovery" flow.
+DCR is only useful for an MCP client's "Dynamic discovery" flow.
 Once Agent 365 is the broker, you should harden `POST /oauth/register`:
 
 ```powershell
@@ -253,7 +253,7 @@ A tenant admin (Global admin or AI admin) must:
 4. Grant tenant-wide Microsoft Entra consent for the permissions Agent 365
    requests on behalf of the server (this lets the Tooling Gateway acquire
    tokens with `api://<ENTRA_CLIENT_ID>/.default`).
-5. Wait up to 30 minutes for the server to propagate to Copilot Studio and
+5. Wait up to 30 minutes for the server to propagate to MCP clients and
    other surfaces.
 
 The status in **Agents > Tools > Registry** flips to **Available** when the
@@ -262,18 +262,6 @@ server is ready to invoke.
 ---
 
 ## Step 6 — Use the approved server
-
-### Copilot Studio
-
-1. Open your environment in [Copilot Studio](https://copilotstudio.microsoft.com/).
-2. Open or create a custom agent.
-3. **Tools > Add a tool > MCP Server > Pick from registry**, choose
-   **ServiceNow MCP Server**.
-4. Test with a prompt such as `Order a new laptop` — the MCP server should
-   respond with an Adaptive Card item picker.
-
-The legacy "Add MCP from URL" flow for Copilot Studio is still supported but
-no longer required once BYO MCP is in place.
 
 ### VS Code, Claude Code, GitHub Copilot CLI
 
@@ -327,11 +315,11 @@ with your tenant admin to delete and re-create the registry entry.
 |---|---|---|
 | `a365 develop-mcp register-external-mcp-server` fails with `service principal not found` | Agent 365 SP missing in tenant | Run [Set up service principal](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/tooling#set-up-service-principal). |
 | Admin sees the request but approval fails | Caller lacks AI admin / Global admin role | Assign the role or hand off the approval. |
-| Server is **Available** but Copilot Studio can't see it | < 30 min since approval | Wait, then refresh the agent's tool picker. |
+| Server is **Available** but the MCP client can't see it | < 30 min since approval | Wait, then refresh the agent's tool picker. |
 | First invocation returns `401 invalid_token` | Audience mismatch | Confirm the Entra app's App ID URI is `api://<ENTRA_CLIENT_ID>` (default) or add the custom URI to `ENTRA_ALLOWED_AUDIENCES`. |
 | `401 invalid_token` only from users in another tenant | Cross-tenant not allowed | Set `ENTRA_TRUSTED_TENANT_IDS` (preferred) or `ENTRA_ALLOW_ANY_TENANT=true`. |
 | Tools list works but every call returns ServiceNow `401` | ServiceNow integration user missing `catalog`/`itil` roles | See [`docs/SERVICENOW_SETUP.md`](SERVICENOW_SETUP.md). |
-| Defender XDR shows no events | Server not invoked through the Tooling Gateway (still hitting the legacy direct path) | Re-test from a Copilot Studio agent that picked the tool from the registry, not from a manual MCP URL. |
+| Defender XDR shows no events | Server not invoked through the Tooling Gateway (still hitting the legacy direct path) | Re-test from an MCP client that picked the tool from the registry, not from a manual MCP URL. |
 
 ---
 

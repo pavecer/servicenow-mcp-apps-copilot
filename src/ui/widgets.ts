@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
+  CART_HTML,
   CATALOG_BROWSE_HTML,
   MY_ORDERS_HTML,
   ORDER_DETAIL_HTML,
@@ -103,12 +104,23 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
     // place_order also mounts this widget: after a successful order we fetch
     // the created request and render it here as the confirmation, so the user
     // sees the whole ordered item (items, status, ServiceNow link) instead of
-    // a plain-text request number.
-    boundToolNames: ["place_order"],
+    // a plain-text request number. submit_cart reuses the same confirmation.
+    boundToolNames: ["place_order", "submit_cart"],
     uri: `${WIDGET_URI_NAMESPACE}/order-detail.html`,
     name: "order-detail",
     description: "Show a single ServiceNow request with items, approvals, and a comment form.",
     html: ORDER_DETAIL_HTML,
+    permissions: ["clipboardWrite"]
+  },
+  {
+    toolName: "view_cart",
+    // All cart-mutating tools render the same cart widget so add/update/remove
+    // re-render the basket in place.
+    boundToolNames: ["add_to_cart", "update_cart_item", "remove_cart_item"],
+    uri: `${WIDGET_URI_NAMESPACE}/cart.html`,
+    name: "cart",
+    description: "Show the user's ServiceNow cart (basket) with quantity controls and a submit action.",
+    html: CART_HTML,
     permissions: ["clipboardWrite"]
   }
 ];
@@ -134,7 +146,7 @@ export function getWidgetForTool(toolName: string): WidgetDescriptor | undefined
  * Register all SEP-1865 widget resources on the given MCP server.
  *
  * No-op when `config.mcpApps.enabled` is false — this is the single safety
- * gate that keeps the existing Copilot Studio surface byte-identical.
+ * gate that keeps the default (non-MCP-Apps) surface byte-identical.
  */
 export function registerWidgetResources(server: McpServer): void {
   if (!config.mcpApps.enabled) return;

@@ -33,6 +33,26 @@
         {
             "name": "get_order_detail",
             "description": "Retrieve a single ServiceNow service catalog request (sc_request) by sys_id, including its items and approval records."
+        },
+        {
+            "name": "add_to_cart",
+            "description": "Add a ServiceNow catalog item to the user's cart (basket) without ordering yet. Use when collecting multiple items before checkout instead of placing a single order."
+        },
+        {
+            "name": "view_cart",
+            "description": "Retrieve the authenticated user's current ServiceNow cart (basket) contents. Renders the cart widget."
+        },
+        {
+            "name": "update_cart_item",
+            "description": "Update a line item in the ServiceNow cart — change its quantity and/or variable values."
+        },
+        {
+            "name": "remove_cart_item",
+            "description": "Remove a single line item from the ServiceNow cart."
+        },
+        {
+            "name": "submit_cart",
+            "description": "Submit the entire ServiceNow cart as a single request (one REQ with multiple requested items)."
         }
     ],
     "runtimes": [
@@ -51,7 +71,12 @@
                 "validate_servicenow_config",
                 "list_user_orders",
                 "update_order",
-                "get_order_detail"
+                "get_order_detail",
+                "add_to_cart",
+                "view_cart",
+                "update_cart_item",
+                "remove_cart_item",
+                "submit_cart"
             ],
             "auth": {
                 "type": "OAuthPluginVault",

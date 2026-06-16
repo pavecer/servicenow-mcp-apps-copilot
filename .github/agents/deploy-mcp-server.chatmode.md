@@ -133,9 +133,9 @@ npm run smoke:test
 
 ---
 
-### Phase 6 — Output Copilot Studio Setup
+### Phase 6 — Output MCP Client Setup
 
-After successful deployment, print the Copilot Studio configuration:
+After successful deployment, print the MCP client configuration:
 
 ```
 Server name:     ServiceNow MCP

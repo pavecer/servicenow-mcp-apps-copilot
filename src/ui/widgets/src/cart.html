@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServiceNow Cart</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b;
+    --border: #e0e0e0; --accent: #0078d4; --accent-fg: #ffffff;
+    --card-bg: #fafafa; --field-bg: #fafafa; --error: #c50f1f;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3;
+    --border: #3b3a39; --accent: #2899f5; --card-bg: #2a2a2a; --field-bg: #2a2a2a;
+  }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .lines { display: flex; flex-direction: column; gap: 10px; }
+  .line {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 12px;
+  }
+  .line .info { flex: 1 1 auto; min-width: 0; }
+  .line .name { font-weight: 600; font-size: 14px; }
+  .line .desc { font-size: 12px; color: var(--muted); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .line .price { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .qty { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+  .qty button {
+    width: 26px; height: 26px; padding: 0; line-height: 1; font-size: 15px;
+    border: 1px solid var(--border); background: var(--field-bg); color: var(--fg);
+    border-radius: 4px; cursor: pointer;
+  }
+  .qty .val { min-width: 22px; text-align: center; font-size: 13px; }
+  .remove {
+    flex: 0 0 auto; border: none; background: none; color: var(--muted);
+    font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 4px;
+  }
+  .remove:hover { color: var(--error); }
+  .totals { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .totals .row { display: flex; justify-content: space-between; }
+  .totals .row.subtotal { font-weight: 700; font-size: 14px; }
+  .actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  button {
+    border: 1px solid var(--border); background: var(--field-bg); color: var(--fg);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button.link { background: none; border: none; color: var(--accent); padding: 8px 4px; text-decoration: underline; }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  .btn-link { display: inline-block; text-decoration: none; border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer; }
+  .btn-link.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .banner-ok { background: #107c10; color: #fff; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  .empty { color: var(--muted); padding: 12px 0; }
+  .error { color: var(--error); font-size: 13px; margin-top: 8px; }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  // --- MCP Apps host bridge (window.mcpHost from host-bridge.ts) -----------
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) {
+    var h = host();
+    if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
+    return Promise.reject(new Error("MCP Apps host bridge unavailable."));
+  }
+  function sendFollowUp(text) {
+    var h = host();
+    if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
+  }
+  function openExternal(url) {
+    var h = host();
+    if (h && typeof h.openExternal === "function") {
+      try { if (h.openExternal(url)) return; } catch (_) {}
+    }
+    try { window.open(url, "_blank", "noopener"); } catch (_) {}
+  }
+  function subscribe(cb) {
+    var h = host();
+    if (h && typeof h.onData === "function") { h.onData(cb); return true; }
+    return false;
+  }
+  function showLoading(el, msg) {
+    el.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty";
+    p.textContent = msg || "Loading\u2026"; el.appendChild(p);
+  }
+
+  function unwrapResult(result) {
+    if (result && typeof result === "object") {
+      var r = result;
+      if (r.structuredContent) return r.structuredContent;
+      if (r.result && r.result.structuredContent) return r.result.structuredContent;
+    }
+    return result || {};
+  }
+
+  var root = document.getElementById("root");
+  applyTheme();
+
+  var currentCart = { items: [] };
+
+  function cartFrom(data) {
+    if (data && data.cart && typeof data.cart === "object") return data.cart;
+    if (data && Array.isArray(data.items)) return data;
+    return { items: [] };
+  }
+
+  // --- Confirmation (after submit) ----------------------------------------
+  function renderConfirmation(data) {
+    data = data || {};
+    var reqNum = data.requestNumber || (data.order && data.order.number) || "";
+    var link = data.link || "";
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var banner = document.createElement("div"); banner.className = "banner-ok";
+    banner.textContent = "\u2713 Order " + (reqNum || "submitted") + " submitted to ServiceNow";
+    root.appendChild(banner);
+    var items = (data.items && Array.isArray(data.items)) ? data.items : [];
+    if (items.length) {
+      var meta = document.createElement("div"); meta.className = "meta";
+      meta.textContent = items.length + " item" + (items.length === 1 ? "" : "s") + " in this request";
+      root.appendChild(meta);
+    }
+    if (link) {
+      var act = document.createElement("div"); act.className = "actions";
+      var a = document.createElement("a");
+      a.className = "btn-link primary"; a.textContent = "View in ServiceNow";
+      a.href = link; a.rel = "noopener noreferrer";
+      a.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(link); });
+      act.appendChild(a);
+      root.appendChild(act);
+    }
+  }
+
+  // --- Tool helpers with chat fallback ------------------------------------
+  function mutate(toolName, args, onCart) {
+    var p;
+    try { p = callTool(toolName, args); }
+    catch (e) { sendFollowUp(fallbackText(toolName, args)); return; }
+    if (!p || typeof p.then !== "function") { sendFollowUp(fallbackText(toolName, args)); return; }
+    p.then(function (result) {
+      var data = unwrapResult(result);
+      onCart(cartFrom(data));
+    }).catch(function () { sendFollowUp(fallbackText(toolName, args)); });
+  }
+
+  function fallbackText(toolName, args) {
+    if (toolName === "update_cart_item") return "Update cart item " + args.cartItemId + " to quantity " + args.quantity + ".";
+    if (toolName === "remove_cart_item") return "Remove cart item " + args.cartItemId + " from my cart.";
+    if (toolName === "submit_cart") return "Submit my ServiceNow cart.";
+    return "Show my ServiceNow cart.";
+  }
+
+  function setQuantity(line, nextQty) {
+    if (nextQty < 1) return;
+    showLoading(root, "Updating cart\u2026");
+    mutate("update_cart_item", { cartItemId: line.cartItemId, quantity: nextQty }, function (cart) {
+      currentCart = cart; render(cart);
+    });
+  }
+
+  function removeLine(line) {
+    showLoading(root, "Updating cart\u2026");
+    mutate("remove_cart_item", { cartItemId: line.cartItemId }, function (cart) {
+      currentCart = cart; render(cart);
+    });
+  }
+
+  function submitCart(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = "Submitting\u2026"; }
+    var p;
+    try { p = callTool("submit_cart", {}); }
+    catch (e) { sendFollowUp("Submit my ServiceNow cart."); return; }
+    if (!p || typeof p.then !== "function") { sendFollowUp("Submit my ServiceNow cart."); return; }
+    p.then(function (result) {
+      renderConfirmation(unwrapResult(result));
+    }).catch(function () {
+      if (btn) { btn.disabled = false; btn.textContent = "Submit order"; }
+      sendFollowUp("Submit my ServiceNow cart.");
+    });
+  }
+
+  // --- Main render --------------------------------------------------------
+  function render(cart) {
+    cart = cart || { items: [] };
+    var items = Array.isArray(cart.items) ? cart.items : [];
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+
+    var h1 = document.createElement("h1"); h1.textContent = "Your ServiceNow cart"; root.appendChild(h1);
+
+    if (items.length === 0) {
+      var meta0 = document.createElement("div"); meta0.className = "meta";
+      meta0.textContent = "Your cart is empty.";
+      root.appendChild(meta0);
+      var p = document.createElement("p"); p.className = "empty";
+      p.textContent = "Search the catalog and choose \u201cAdd to cart\u201d to build a basket, then submit it as one request.";
+      root.appendChild(p);
+      return;
+    }
+
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = items.length + " item" + (items.length === 1 ? "" : "s") + " in your basket";
+    root.appendChild(meta);
+
+    var list = document.createElement("div"); list.className = "lines";
+    items.forEach(function (line) {
+      var row = document.createElement("div"); row.className = "line";
+
+      var info = document.createElement("div"); info.className = "info";
+      var name = document.createElement("div"); name.className = "name";
+      name.textContent = line.name || "Catalog item"; info.appendChild(name);
+      if (line.shortDescription) {
+        var desc = document.createElement("div"); desc.className = "desc";
+        desc.textContent = line.shortDescription; info.appendChild(desc);
+      }
+      if (line.price) {
+        var price = document.createElement("div"); price.className = "price";
+        price.textContent = line.price + (line.recurringPrice ? " + " + line.recurringPrice + " " + (line.recurringFrequency || "recurring") : "");
+        info.appendChild(price);
+      }
+      row.appendChild(info);
+
+      var qty = document.createElement("div"); qty.className = "qty";
+      var minus = document.createElement("button"); minus.type = "button"; minus.textContent = "\u2212";
+      minus.setAttribute("aria-label", "Decrease quantity");
+      minus.addEventListener("click", function () { setQuantity(line, (line.quantity || 1) - 1); });
+      var val = document.createElement("span"); val.className = "val"; val.textContent = String(line.quantity || 1);
+      var plus = document.createElement("button"); plus.type = "button"; plus.textContent = "+";
+      plus.setAttribute("aria-label", "Increase quantity");
+      plus.addEventListener("click", function () { setQuantity(line, (line.quantity || 1) + 1); });
+      qty.appendChild(minus); qty.appendChild(val); qty.appendChild(plus);
+      row.appendChild(qty);
+
+      var rm = document.createElement("button"); rm.type = "button"; rm.className = "remove";
+      rm.textContent = "\u2715"; rm.title = "Remove"; rm.setAttribute("aria-label", "Remove " + (line.name || "item"));
+      rm.addEventListener("click", function () { removeLine(line); });
+      row.appendChild(rm);
+
+      list.appendChild(row);
+    });
+    root.appendChild(list);
+
+    if (cart.subtotalPrice || cart.subtotalRecurringPrice) {
+      var totals = document.createElement("div"); totals.className = "totals";
+      if (cart.subtotalPrice) {
+        var r1 = document.createElement("div"); r1.className = "row subtotal";
+        var l1 = document.createElement("span"); l1.textContent = "Subtotal";
+        var v1 = document.createElement("span"); v1.textContent = cart.subtotalPrice;
+        r1.appendChild(l1); r1.appendChild(v1); totals.appendChild(r1);
+      }
+      if (cart.subtotalRecurringPrice) {
+        var r2 = document.createElement("div"); r2.className = "row";
+        var l2 = document.createElement("span"); l2.textContent = "Recurring (" + (cart.subtotalRecurringFrequency || "") + ")";
+        var v2 = document.createElement("span"); v2.textContent = cart.subtotalRecurringPrice;
+        r2.appendChild(l2); r2.appendChild(v2); totals.appendChild(r2);
+      }
+      root.appendChild(totals);
+    }
+
+    var actions = document.createElement("div"); actions.className = "actions";
+    var submit = document.createElement("button");
+    submit.type = "button"; submit.className = "primary"; submit.textContent = "Submit order";
+    submit.addEventListener("click", function () { submitCart(submit); });
+    actions.appendChild(submit);
+
+    var keep = document.createElement("button");
+    keep.type = "button"; keep.className = "link"; keep.textContent = "Continue shopping";
+    keep.addEventListener("click", function () { sendFollowUp("Search the ServiceNow catalog for more items to add to my cart."); });
+    actions.appendChild(keep);
+    root.appendChild(actions);
+  }
+
+  function handle(payload) {
+    var data = payload || getData();
+    currentCart = cartFrom(data);
+    render(currentCart);
+  }
+
+  if (!subscribe(handle)) {
+    handle(getData());
+  }
+})();
+</script>
+</body>
+</html>

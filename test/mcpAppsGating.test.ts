@@ -70,14 +70,15 @@ describe("MCP Apps gating: MCP_APPS_ENABLED=true", () => {
     expect(loaded.config.mcpApps.enabled).toBe(true);
   });
 
-  it("WIDGETS registry exposes exactly four widgets with ui:// URIs", () => {
-    expect(loaded.widgets.WIDGETS.length).toBe(4);
+  it("WIDGETS registry exposes exactly five widgets with ui:// URIs", () => {
+    expect(loaded.widgets.WIDGETS.length).toBe(5);
     const toolNames = loaded.widgets.WIDGETS.map(w => w.toolName).sort();
     expect(toolNames).toEqual([
       "get_catalog_item_form",
       "get_order_detail",
       "list_user_orders",
-      "search_catalog_items"
+      "search_catalog_items",
+      "view_cart"
     ]);
     for (const w of loaded.widgets.WIDGETS) {
       expect(w.uri.startsWith("ui://")).toBe(true);
@@ -95,7 +96,14 @@ describe("MCP Apps gating: MCP_APPS_ENABLED=true", () => {
       ["get_catalog_item_form", /order-form\.html$/],
       ["list_user_orders", /my-orders\.html$/],
       ["get_order_detail", /order-detail\.html$/],
-      ["place_order", /order-detail\.html$/]
+      ["place_order", /order-detail\.html$/],
+      // Cart tools: view/add/update/remove render the cart widget; submit_cart
+      // reuses the order-detail confirmation widget.
+      ["view_cart", /cart\.html$/],
+      ["add_to_cart", /cart\.html$/],
+      ["update_cart_item", /cart\.html$/],
+      ["remove_cart_item", /cart\.html$/],
+      ["submit_cart", /order-detail\.html$/]
     ]);
     for (const def of defs) {
       const meta = (def as { _meta?: { ui?: { resourceUri?: string; visibility?: string[] } } })._meta;

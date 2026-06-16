@@ -6,15 +6,15 @@ import { buildCorsHeaders } from "../utils/cors";
 import { withFunctionContext } from "./wrap";
 
 /**
- * OAuth 2.0 Dynamic Discovery endpoints that enable Copilot Studio's
- * "OAuth 2.0 → Dynamic discovery" MCP authentication type.
+ * OAuth 2.0 Dynamic Discovery endpoints that enable an MCP client's
+ * "OAuth 2.0 → Dynamic discovery" authentication type.
  *
  * Two endpoints are exposed:
  *
  *   GET  /.well-known/openid-configuration
  *        OpenID Connect Discovery document pointing at the Entra tenant's
  *        authorization and token endpoints.  Includes a `registration_endpoint`
- *        so Copilot Studio can use Dynamic Client Registration (DCR, RFC 7591).
+ *        so clients can use Dynamic Client Registration (DCR, RFC 7591).
  *        Falls back gracefully (404) when Entra auth is not configured.
  *        The issuer and endpoint URLs are proxied from Microsoft's real OIDC
  *        discovery document so they stay accurate even when ENTRA_TENANT_ID is
@@ -26,9 +26,9 @@ import { withFunctionContext } from "./wrap";
  *   POST /oauth/register
  *        RFC 7591 Dynamic Client Registration endpoint.  Returns the
  *        pre-registered Entra application credentials (client_id + client_secret)
- *        so Copilot Studio's wizard can complete OAuth setup automatically.
- *        Returns 404 when ENTRA_CLIENT_SECRET is not configured (the "Dynamic"
- *        or "Manual" Copilot Studio auth types can be used instead).
+ *        so a client's setup wizard can complete OAuth automatically.
+ *        Returns 404 when ENTRA_CLIENT_SECRET is not configured (a manual OAuth
+ *        configuration can be used instead).
  *
  *        SECURITY NOTE: This endpoint is closed by default unless one of these
  *        conditions is met:
@@ -38,18 +38,18 @@ import { withFunctionContext } from "./wrap";
  *
  *        For enterprise deployments, keep unauthenticated DCR disabled and use
  *        registration tokens, network restrictions (private networking), and/or
- *        manual OAuth configuration in Copilot Studio.
+ *        manual OAuth configuration in the client.
  *
  * CORS: All endpoints include Access-Control-Allow-Origin: * headers and handle
- * OPTIONS preflight requests so that browser-based clients (including Copilot
- * Studio) can reach them from any origin without being blocked.
+ * OPTIONS preflight requests so that browser-based clients can reach them from
+ * any origin without being blocked.
  */
 
 const OIDC_CACHE_MAX_AGE_SECONDS = 3600; // 1 hour
 const MS_METADATA_CACHE_TTL_MS = OIDC_CACHE_MAX_AGE_SECONDS * 1_000;
 
 // CORS headers included on every OIDC response so that browser-based clients
-// (including Microsoft Copilot Studio) can reach these endpoints cross-origin.
+// can reach these endpoints cross-origin.
 // Implemented via the shared helper in src/utils/cors.ts.
 
 // ---------------------------------------------------------------------------
@@ -151,7 +151,8 @@ async function oidcDiscoveryHandler(
   const requestUrl = new URL(request.url);
   const serverBase = `${requestUrl.protocol}//${requestUrl.host}`;
 
-  // For cross-tenant scenarios (Copilot Studio in a different Entra tenant), all
+  // For cross-tenant scenarios (the client signs users in to a different Entra
+  // tenant), all
   // OIDC document values — issuer, authorization_endpoint, token_endpoint, and
   // jwks_uri — must be sourced from Microsoft's /common metadata rather than the
   // primary tenant's.  The /common issuer is "https://login.microsoftonline.com/
@@ -252,7 +253,7 @@ app.http("oidc-discovery-options", {
 // ---------------------------------------------------------------------------
 // /.well-known/oauth-authorization-server  — RFC 8414 alias
 // ---------------------------------------------------------------------------
-// Some MCP clients (including Copilot Studio) try this path before the
+// Some MCP clients try this path before the
 // OIDC well-known path.  Serve the same discovery document for compatibility.
 app.http("oauth-authorization-server", {
   methods: ["GET"],
@@ -351,7 +352,7 @@ export async function oauthRegisterHandler(
         error: "invalid_client_metadata",
         error_description:
           "Dynamic Client Registration is not enabled on this server. " +
-          "Use 'Dynamic' or 'Manual' OAuth type in Copilot Studio and provide " +
+          "Use the 'Dynamic' or 'Manual' OAuth type in your MCP client and provide " +
           "the Entra application credentials manually."
       })
     };
@@ -404,7 +405,7 @@ export async function oauthRegisterHandler(
   }
 
   // Return the pre-registered Entra application credentials.
-  // Copilot Studio stores these and uses them for the Authorization Code flow.
+  // The client stores these and uses them for the Authorization Code flow.
   const registrationResponse = {
     client_id: clientId,
     client_secret: clientSecret,

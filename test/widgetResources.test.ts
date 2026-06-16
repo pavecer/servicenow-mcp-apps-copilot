@@ -65,9 +65,10 @@ describe("registerWidgetResources: flag on", () => {
     else process.env.MCP_APPS_ENABLED = originalFlag;
   });
 
-  it("registers exactly four ui:// widget resources", () => {
-    expect(resources).toHaveLength(4);
+  it("registers exactly five ui:// widget resources", () => {
+    expect(resources).toHaveLength(5);
     expect(resources.map(r => r.uri).sort()).toEqual([
+      "ui://servicenow-mcp/cart.html",
       "ui://servicenow-mcp/catalog-browse.html",
       "ui://servicenow-mcp/my-orders.html",
       "ui://servicenow-mcp/order-detail.html",

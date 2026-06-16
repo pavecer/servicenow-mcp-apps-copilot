@@ -1,23 +1,16 @@
 # Cost Estimation
 
-> **Disclaimer.** All numbers below are **public list prices as of mid-2026, in USD, for West Europe** (the default region used by `infra/main.bicep`). Real bills will differ based on region, Enterprise Agreement / CSP discounts, currency, taxes, and actual traffic. Treat the formulas as a planning aid, not a quote. Always reconcile against the [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) and your tenant's current Microsoft 365 / Copilot Studio price sheet before quoting a customer.
+> **Disclaimer.** All numbers below are **public list prices as of mid-2026, in USD, for West Europe** (the default region used by `infra/main.bicep`). Real bills will differ based on region, Enterprise Agreement / CSP discounts, currency, taxes, and actual traffic. Treat the formulas as a planning aid, not a quote. Always reconcile against the [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) before quoting a customer.
 
-This document covers two cost surfaces:
+This document covers the **Azure infrastructure** that hosts the MCP server (Function App, Storage, Key Vault, monitoring, etc.).
 
-1. **Azure infrastructure** that hosts the MCP server (Function App, Storage, Key Vault, monitoring, etc.)
-2. **Microsoft Copilot Studio messages** consumed when an agent invokes one of this server's tools
+> **Note on agent-host / messaging costs.** Whatever client or agent host invokes this MCP server (Microsoft 365 Copilot, an IDE MCP client, a custom app, etc.) may have its own licensing or per-message billing. Those costs depend entirely on the host you choose and are **out of scope** for this document — price them against that host's current pricing sheet.
 
 ---
 
 ## TL;DR for a typical mid-size deployment
 
-A **medium-traffic deployment** (≈500 daily active users, each placing one ticket per workday, plus a similar volume of read-only catalog browsing) lands at roughly:
-
-| Surface | Monthly cost (USD, list) | Notes |
-|---|---|---|
-| Azure infrastructure | **$25 – $60** | Almost entirely Function App execution + Log Analytics ingestion |
-| Copilot Studio messages | **$250 – $500** if billed at PAYG / standalone; **$0** if all users are licensed for Microsoft 365 Copilot | See "Copilot Studio cost" section for the messages-per-ticket math |
-| **Total** | **$275 – $560** PAYG / **$25 – $60** if M365 Copilot-licensed | Per month, list, before discounts |
+A **medium-traffic deployment** (≈500 daily active users, each placing one ticket per workday, plus a similar volume of read-only catalog browsing) lands at roughly **$25 – $60/month** of Azure infrastructure — almost entirely Function App execution + Log Analytics ingestion.
 
 Per-tool unit costs (Azure-only, list, West Europe, mid-2026):
 
@@ -30,7 +23,7 @@ Per-tool unit costs (Azure-only, list, West Europe, mid-2026):
 | `list_user_orders` | **~$0.0002 – $0.0005** | One ServiceNow REST query |
 | `update_order` | **~$0.0003 – $0.0006** | One PATCH against the order record |
 
-Adding **Copilot Studio messages** (when billed PAYG / standalone) typically dominates the bill by 5-10x — see the Copilot Studio section below.
+The Azure infrastructure bill is **flat and small** for any realistic ServiceNow ticketing workload — the MCP server itself is not a cost driver.
 
 ---
 
@@ -52,7 +45,7 @@ There is no App Service Plan to pre-pay for — Flex Consumption is pure consump
 
 ### Per-call cost breakdown (Flex Consumption + dependencies)
 
-Each tool invocation is a single HTTP POST to `/api/mcp`. Empirical timings against the production-shaped deployment used during the OBO rollout:
+Each tool invocation is a single HTTP POST to `/mcp`. Empirical timings against the production-shaped deployment used during the OBO rollout:
 
 | Stage | Typical duration | Notes |
 |---|---|---|
@@ -116,159 +109,65 @@ The Azure infrastructure bill is **flat and small** for any realistic ServiceNow
 
 ---
 
-## 2. Microsoft Copilot Studio cost model
-
-This is where most deployments will see real money.
-
-> **Important.** Copilot Studio billing terms changed multiple times during 2024–2026. As of mid-2026 the **messages** model still applies, but **autonomous / generative** features and **MCP tool calls** consume more messages than classic topic-driven flows. The numbers below are the best-effort current public list prices; **always cross-check the [official Copilot Studio pricing page](https://www.microsoft.com/microsoft-copilot/microsoft-copilot-studio/pricing) for your tenant before committing to a customer quote**.
-
-### Licensing models
-
-Three ways customers pay for Copilot Studio messages:
-
-| Model | Effective per-message cost (USD) | Best fit |
-|---|---|---|
-| **Microsoft 365 Copilot license** (~$30/user/month) | **$0 incremental** — agent usage by licensed users does not draw from messages | Most enterprise deployments, especially if M365 Copilot is already rolling out |
-| **Copilot Studio standalone** ($200/tenant/month for 25,000 messages) | **~$0.008/message** | Standalone tenants, or to cover non-M365-Copilot-licensed users (front-line workers, contractors) |
-| **Pay-As-You-Go** (Azure subscription, no commitment) | **~$0.01/message** | Variable load, validation phases, environments without monthly commitment |
-
-The "$.04 per form lookup / $.06 per catalog write" rule-of-thumb mentioned in some field conversations is consistent with the PAYG model **once you include all messages a single tool call actually consumes** (see below).
-
-### How many messages a single MCP tool call consumes
-
-The Copilot Studio pricing model bills **messages**, not raw tool calls. As of mid-2026, the message-counting rules that matter for an MCP tool call are roughly:
-
-| Action | Messages billed |
-|---|---|
-| User sends a chat turn that triggers a topic (no AI) | **1** |
-| Topic runs without generative answers | **1** |
-| Generative answers / autonomous reasoning step (LLM call) | **~2** per LLM step |
-| **MCP tool call via custom connector (with OBO)** | **~10 messages** per call (autonomous-style billing — the orchestrator's planning + the tool invocation + the response synthesis are billed together) |
-| Adaptive Card sent back to user | **0 incremental** (part of the topic/tool response) |
-
-This is the same "autonomous action" multiplier Microsoft applies to other AI-augmented connectors. Each MCP tool call (search, get-form, place-order) consumes **roughly 10 messages** end-to-end when invoked via an autonomous-style agent.
-
-### Per-operation cost (Copilot Studio, PAYG basis)
-
-Using ~10 messages per MCP tool call at ~$0.01/message (PAYG):
-
-| User-facing operation | MCP tool calls | Messages billed | **Cost per operation (PAYG)** |
-|---|---|---|---|
-| Browse catalog (search only) | 1 (`search_catalog_items`) | ~10 | **~$0.10** |
-| Look up an order form (search + get_form) | 2 | ~20 | **~$0.20** |
-| Place a complete order (search + form + place) | 3 | ~30 | **~$0.30** |
-| Check on an existing order | 1 (`list_user_orders`) | ~10 | **~$0.10** |
-| Update / cancel an order | 2 (`list` + `update`) | ~20 | **~$0.20** |
-
-**Same operations on the standalone Copilot Studio license** ($200 / 25,000 messages = ~$0.008/message): multiply the above by 0.8 (≈$0.08 search, ≈$0.24 full order).
-
-**Same operations under a Microsoft 365 Copilot license**: **$0 incremental** to the agent owner; the user's $30/month covers their usage.
-
-### Cost scenarios (Copilot Studio messages, PAYG basis)
-
-Assuming the "ticket = 3 tool calls = ~30 messages" pattern dominates, plus ~5 messages of conversational overhead per session:
-
-| Scenario | Tickets placed/month | Messages billed | **PAYG cost/month** | **Standalone cost/month** | **M365 Copilot license cost** |
-|---|---|---|---|---|---|
-| Demo / pilot | 200 | ~7,000 | **~$70** | **~$56** | $0 (if users licensed) |
-| Small team (100 users, ~1 ticket/week) | 400 | ~14,000 | **~$140** | **~$112** | $0 |
-| Medium org (500 users, ~1 ticket/week) | 2,000 | ~70,000 | **~$700** | $200 base + 1.8x overage ≈ **~$560** | $0 |
-| Large org (2,000 users, ~1 ticket/week) | 8,000 | ~280,000 | **~$2,800** | $200 × 12 capacity packs ≈ **~$2,400** | $0 |
-
-These numbers can shift up or down by ~2x depending on how chatty the agent's topic design is — every extra "did I get that right?" confirmation step adds another billed message.
-
-### How to keep Copilot Studio costs low
-
-1. **License via Microsoft 365 Copilot if the audience is already on M365 E3/E5 + Copilot**. This zeros out the incremental cost.
-2. **Avoid unnecessary tool calls** in the topic design. For example, use the `selectionAdaptiveCard` returned by `search_catalog_items` directly instead of calling `search` twice — that's a 10-message saving per session.
-3. **Pre-filter the user request before calling MCP**. If you can validate intent inside the topic ("did the user ask for something we even offer?") you can avoid spending 10 messages on a `search` that will return no results.
-4. **For high-volume, low-margin operations**, consider whether the topic should call a deterministic Power Automate flow (which is cheaper per message) instead of routing through the autonomous orchestrator.
-5. **Monitor message consumption via Power Platform Admin Center → Analytics → Capacity**. Set alerts at 70%, 85%, and 95% of your monthly cap.
-
----
-
-## 3. Full-stack worked examples
+## 2. Full-stack worked examples (Azure only)
 
 ### Example A — Pilot deployment (10 users, 2 weeks of validation)
 
-- **Tool calls**: ~200 across all 6 tools
+- **Tool calls**: ~200 across all tools
 - **Tickets placed**: ~20
-- **Messages**: ~600
 
 | Surface | Cost |
 |---|---|
 | Azure infrastructure | **~$3 – $5** |
-| Copilot Studio (PAYG) | **~$6** |
-| **Total** | **~$10 for the pilot** |
+| **Total** | **~$5 for the pilot** |
 
-### Example B — Production rollout, 500 users, all M365 Copilot-licensed
+### Example B — Production rollout, 500 users
 
 - **Tool calls**: ~6,000/month
 - **Tickets placed**: ~2,000/month
-- **Messages**: ~70,000/month — covered by user licenses
 
 | Surface | Cost |
 |---|---|
 | Azure infrastructure | **~$8/month** |
-| Copilot Studio messages | **$0 incremental** (covered by M365 Copilot) |
 | **Total** | **~$8/month** for the integration |
 
-### Example C — Production rollout, 500 users, standalone Copilot Studio
-
-- Same traffic as Example B
-- **Messages**: ~70,000/month → 1.8 standalone packs
-
-| Surface | Cost |
-|---|---|
-| Azure infrastructure | **~$8/month** |
-| Copilot Studio standalone (2 packs at $200 each) | **~$400/month** |
-| **Total** | **~$408/month** |
-
-### Example D — Enterprise, 10,000 users, PAYG
+### Example C — Enterprise, 10,000 users
 
 - **Tool calls**: ~120,000/month
 - **Tickets placed**: ~40,000/month
-- **Messages**: ~1.4M/month
 
 | Surface | Cost |
 |---|---|
 | Azure infrastructure | **~$55/month** |
-| Copilot Studio (PAYG at $0.01/msg) | **~$14,000/month** |
-| **Total** | **~$14,055/month** |
+| **Total** | **~$55/month** |
 
-At this scale, licensing optimization (move to M365 Copilot licenses or buy bulk standalone packs) typically reduces the bill by 5-10x.
-
----
-
-## 4. Field-friendly rule of thumb
-
-If a customer asks "what does this cost per transaction?", the safe answer in mid-2026 is:
-
-- **Azure side**: rounding error. Less than $0.001 per tool call. Less than $10/month for any realistic deployment.
-- **Copilot Studio side**:
-  - **$0** if users are licensed for Microsoft 365 Copilot.
-  - **~$0.30 per ticket placed end-to-end** at PAYG list price (search + form + submit + confirmation = ~30 messages × $0.01).
-  - **~$0.20 per ticket placed end-to-end** at standalone Copilot Studio list price.
-  - Confirm the message-count multiplier against your tenant's current Power Platform Admin Center → Analytics → Capacity dashboard — Microsoft tweaks the counting rules periodically.
+The Azure side stays a rounding error even at enterprise scale; the dominant cost driver in any deployment is whatever agent host / licensing you put in front of the MCP server (out of scope here).
 
 ---
 
-## 5. Where these numbers come from
+## 3. Field-friendly rule of thumb
+
+If a customer asks "what does the Azure side cost per transaction?", the safe answer in mid-2026 is:
+
+- **Azure side**: rounding error. Less than $0.001 per tool call. Less than $10/month for any realistic deployment, under ~$55/month at enterprise scale.
+- **Agent-host / messaging side**: depends entirely on the host (Microsoft 365 Copilot license, an IDE MCP client, a custom app, etc.). Price it against that host's current pricing sheet.
+
+---
+
+## 4. Where these numbers come from
 
 - **Azure pricing meters**: [Azure Functions pricing](https://azure.microsoft.com/pricing/details/functions/), [Storage](https://azure.microsoft.com/pricing/details/storage/blobs/), [Key Vault](https://azure.microsoft.com/pricing/details/key-vault/), [Log Analytics](https://azure.microsoft.com/pricing/details/monitor/), [Bandwidth](https://azure.microsoft.com/pricing/details/bandwidth/) — all checked against the West Europe rate card.
-- **Empirical timings**: production-shaped deployment in tenant where the OBO rollout was validated (see `docs/AUTH_ENTRA_OBO_OKTA.md`). Wall-clock per call measured via App Insights, with the ServiceNow round-trip being the dominant component.
-- **Copilot Studio pricing**: the [official Copilot Studio pricing page](https://www.microsoft.com/microsoft-copilot/microsoft-copilot-studio/pricing) and the message-counting rules published in [Copilot Studio capacity documentation](https://learn.microsoft.com/microsoft-copilot-studio/requirements-messages-management). The per-MCP-call message multiplier is an empirical observation as of mid-2026; expect this to shift as Microsoft formalizes MCP billing.
+- **Empirical timings**: production-shaped deployment in the tenant where the OBO rollout was validated (see `docs/AUTH_ENTRA_OBO_OKTA.md`). Wall-clock per call measured via App Insights, with the ServiceNow round-trip being the dominant component.
 
 ---
 
-## 6. Disclaimer (read this before quoting a customer)
+## 5. Disclaimer (read this before quoting a customer)
 
 Everything above is a **planning aid**, not a binding price. In particular:
 
-1. **Microsoft changes Copilot Studio pricing periodically.** The message-counting model for MCP/autonomous tool calls has been adjusted multiple times in the last 18 months. Always pull the current `Power Platform Admin Center → Analytics → Capacity` reading from a representative test session before quoting.
-2. **Regional pricing differs.** West Europe is used as the reference. North Europe, US, and Asia regions vary by 0-30% on most meters.
-3. **Enterprise Agreement / CSP discounts.** Both Azure and Microsoft 365 list prices can be discounted 10-40% via volume agreements. The numbers here are list (un-discounted).
-4. **Taxes and currency.** Numbers exclude VAT/GST/sales tax. Customers in non-USD regions will see local-currency conversion deltas.
-5. **Workload assumptions.** The "ticket = 3 tool calls" pattern assumes the agent is well-designed. A topic that triggers `search_catalog_items` on every user turn can easily 5x the message count. Profile your own topic before scaling.
+1. **Regional pricing differs.** West Europe is used as the reference. North Europe, US, and Asia regions vary by 0-30% on most meters.
+2. **Enterprise Agreement / CSP discounts.** Azure list prices can be discounted 10-40% via volume agreements. The numbers here are list (un-discounted).
+3. **Taxes and currency.** Numbers exclude VAT/GST/sales tax. Customers in non-USD regions will see local-currency conversion deltas.
+4. **Workload assumptions.** The "ticket = 3 tool calls" pattern assumes the agent is well-designed. Profile your own traffic before scaling.
 
-When in doubt, run the [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) for the Azure side and the Copilot Studio capacity calculator (or your CSP's quote tool) for the Copilot Studio side.
+When in doubt, run the [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) for the Azure side.

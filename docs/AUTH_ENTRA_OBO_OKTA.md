@@ -1,6 +1,6 @@
-# Authentication patterns for the ServiceNow MCP server in Copilot Studio
+# Per-user authentication patterns for the ServiceNow MCP server
 
-This document describes two end-to-end authentication architectures for hosting this MCP server behind a Microsoft Copilot Studio agent, and how each one impacts the per-user **"Open connection manager"** prompt that Copilot Studio raises by default for `oauth2pkcewithprm` connectors.
+This document describes two end-to-end authentication architectures for giving each user their own ServiceNow identity through this MCP server, and how each one enables silent SSO instead of a per-user OAuth connection prompt.
 
 It complements:
 
@@ -19,9 +19,9 @@ It complements:
 
 ## Why this matters
 
-Today, when you publish the agent to Teams or Microsoft 365 Copilot, every new user is hit with a one-time **"Let's get you connected first… Open connection manager"** card before any tool fires. This is documented behavior of the `oauth2pkcewithprm` identity provider used by Copilot Studio's MCP Dynamic discovery wizard.
+Today, when you publish the agent to Teams or Microsoft 365 Copilot, every new user may be hit with a one-time OAuth connection prompt before any tool fires — typical of OAuth connectors that broker per-user sign-in via a PKCE/PRM identity provider.
 
-Both patterns below replace `oauth2pkcewithprm` with an **SSO-capable** Entra ID OAuth connector configured with **Enable on-behalf-of login**. Combined with pre-authorizing the host (Teams / M365 Copilot) on the MCP server's Entra app, this eliminates the connection-manager prompt entirely.
+Both patterns below replace that flow with an **SSO-capable** Entra ID OAuth connector configured with **Enable on-behalf-of login**. Combined with pre-authorizing the host (Teams / M365 Copilot) on the MCP server's Entra app, this eliminates the connection prompt entirely.
 
 ---
 
@@ -31,7 +31,7 @@ The MCP server is **already a fully compliant Entra-protected OAuth resource**. 
 
 | Capability | Where it lives | Status |
 |---|---|---|
-| Bearer token validation on `POST /mcp` and `/api/catalog/*` | [src/utils/entraAuthMiddleware.ts](../src/utils/entraAuthMiddleware.ts), [src/services/entraTokenValidator.ts](../src/services/entraTokenValidator.ts) | ✅ |
+| Bearer token validation on `POST /mcp` | [src/utils/entraAuthMiddleware.ts](../src/utils/entraAuthMiddleware.ts), [src/services/entraTokenValidator.ts](../src/services/entraTokenValidator.ts) | ✅ |
 | RFC 8414 / 9728 metadata at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource` | [src/functions/oidc.ts](../src/functions/oidc.ts) | ✅ |
 | RFC 7591 Dynamic Client Registration at `POST /oauth/register` | [src/functions/oidc.ts](../src/functions/oidc.ts) | ✅ |
 | Multi-tenant token acceptance (`ENTRA_TRUSTED_TENANT_IDS`, `ENTRA_ALLOW_ANY_TENANT`) | [src/config.ts](../src/config.ts) | ✅ |
@@ -40,7 +40,7 @@ The MCP server is **already a fully compliant Entra-protected OAuth resource**. 
 | Optional "no fallback to integration user" enforcement (`SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN`) | [src/config.ts](../src/config.ts), [infra/main.bicep](../infra/main.bicep) | ✅ wired, awaiting downstream OBO implementation |
 | Per-user ServiceNow token via `x-servicenow-access-token` header | [src/config.ts](../src/config.ts) | ✅ contract reserved; **implementation hook missing in [tokenManager.ts](../src/services/tokenManager.ts)** |
 
-The only code that needs to change to enable either Pattern A or Pattern B is in [src/services/tokenManager.ts](../src/services/tokenManager.ts): replace (or augment) the ServiceNow password-grant call with an OBO-driven exchange. Everything else — middleware, config, identity extraction, `requested_for`, Bicep parameters, Copilot Studio topic YAML — stays as is.
+The only code that needs to change to enable either Pattern A or Pattern B is in [src/services/tokenManager.ts](../src/services/tokenManager.ts): replace (or augment) the ServiceNow password-grant call with an OBO-driven exchange. Everything else — middleware, config, identity extraction, `requested_for`, Bicep parameters — stays as is.
 
 ---
 
@@ -50,22 +50,22 @@ Both patterns share the same Entra app layout, connector configuration, and host
 
 ### Entra ID app registrations (in your home tenant)
 
-You already have one Entra app registration for this server. For SSO-grade OBO, the recommended layout is **two** registrations to follow Microsoft's separation-of-concerns guidance (see [Configure OBO authentication for custom connectors](https://learn.microsoft.com/microsoft-copilot-studio/advanced-custom-connector-on-behalf-of)):
+You already have one Entra app registration for this server. For SSO-grade OBO, the recommended layout is **two** registrations to follow Microsoft's separation-of-concerns guidance (see [Deploy Azure MCP Server with on-behalf-of authentication](https://learn.microsoft.com/azure/developer/azure-mcp-server/how-to/deploy-remote-mcp-server-on-behalf-of)):
 
 | Registration | Role | Settings |
 |---|---|---|
 | **Server App** (`ServiceNow MCP Server`) | OAuth 2.0 resource (your Function). This is the audience of incoming user tokens. | Application ID URI: `api://<server-app-id>`. Expose scope: `access_as_user` (delegated, admins+users). Federated credential bound to the Function's User-Assigned Managed Identity (recommended) **or** a client secret. |
-| **Client App** (`ServiceNow MCP Connector`) | OAuth client used by the Copilot Studio custom connector. | Web platform with the Power Platform redirect URIs (already in [README.md](../README.md) step 2). Delegated API permission on `api://<server-app-id>/access_as_user`. **Pre-authorized client IDs**: see next section. |
+| **Client App** (`ServiceNow MCP Connector`) | OAuth client used by the agent host's OAuth connector. | Web platform with the redirect URIs (already in [README.md](../README.md) step 2). Delegated API permission on `api://<server-app-id>/access_as_user`. **Pre-authorized client IDs**: see next section. |
 
 > If you currently have a single combined app, you can keep using it — set its API permissions to pre-authorize *itself* on its own scope. Splitting into two apps is cleaner long-term but not required.
 
-#### Pre-authorize Copilot Studio and Microsoft 365 hosts
+#### Pre-authorize the agent host and Microsoft 365 hosts
 
 On the **Server App**, *Expose an API → Add a client application* and add the first-party app IDs that should be allowed to silently obtain tokens for `access_as_user` without a consent screen:
 
 | First-party host | App ID to pre-authorize |
 |---|---|
-| Power Platform / Copilot Studio runtime | `7df0a125-d3be-4c96-aa54-591f83ff541c` (Power Apps / Copilot Studio) |
+| Power Platform connector runtime | `7df0a125-d3be-4c96-aa54-591f83ff541c` (Power Apps) |
 | Microsoft Teams desktop / web | `1fec8e78-bce4-4aaf-ab1b-5451cc387264` (Teams mobile/desktop) and `5e3ce6c0-2b1f-4285-8d4b-75ee78787346` (Teams web) |
 | Microsoft 365 Copilot (web / Office) | `ab9b8c07-8f02-4f72-87fa-80105867a763` (M365 Copilot) |
 
@@ -73,9 +73,9 @@ Plus pre-authorize the **Client App** on the same scope. Grant tenant-wide admin
 
 > Exact first-party client IDs evolve; the canonical list lives in Microsoft documentation and the Teams/M365 Copilot manifest reference. Treat the table above as a starting point and verify against your tenant's sign-in logs.
 
-### Copilot Studio custom connector — security tab
+### OAuth connector — security settings
 
-Open the existing **ServiceNow MCP** custom connector in Power Apps and update **2. Security**:
+In your agent host's OAuth connector, configure the security settings:
 
 | Field | Value |
 |---|---|
@@ -91,7 +91,7 @@ Open the existing **ServiceNow MCP** custom connector in Power Apps and update *
 
 This is the exact recipe from [Deploy Azure MCP Server with on-behalf-of authentication](https://learn.microsoft.com/azure/developer/azure-mcp-server/how-to/deploy-remote-mcp-server-on-behalf-of) applied to a custom (non-Microsoft) MCP server.
 
-> ⚠️ Once you save this, **delete any existing user connections** for this connector. Existing `oauth2pkcewithprm`-bound connections cannot be migrated; users must let the agent create a fresh, silent connection on next invocation.
+> ⚠️ Once you save this, **delete any existing user connections** for this connector. Existing PKCE/PRM-bound connections cannot be migrated; users must let the agent create a fresh, silent connection on next invocation.
 
 ### Teams / M365 Copilot manifest (only required for true silent SSO)
 
@@ -122,8 +122,8 @@ Then read `res.locals.callerAccessToken` from the [requestContext.ts](../src/req
 ```mermaid
 sequenceDiagram
   participant U as User (Teams / M365 Copilot)
-  participant C as Copilot Studio Agent
-  participant K as Custom Connector<br/>(Entra OAuth + OBO)
+  participant C as Agent host
+  participant K as OAuth connector<br/>(Entra OAuth + OBO)
   participant F as Azure Function<br/>MCP Server
   participant E as Entra ID
   participant S as ServiceNow
@@ -201,8 +201,8 @@ Wire `ServiceNowClient` to prefer this path when `res.locals.callerAccessToken` 
 ```mermaid
 sequenceDiagram
   participant U as User (Teams / M365 Copilot)
-  participant C as Copilot Studio Agent
-  participant K as Custom Connector<br/>(Entra OAuth + OBO)
+  participant C as Agent host
+  participant K as OAuth connector<br/>(Entra OAuth + OBO)
   participant F as Azure Function<br/>MCP Server
   participant E as Entra ID
   participant O as Okta Org<br/>(External IdP: Entra)
@@ -321,7 +321,7 @@ If the ServiceNow team will not register Entra and Okta will not enable JWT-Bear
 6. ☐ Implement `getAccessTokenForCaller` (or `…ViaOkta`) in [src/services/tokenManager.ts](../src/services/tokenManager.ts) and surface `res.locals.callerAccessToken` from the middleware.
 7. ☐ Add new env vars to [src/config.ts](../src/config.ts) and Bicep parameters to [infra/main.bicep](../infra/main.bicep); store secrets in Key Vault.
 8. ☐ Set `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` to disable integration-user fallback once the new path is verified.
-9. ☐ In Power Apps, edit the **ServiceNow MCP** custom connector → Security tab → switch to Azure AD with **Enable on-behalf-of login = true** (see table above). Delete and recreate all user connections.
+9. ☐ In your agent host's OAuth connector, switch to Azure AD with **Enable on-behalf-of login = true** (see table above). Delete and recreate all user connections.
 10. ☐ Publish the Teams app manifest with `webApplicationInfo` pointing at the Server App. Verify the silent SSO path with a non-admin test user on Teams desktop and M365 Copilot web.
 11. ☐ Update [AGENT_365_BYO_MCP.md](AGENT_365_BYO_MCP.md) registration so the BYO MCP record matches the Server App ID.
 12. ☐ Smoke test: `npm run smoke:test` against the deployed endpoint with a real user token; verify Application Insights shows the OBO exchange and the user-scoped ServiceNow call.
@@ -330,9 +330,7 @@ If the ServiceNow team will not register Entra and Okta will not enable JWT-Bear
 
 ## Reference docs
 
-- [Configure OBO authentication for custom connectors](https://learn.microsoft.com/microsoft-copilot-studio/advanced-custom-connector-on-behalf-of)
 - [Deploy Azure MCP Server with on-behalf-of authentication](https://learn.microsoft.com/azure/developer/azure-mcp-server/how-to/deploy-remote-mcp-server-on-behalf-of) — the canonical reference template; this doc adapts the same pattern to a non-Microsoft downstream (ServiceNow / Okta)
-- [Use SSO for connectors in agents](https://learn.microsoft.com/power-platform/release-plan/2025wave1/microsoft-copilot-studio/use-sso-connectors-agents) (GA July 31, 2025)
 - [Conditional Access for agent identities — OBO flow](https://learn.microsoft.com/entra/identity/conditional-access/agent-id#on-behalf-of-obo-flow)
 - [Microsoft identity platform — On-behalf-of flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow)
 - [RFC 7523 — JWT Profile for OAuth 2.0 Client Authentication and Authorization Grants](https://datatracker.ietf.org/doc/html/rfc7523) (used in Pattern B)

@@ -206,7 +206,7 @@ try {
   Write-Host ""
 
   if (-not [string]::IsNullOrWhiteSpace($EntraTenantId)) {
-    Write-Host "Copilot Studio setup (OAuth 2.0 - Dynamic discovery):"
+    Write-Host "MCP client setup (OAuth 2.0 - Dynamic discovery):"
     Write-Host "- MCP URL         = $endpointUrl"
     Write-Host "- Authentication  = OAuth 2.0"
     Write-Host "- Type            = Dynamic discovery"
@@ -214,7 +214,7 @@ try {
     Write-Host "  The wizard reads /.well-known/openid-configuration automatically."
     Write-Host "  Click 'Create' to register and complete the setup."
   } else {
-    Write-Host "Copilot Studio setup (API key - Entra auth not configured):"
+    Write-Host "MCP client setup (API key - Entra auth not configured):"
     Write-Host "- MCP URL         = $endpointUrl"
     Write-Host "- Authentication  = API key"
     Write-Host "- Header name     = x-functions-key"

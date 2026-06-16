@@ -88,7 +88,7 @@ export function createMcpExpressApp(): express.Express {
     res.setHeader("Vary", "Origin");
 
     // Only echo Access-Control-Allow-Origin for explicitly allowlisted origins.
-    // The MCP endpoint is primarily called server-to-server (Copilot Studio
+    // The MCP endpoint is primarily called server-to-server (agent host
     // backend, smoke tests), so the default empty allowlist is correct. Browser
     // clients must opt in via the CORS_ALLOWED_ORIGINS env var.
     const requestOrigin = req.headers.origin;
@@ -260,7 +260,7 @@ export function createMcpExpressApp(): express.Express {
 
     registerTools(server, sharedServiceNowClient, sharedTokenManager);
 
-    // Copilot Studio currently appears sensitive to extra MCP SDK fields such as
+    // Some MCP clients are sensitive to extra MCP SDK fields such as
     // execution metadata and some richer JSON Schema keywords. Override tools/list
     // with a minimal manifest while leaving tool execution on the SDK path.
     server.server.setRequestHandler(ListToolsRequestSchema, () => ({

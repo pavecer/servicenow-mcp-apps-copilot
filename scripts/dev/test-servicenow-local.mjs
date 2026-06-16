@@ -2,11 +2,11 @@
 /**
  * Direct ServiceNow probe — runs the ServiceNow client against your real
  * instance WITHOUT going through MCP, the Azure Functions runtime, or
- * Copilot Studio. Useful for:
+ * an MCP client. Useful for:
  *
  *   - Verifying ServiceNow OAuth credentials and token endpoint
  *   - Inspecting raw catalog item / order responses
- *   - Reproducing ServiceNow-side bugs in isolation (no MCS / Express layer)
+ *   - Reproducing ServiceNow-side bugs in isolation (no MCP / Express layer)
  *
  * Reads configuration from ./local.settings.json (the same file Azure
  * Functions Core Tools loads on `func start`). Existing process.env values
