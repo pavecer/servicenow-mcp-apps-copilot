@@ -1,0 +1,70 @@
+name: deploy
+
+# Continuous deployment to Azure via the Azure Developer CLI (azd).
+#
+# SAFE BY DEFAULT: this workflow is INERT until you configure the AZURE_*
+# repository/environment *variables* (see the `if:` guard below). Until then it
+# is skipped — it will never produce a failing run. App secrets are NOT handled
+# here: they live in Azure Key Vault (set once during `azd up` / provisioning)
+# and the Function App reads them via managed identity.
+#
+# One-time setup (creates the OIDC federated credential + the variables below):
+#   azd pipeline config --provider github
+#
+# Auth uses OpenID Connect (workload identity federation) — no long-lived
+# service-principal secret is ever stored in GitHub.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - ".github/skills/**"
+      - ".github/agents/**"
+
+permissions:
+  id-token: write # required to request the OIDC token
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy application code (azd)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Inert until AZURE_ENV_NAME is set as a repo/environment variable.
+    if: ${{ vars.AZURE_ENV_NAME != '' }}
+    environment: ${{ vars.AZURE_ENV_NAME }}
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install azd
+        uses: Azure/setup-azd@v2
+
+      - name: Azure login (OIDC federated credential)
+        run: azd auth login --client-id "$AZURE_CLIENT_ID" --federated-credential-provider github --tenant-id "$AZURE_TENANT_ID"
+
+      - name: Deploy application code to Azure
+        # `azd deploy` ships the built code to already-provisioned infra.
+        # For the very first deployment (to create the infra), run `azd up`
+        # locally once — see README "Deploy to Azure".
+        run: azd deploy --no-prompt

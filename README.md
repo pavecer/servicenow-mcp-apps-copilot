@@ -37,6 +37,26 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 
 ---
 
+## How the agent works (scenario flows)
+
+The agent's behavior is defined in [`m365-agent/appPackage/instruction.txt`](m365-agent/appPackage/instruction.txt). Each user intent maps to a tool call and the MCP Apps widget it renders:
+
+| User intent (example) | Tool(s) called | Widget rendered |
+|---|---|---|
+| "I need a laptop" / "what software can I request" | `search_catalog_items` | **catalog-browse** (results grid) |
+| Picks an item (or a single match is found) | `get_catalog_item_form` | **order-form** (pre-filled from the request) |
+| Submits the order form | `place_order` | **order-detail** (confirmation) |
+| "I need a laptop and a monitor" / "add to cart" | `add_to_cart` → `view_cart` → `update_cart_item` / `remove_cart_item` → `submit_cart` | **cart** → **order-detail** |
+| "show my orders" / "status of my requests" | `list_user_orders` | **my-orders** |
+| Opens a specific request | `get_order_detail` | **order-detail** (items, approvals, comment box) |
+| "change the qty / remove an item on REQ…" | `update_order_item` / `remove_order_item` | **order-detail** (re-rendered in place) |
+| "update the description / urgency" | `update_order` | **order-detail** |
+| Connectivity troubleshooting | `validate_servicenow_config` | — (text result) |
+
+Widget structure, the host bridge, and the build pipeline are documented in [`.github/skills/mcp-apps-ui/SKILL.md`](.github/skills/mcp-apps-ui/SKILL.md) and [`AGENTS.md`](AGENTS.md). The declarative-agent construct (manifest, `ai-plugin.json`, `run_for_functions`) is in [`m365-agent/`](m365-agent/README.md).
+
+---
+
 ## Repository structure
 
 ```
@@ -134,6 +154,19 @@ npm run deploy:azure
 ```
 
 The script prompts for all values, provisions Azure resources (Function App, Key Vault, Application Insights), deploys the function, and prints client setup instructions.
+
+**GitHub Actions (automated CI/CD):**
+
+The repo ships two workflows:
+
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — build + test on every push and PR.
+- [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — deploys to Azure via `azd` on push to `main`, authenticating with **OIDC** (no long-lived secrets stored in GitHub). It stays **inert until configured**, so it never produces a failing run before setup. Run the one-time setup, which creates the federated credential and the variables below:
+
+  ```bash
+  azd pipeline config --provider github
+  ```
+
+  Required repository/environment **variables**: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_ENV_NAME`, `AZURE_LOCATION`. App secrets (ServiceNow / Entra) are **not** stored in GitHub — they live in Key Vault and are read via managed identity.
 
 **Non-interactive (CI/CD):**
 
