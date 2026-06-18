@@ -20,7 +20,7 @@
 | **This fork's function app** | `func-yj453fjwuhph4` in RG `rg-snowmcpwidg-dev` (westeurope), `MCP_APPS_ENABLED=true`. MCP endpoint `https://func-yj453fjwuhph4.azurewebsites.net/mcp`, `/health` 200. azd env `snowmcpwidg-dev`. |
 | **Original repo's function app** | `func-xflvdzmohd3e2` in RG `rg-dev-alt-tenant` — **no** `MCP_APPS_ENABLED`. Pre-MCP-Apps MCP server. Never touched by the widget work. |
 | Subscription | `ff6e6a8b-29f6-4666-b4b0-ff238c72bb23` |
-| ServiceNow dev instance | `https://dev310193.service-now.com` (admin / password grant) |
+| ServiceNow dev instance | `https://your-instance.service-now.com` (admin / password grant) |
 | Deploy command | `azd deploy api -e snowmcpwidg-dev` (~1m30s) |
 | Build widgets | `npm run build:widgets` (regenerates `src/ui/widgets/generated/*.ts`) |
 | Tests | `npx vitest run` — 188 passing (25 files) |
@@ -120,7 +120,7 @@ stamps `opened_by`/`sys_created_by` with **whoever authenticates the REST call**
 
 ### Solution shipped (2026-06-15) — patch the ownership fields
 
-We verified live against `dev310193` that **PATCHing `opened_by` on the created
+We verified live against the dev instance that **PATCHing `opened_by` on the created
 `sc_request` sticks** (no business rule re-stamps it). So `placeOrder` now, after
 `order_now`, resolves the **caller's** `sys_user` sys_id and patches
 `opened_by` + `requested_by` (the ordering user) alongside `requested_for` (the

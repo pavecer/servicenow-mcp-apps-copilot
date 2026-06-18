@@ -8,7 +8,7 @@ Usage: SN_AUTH='admin:pwd' python3 scripts/dev/catalog-coverage-classify.py [num
 """
 import os, sys, json, urllib.request, base64, collections
 
-SN = os.environ.get("SN_URL", "https://dev310193.service-now.com")
+SN = os.environ.get("SN_URL", "https://your-instance.service-now.com")
 AUTH = os.environ["SN_AUTH"]
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 60
 

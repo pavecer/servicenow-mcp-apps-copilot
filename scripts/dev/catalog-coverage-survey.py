@@ -10,7 +10,7 @@ Usage: SN_AUTH='admin:pwd' python3 scripts/dev/catalog-coverage-survey.py
 """
 import os, sys, json, urllib.request, base64, collections
 
-SN = os.environ.get("SN_URL", "https://dev310193.service-now.com")
+SN = os.environ.get("SN_URL", "https://your-instance.service-now.com")
 AUTH = os.environ["SN_AUTH"]  # "user:pass"
 
 def get(path):

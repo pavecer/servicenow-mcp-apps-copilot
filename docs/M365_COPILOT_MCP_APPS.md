@@ -22,7 +22,7 @@ client can call.
 | MCP endpoint | `https://func-yj453fjwuhph4.azurewebsites.net/mcp` |
 | Feature flag | `MCP_APPS_ENABLED=true` (set on this app) |
 | azd env | `snowmcpwidg-dev` — deploy with `azd deploy api -e snowmcpwidg-dev` |
-| ServiceNow | `https://dev310193.service-now.com` (admin / password grant) |
+| ServiceNow | `https://your-instance.service-now.com` (admin / password grant) |
 | Telemetry | App Insights `appi-yj453fjwuhph4` (AppId `2985a951-eef7-4587-8ff1-edf043211e08`) |
 
 > The original (pre-MCP-Apps) MCP server runs on a **separate** function app
