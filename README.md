@@ -19,7 +19,7 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 | `update_order` | Updates a small allowlist of requestor-mutable fields on the caller's order (`short_description`, `description`, `comments`, `urgency`, `priority`) |
 | `validate_servicenow_config` | Validates OAuth and catalog API access end-to-end |
 
-> **This repo is dedicated to the MCP Apps capability** — delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. The full build-and-debug story, the deployment map, and the per-user-identity (OBO) research are in [`DEVELOPMENT_JOURNAL.md`](DEVELOPMENT_JOURNAL.md).
+> **This repo is dedicated to the MCP Apps capability** — delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. The deployment map, the per-user-identity (OBO) research, and the architecture are covered in this README and the [`docs/`](docs/) folder.
 
 **Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and five `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, cart, my orders, order detail). The cart tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`) are registered **only** when this flag is on, so the flag-off default surface is unchanged. When the flag is **off**, tool results fall back to a legacy Adaptive Card surface in `content[0].text` (still consumable by any standard MCP client). Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
 

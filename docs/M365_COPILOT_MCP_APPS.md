@@ -3,8 +3,7 @@
 > This repo is a **standalone project dedicated to the MCP Apps capability** —
 > delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. (It
 > began as a fork of `mcp-server-servicenow` and was promoted to its own repo on
-> 2026-06-15.) For the full build-and-debug story (every bug we hit and how it
-> was fixed) see [`DEVELOPMENT_JOURNAL.md`](../DEVELOPMENT_JOURNAL.md).
+> 2026-06-15.) For deeper background, see the other docs in this folder.
 
 This server optionally exposes [SEP-1865 "MCP Apps"][sep-1865] widget UIs that
 render inline inside Microsoft 365 Copilot. When you ask the agent to "order a
