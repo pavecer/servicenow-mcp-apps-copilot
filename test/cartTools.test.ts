@@ -72,7 +72,7 @@ describe("cart tool manifest gating", () => {
     ]);
   });
 
-  it("flag ON: manifest adds the five cart tools (twelve total)", async () => {
+  it("flag ON: manifest adds the five cart tools (fourteen total)", async () => {
     const mod = await loadIndex(true);
     const names = mod.getMinimalToolDefinitions().map(t => t.name).sort();
     expect(names).toContain("add_to_cart");
@@ -80,7 +80,9 @@ describe("cart tool manifest gating", () => {
     expect(names).toContain("update_cart_item");
     expect(names).toContain("remove_cart_item");
     expect(names).toContain("submit_cart");
-    expect(names).toHaveLength(12);
+    expect(names).toContain("update_order_item");
+    expect(names).toContain("remove_order_item");
+    expect(names).toHaveLength(14);
   });
 
   it("flag ON: cart tools are decorated with their widget resourceUri", async () => {

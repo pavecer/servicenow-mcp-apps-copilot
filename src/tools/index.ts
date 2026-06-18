@@ -9,6 +9,10 @@ import { registerListUserOrdersTool } from "./listUserOrders";
 import { registerUpdateOrderTool } from "./updateOrder";
 import { registerGetOrderDetailTool } from "./getOrderDetail";
 import {
+  registerUpdateOrderItemTool,
+  registerRemoveOrderItemTool
+} from "./orderItems";
+import {
   registerAddToCartTool,
   registerViewCartTool,
   registerUpdateCartItemTool,
@@ -56,16 +60,26 @@ const CART_TOOL_NAMES = [
   "submit_cart"
 ] as const;
 
+// Order line-item tools are also part of the SEP-1865 "MCP Apps" experience —
+// they let the user edit/remove individual items in an existing order and
+// re-render the order-detail widget in place. Gated on the same flag as the
+// cart tools so the default tools/list stays the seven base tools.
+const ORDER_ITEM_TOOL_NAMES = [
+  "update_order_item",
+  "remove_order_item"
+] as const;
+
 export type RegisteredToolName =
   | (typeof BASE_TOOL_NAMES)[number]
-  | (typeof CART_TOOL_NAMES)[number];
+  | (typeof CART_TOOL_NAMES)[number]
+  | (typeof ORDER_ITEM_TOOL_NAMES)[number];
 
 // The effective set of tool names for the current configuration. Both the
 // minimal manifest and registerTools() derive from the same gate so the
 // import-time drift guard stays consistent in either flag state.
 function effectiveToolNames(): string[] {
   return config.mcpApps.enabled
-    ? [...BASE_TOOL_NAMES, ...CART_TOOL_NAMES]
+    ? [...BASE_TOOL_NAMES, ...CART_TOOL_NAMES, ...ORDER_ITEM_TOOL_NAMES]
     : [...BASE_TOOL_NAMES];
 }
 
@@ -370,6 +384,53 @@ export function getMinimalToolDefinitions() {
             }
           }
         }
+      },
+      {
+        name: "update_order_item",
+        description: "Update a single requested item (line item) on an existing order. Allowed fields: quantity, comments, short_description, description.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            orderItemSysId: {
+              type: "string",
+              description: "The sys_id of the requested item (sc_req_item) to update"
+            },
+            orderSysId: {
+              type: "string",
+              description: "Optional sys_id of the parent order (sc_request); resolved from the item when omitted"
+            },
+            updates: {
+              type: "object",
+              description: "Allowed fields: quantity, comments, short_description, description",
+              additionalProperties: false,
+              properties: {
+                quantity: { type: ["string", "number"] },
+                comments: { type: "string" },
+                short_description: { type: "string" },
+                description: { type: "string" }
+              }
+            }
+          },
+          required: ["orderItemSysId", "updates"]
+        }
+      },
+      {
+        name: "remove_order_item",
+        description: "Remove a single requested item (line item) from an existing order without cancelling the whole request.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            orderItemSysId: {
+              type: "string",
+              description: "The sys_id of the requested item (sc_req_item) to remove"
+            },
+            orderSysId: {
+              type: "string",
+              description: "Optional sys_id of the parent order (sc_request); resolved from the item when omitted"
+            }
+          },
+          required: ["orderItemSysId"]
+        }
       }
     );
   }
@@ -418,13 +479,16 @@ export function registerTools(
   registerUpdateOrderTool(server, client);
   registerGetOrderDetailTool(server, client);
 
-  // Cart/basket tools — MCP Apps surface only (see effectiveToolNames()).
+  // Cart/basket + order line-item tools — MCP Apps surface only (see
+  // effectiveToolNames()).
   if (config.mcpApps.enabled) {
     registerAddToCartTool(server, client);
     registerViewCartTool(server, client);
     registerUpdateCartItemTool(server, client);
     registerRemoveCartItemTool(server, client);
     registerSubmitCartTool(server, client);
+    registerUpdateOrderItemTool(server, client);
+    registerRemoveOrderItemTool(server, client);
   }
 
   // SEP-1865 widget resources. No-op when MCP_APPS_ENABLED != "true".

@@ -4,6 +4,10 @@ dist/
 .env
 .env.*
 local.settings.json
+
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store
 .azure/
 docs/handover.md
 

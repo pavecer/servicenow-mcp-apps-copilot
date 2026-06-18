@@ -26,7 +26,7 @@
     --accent: #2899f5;
     --field-bg: #2a2a2a;
   }
-  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
   h1 { font-size: 16px; margin: 0 0 4px; }
   .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
   form { display: flex; flex-direction: column; gap: 14px; }
@@ -336,8 +336,8 @@
     });
   }
 
-  // Add to cart (basket): add the item without ordering, then show an "added"
-  // panel so the user can go review and submit the whole basket. PRIMARY path
+  // Add to cart: add the item without ordering, then show an "added"
+  // panel so the user can go review and submit the whole cart. PRIMARY path
   // is the host bridge add_to_cart; FALLBACK drives it through the chat.
   function addToCart(name, sysId, vars, btn, errEl) {
     var settled = false;
@@ -372,15 +372,87 @@
     root.appendChild(banner);
     if (count) {
       var meta = document.createElement("div"); meta.className = "meta";
-      meta.textContent = "Your basket now has " + count + " item" + (count === 1 ? "" : "s") +
+      meta.textContent = "Your cart now has " + count + " item" + (count === 1 ? "" : "s") +
         (cart.subtotalPrice ? " \u2022 subtotal " + cart.subtotalPrice : "");
       root.appendChild(meta);
     }
     var act = document.createElement("div"); act.className = "actions";
     var review = document.createElement("button");
-    review.type = "button"; review.className = "primary"; review.textContent = "Review & submit basket";
-    review.addEventListener("click", function () { sendFollowUp("Show my ServiceNow cart so I can review and submit it."); });
+    review.type = "button"; review.className = "primary"; review.textContent = "Review cart";
+    review.addEventListener("click", function () { reviewCart(review); });
     act.appendChild(review);
+    var more = document.createElement("button");
+    more.type = "button"; more.textContent = "Add more items";
+    more.addEventListener("click", function () { sendFollowUp("Search the ServiceNow catalog for more items to add to my cart."); });
+    act.appendChild(more);
+    root.appendChild(act);
+  }
+
+  function reviewCart(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = "Loading cart…"; }
+    var p;
+    try { p = callTool("view_cart", {}); }
+    catch (e) { sendFollowUp("Show my ServiceNow cart."); return; }
+    if (!p || typeof p.then !== "function") { sendFollowUp("Show my ServiceNow cart."); return; }
+    p.then(function (result) {
+      var data = unwrapResult(result);
+      renderCartReview((data && data.cart) || { items: [] });
+    }).catch(function () {
+      sendFollowUp("Show my ServiceNow cart.");
+    });
+  }
+
+  function submitCart(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = "Submitting…"; }
+    var p;
+    try { p = callTool("submit_cart", {}); }
+    catch (e) { sendFollowUp("Submit my ServiceNow cart."); return; }
+    if (!p || typeof p.then !== "function") { sendFollowUp("Submit my ServiceNow cart."); return; }
+    p.then(function (result) {
+      renderConfirmation(unwrapResult(result), "ServiceNow cart");
+    }).catch(function () {
+      if (btn) { btn.disabled = false; btn.textContent = "Submit cart"; }
+      sendFollowUp("Submit my ServiceNow cart.");
+    });
+  }
+
+  function renderCartReview(cart) {
+    cart = cart || { items: [] };
+    var items = Array.isArray(cart.items) ? cart.items : [];
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var h1 = document.createElement("h1"); h1.textContent = "Your ServiceNow cart"; root.appendChild(h1);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = items.length ? (items.length + " item" + (items.length === 1 ? "" : "s") + " in your cart") : "Your cart is empty.";
+    root.appendChild(meta);
+    if (items.length) {
+      var list = document.createElement("div"); list.className = "list";
+      items.forEach(function (line) {
+        var item = document.createElement("div"); item.className = "item";
+        var title = document.createElement("div"); title.className = "item-title";
+        title.textContent = (line.name || "Catalog item") + " × " + String(line.quantity || 1);
+        item.appendChild(title);
+        if (line.price) {
+          var price = document.createElement("div"); price.className = "meta";
+          price.textContent = line.price;
+          item.appendChild(price);
+        }
+        list.appendChild(item);
+      });
+      root.appendChild(list);
+      if (cart.subtotalPrice) {
+        var subtotal = document.createElement("div"); subtotal.className = "meta";
+        subtotal.textContent = "Subtotal \u2022 " + cart.subtotalPrice;
+        root.appendChild(subtotal);
+      }
+    }
+    var act = document.createElement("div"); act.className = "actions";
+    if (items.length) {
+      var submit = document.createElement("button");
+      submit.type = "button"; submit.className = "primary"; submit.textContent = "Submit cart";
+      submit.addEventListener("click", function () { submitCart(submit); });
+      act.appendChild(submit);
+    }
     var more = document.createElement("button");
     more.type = "button"; more.textContent = "Add more items";
     more.addEventListener("click", function () { sendFollowUp("Search the ServiceNow catalog for more items to add to my cart."); });

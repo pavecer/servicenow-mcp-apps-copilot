@@ -16,7 +16,7 @@
     --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3;
     --border: #3b3a39; --accent: #2899f5; --card-bg: #2a2a2a; --field-bg: #2a2a2a;
   }
-  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
   h1 { font-size: 16px; margin: 0 0 4px; }
   .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
   .lines { display: flex; flex-direction: column; gap: 10px; }
@@ -190,7 +190,7 @@
     p.then(function (result) {
       renderConfirmation(unwrapResult(result));
     }).catch(function () {
-      if (btn) { btn.disabled = false; btn.textContent = "Submit order"; }
+      if (btn) { btn.disabled = false; btn.textContent = "Submit cart"; }
       sendFollowUp("Submit my ServiceNow cart.");
     });
   }
@@ -209,13 +209,13 @@
       meta0.textContent = "Your cart is empty.";
       root.appendChild(meta0);
       var p = document.createElement("p"); p.className = "empty";
-      p.textContent = "Search the catalog and choose \u201cAdd to cart\u201d to build a basket, then submit it as one request.";
+      p.textContent = "Search the catalog and choose \u201cAdd to cart\u201d to build a cart, then submit it as one request.";
       root.appendChild(p);
       return;
     }
 
     var meta = document.createElement("div"); meta.className = "meta";
-    meta.textContent = items.length + " item" + (items.length === 1 ? "" : "s") + " in your basket";
+    meta.textContent = items.length + " item" + (items.length === 1 ? "" : "s") + " in your cart";
     root.appendChild(meta);
 
     var list = document.createElement("div"); list.className = "lines";
@@ -275,7 +275,7 @@
 
     var actions = document.createElement("div"); actions.className = "actions";
     var submit = document.createElement("button");
-    submit.type = "button"; submit.className = "primary"; submit.textContent = "Submit order";
+    submit.type = "button"; submit.className = "primary"; submit.textContent = "Submit cart";
     submit.addEventListener("click", function () { submitCart(submit); });
     actions.appendChild(submit);
 

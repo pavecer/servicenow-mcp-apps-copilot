@@ -124,6 +124,29 @@ export function itemNameMatchesQuery(name: string, queryTokens: Set<string>): bo
 }
 
 /**
+ * Returns the position (word index, 0-based) of the earliest matching name token
+ * in the query text. Used as a tiebreaker when multiple items match: "sales laptop"
+ * should rank higher than "adobe acrobat" in the query "order sales laptop with
+ * adobe acrobat" because "sales" appears earlier than "adobe".
+ */
+export function firstMatchPositionInQuery(name: string, queryText: string): number {
+  const nameTokens = [...catalogQueryTokens(name)];
+  const queryTokens = queryText
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/);
+  let minPos = queryTokens.length;
+  for (const nt of nameTokens) {
+    const pos = queryTokens.findIndex(qt => qt === nt);
+    if (pos >= 0 && pos < minPos) {
+      minPos = pos;
+    }
+  }
+  return minPos;
+}
+
+/**
  * Runs `worker` for every item in `items` with at most `concurrency` calls in
  * flight at any time. Preserves input order in the returned array. Errors
  * thrown by `worker` propagate to the caller; existing in-flight tasks are
@@ -1075,6 +1098,88 @@ export class ServiceNowClient {
       Logger.error("Failed to update order", {
         operation: "orders.update_failed",
         requestSysId
+      }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolve the parent sc_request sys_id for a given sc_req_item (line item).
+   * Used by the order item tools to refresh the whole order after an item is
+   * edited or removed. Returns undefined when the item or its parent cannot be
+   * resolved.
+   */
+  async getOrderItemRequestSysId(orderItemSysId: string): Promise<string | undefined> {
+    const client = await this.getClient();
+    try {
+      const response = await client.get<{ result?: { request?: { value?: string } | string } }>(
+        `/api/now/table/sc_req_item/${orderItemSysId}`,
+        { params: { sysparm_fields: "request" } }
+      );
+      const request = response.data.result?.request;
+      if (request && typeof request === "object") {
+        return typeof request.value === "string" ? request.value : undefined;
+      }
+      return typeof request === "string" ? request : undefined;
+    } catch (error) {
+      Logger.warn("Failed to resolve parent request for order item", {
+        operation: "order_item.parent_lookup_failed",
+        orderItemSysId
+      }, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Update an individual requested item (sc_req_item) on an order. The caller
+   * (updateOrderItem MCP tool) restricts `updates` to a safe subset of fields
+   * (quantity, comments, short_description, description); workflow/state fields
+   * are intentionally excluded so this cannot bypass ServiceNow process
+   * controls when the integration-user token is used. Returns the updated row.
+   */
+  async updateOrderItem(
+    orderItemSysId: string,
+    updates: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const client = await this.getClient();
+    try {
+      Logger.info("Updating ServiceNow order item", {
+        operation: "order_item.update",
+        orderItemSysId,
+        fields: Object.keys(updates)
+      });
+      const response = await client.patch<{ result: Record<string, unknown> }>(
+        `/api/now/table/sc_req_item/${orderItemSysId}`,
+        updates
+      );
+      return response.data.result;
+    } catch (error) {
+      Logger.error("Failed to update order item", {
+        operation: "order_item.update_failed",
+        orderItemSysId
+      }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove (delete) an individual requested item (sc_req_item) from an order.
+   * Lets the requestor drop a single line item without cancelling the whole
+   * request. The DELETE succeeds only when the effective ServiceNow identity
+   * has rights on sc_req_item; ACL failures surface to the caller.
+   */
+  async removeOrderItem(orderItemSysId: string): Promise<void> {
+    const client = await this.getClient();
+    try {
+      Logger.info("Removing ServiceNow order item", {
+        operation: "order_item.remove",
+        orderItemSysId
+      });
+      await client.delete(`/api/now/table/sc_req_item/${orderItemSysId}`);
+    } catch (error) {
+      Logger.error("Failed to remove order item", {
+        operation: "order_item.remove_failed",
+        orderItemSysId
       }, error);
       throw error;
     }

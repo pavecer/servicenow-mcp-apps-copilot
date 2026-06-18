@@ -379,6 +379,15 @@ describe("computePrefillValues (iPhone scenario)", () => {
     };
   }
 
+  it("selects only Photoshop (not Acrobat) from userContext 'adobe photoshop' (no false positive on shared brand token)", () => {
+    const item = salesLaptopDemoItem();
+    const { values } = computePrefillValues(item.variables, {
+      userContext: "I need to order sales laptop with adobe photoshop"
+    });
+    expect(values.photoshop).toBe(true);
+    expect(values.acrobat).toBeUndefined();
+  });
+
   it("prefills nested boolean toggles via exact-name hints (PowerPoint, Acrobat, Photoshop)", () => {
     const item = salesLaptopDemoItem();
     const { values, diagnostics } = computePrefillValues(item.variables, {

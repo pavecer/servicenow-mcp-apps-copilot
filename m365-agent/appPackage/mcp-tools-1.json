@@ -289,7 +289,7 @@
         },
         {
             "name": "add_to_cart",
-            "description": "Add a ServiceNow catalog item to the user's cart (basket) without ordering yet. Use when collecting multiple items before checkout instead of place_order. Renders the cart widget.",
+            "description": "Add a ServiceNow catalog item to the user's cart without ordering yet. Use when collecting multiple items before checkout instead of place_order. Renders the cart widget.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -334,7 +334,7 @@
         },
         {
             "name": "view_cart",
-            "description": "Retrieve the authenticated user's current ServiceNow cart (basket) contents. Renders the cart widget.",
+            "description": "Retrieve the authenticated user's current ServiceNow cart contents. Renders the cart widget.",
             "inputSchema": {
                 "type": "object",
                 "properties": {}
@@ -441,6 +441,95 @@
                         "description": "Optional sys_id or email of the user the order is for (defaults to the authenticated user)"
                     }
                 }
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/order-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/order-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "update_order_item",
+            "description": "Update a single requested item (line item) on an existing order \u2014 change its quantity or add a comment/description \u2014 without touching the rest of the order. Renders the refreshed order-detail widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "orderItemSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the requested item (sc_req_item) to update"
+                    },
+                    "orderSysId": {
+                        "type": "string",
+                        "description": "Optional sys_id of the parent order (sc_request); resolved from the item when omitted"
+                    },
+                    "updates": {
+                        "type": "object",
+                        "description": "Allowed fields: quantity, comments, short_description, description",
+                        "additionalProperties": false,
+                        "properties": {
+                            "quantity": {
+                                "type": [
+                                    "string",
+                                    "number"
+                                ]
+                            },
+                            "comments": {
+                                "type": "string"
+                            },
+                            "short_description": {
+                                "type": "string"
+                            },
+                            "description": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "orderItemSysId",
+                    "updates"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/order-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/order-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "remove_order_item",
+            "description": "Remove a single requested item (line item) from an existing order without cancelling the whole request. Renders the refreshed order-detail widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "orderItemSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the requested item (sc_req_item) to remove"
+                    },
+                    "orderSysId": {
+                        "type": "string",
+                        "description": "Optional sys_id of the parent order (sc_request); resolved from the item when omitted"
+                    }
+                },
+                "required": [
+                    "orderItemSysId"
+                ]
             },
             "_meta": {
                 "ui": {

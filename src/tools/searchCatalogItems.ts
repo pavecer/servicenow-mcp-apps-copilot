@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { ServiceNowClient, catalogQueryTokens, itemNameMatchesQuery } from "../services/servicenowClient";
+import { ServiceNowClient, catalogQueryTokens, itemNameMatchesQuery, firstMatchPositionInQuery } from "../services/servicenowClient";
 import { buildCatalogItemSelectionAdaptiveCard } from "../utils/adaptiveCards";
 import { config } from "../config";
 
@@ -130,9 +130,16 @@ export function registerSearchCatalogItemsTool(server: McpServer, client: Servic
         // therefore driven entirely client-side by the widget, never by text
         // instructions to the model.
         const queryTokens = catalogQueryTokens(query);
-        const strongMatches = itemList.filter(item =>
-          itemNameMatchesQuery(item.name, queryTokens)
-        );
+        const strongMatches = itemList
+          .filter(item => itemNameMatchesQuery(item.name, queryTokens))
+          .sort((a, b) => {
+            // Tiebreaker: prefer items whose name tokens appear earlier in the query.
+            // E.g. in "order sales laptop with adobe acrobat", "Sales Laptop" ranks
+            // higher because "sales" appears before "adobe".
+            const posA = firstMatchPositionInQuery(a.name, query);
+            const posB = firstMatchPositionInQuery(b.name, query);
+            return posA - posB;
+          });
         const soleTarget =
           strongMatches.length === 1
             ? strongMatches[0]

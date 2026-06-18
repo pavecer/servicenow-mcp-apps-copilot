@@ -17,7 +17,7 @@
     --border: #3b3a39; --accent: #2899f5;
     --chip-bg: #1c3c5e; --chip-fg: #cfe5fb;
   }
-  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
   h1 { font-size: 16px; margin: 0 0 4px; }
   .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
   .grid {
@@ -37,6 +37,17 @@
   }
   .item .name { font-weight: 600; font-size: 13px; }
   .item .desc { font-size: 12px; color: var(--muted); }
+  .item-controls {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .item-controls label { font-size: 12px; color: var(--muted); }
+  .qty-input {
+    width: 64px; box-sizing: border-box; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font: inherit;
+  }
+  button.btn-danger { color: #b00020; border-color: #e0b4bb; }
+  html[data-theme="dark"] button.btn-danger { color: #ff8a9a; border-color: #5e2a33; }
+  button.btn-small { padding: 4px 10px; font-size: 12px; }
   .actions { display: flex; gap: 8px; margin-top: 12px; }
   button {
     border: 1px solid var(--border); background: var(--bg); color: var(--fg);
@@ -77,6 +88,17 @@
     if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
     return Promise.reject(new Error("MCP Apps host bridge unavailable."));
   }
+  // Tool results may arrive as the raw MCP result ({ structuredContent: {...} })
+  // or already-unwrapped data. Normalize to the structuredContent payload the
+  // render() function consumes.
+  function unwrapResult(result) {
+    if (result && typeof result === "object") {
+      if (result.structuredContent && typeof result.structuredContent === "object") {
+        return result.structuredContent;
+      }
+    }
+    return result || {};
+  }
   function sendFollowUp(text) {
     var h = host();
     if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
@@ -111,6 +133,12 @@
   var root = document.getElementById("root");
   applyTheme();
 
+  // Latest rendered detail payload, a one-shot success banner, and the current
+  // order sys_id — used by the in-widget action handlers to re-render in place.
+  var lastData = null;
+  var pendingBanner = null;
+  var currentOrderSysId = "";
+
   function render(payload) {
     root.innerHTML = "";
     var data = payload || getData();
@@ -118,6 +146,7 @@
       var e = document.createElement("p"); e.className = "empty";
       e.textContent = "Order details unavailable."; root.appendChild(e); return;
     }
+    lastData = data;
     if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
     var order = data.order || data;
     var items = Array.isArray(data.items) ? data.items : (Array.isArray(order.requestItems) ? order.requestItems : []);
@@ -125,6 +154,7 @@
 
     var number = readStr(order.number) || readStr(order.sys_id).slice(0, 8);
     var orderSysId = readStr(order.sys_id);
+    currentOrderSysId = orderSysId;
     var state = readStr(order.state) || readStr(order.request_status);
     var sd = readStr(order.short_description);
     var desc = readStr(order.description);
@@ -137,6 +167,14 @@
       var banner = document.createElement("div"); banner.className = "banner-ok";
       banner.textContent = "\u2713 Order " + (readStr(data.requestNumber) || number) + " submitted to ServiceNow";
       root.appendChild(banner);
+    }
+
+    // One-shot banner from a just-completed in-widget action (comment posted,
+    // item updated/removed, cancellation requested).
+    if (pendingBanner) {
+      var pb = document.createElement("div"); pb.className = "banner-ok";
+      pb.textContent = "\u2713 " + pendingBanner; root.appendChild(pb);
+      pendingBanner = null;
     }
 
     var h1 = document.createElement("h1"); h1.textContent = "Order " + number; root.appendChild(h1);
@@ -167,6 +205,7 @@
       var h2 = document.createElement("h2"); h2.textContent = "Items"; root.appendChild(h2);
       var list = document.createElement("div"); list.className = "items";
       items.forEach(function (it) {
+        var itemSysId = readStr(it.sys_id);
         var card = document.createElement("div"); card.className = "item";
         var name = document.createElement("div"); name.className = "name";
         var catName = (it.catalogItem && (it.catalogItem.name || it.catalogItem.short_description)) || "";
@@ -175,6 +214,59 @@
         var d = readStr(it.short_description) || readStr(it.description);
         if (d && d !== name.textContent) {
           var dd = document.createElement("div"); dd.className = "desc"; dd.textContent = d; card.appendChild(dd);
+        }
+
+        // Per-item edit/remove controls. Only shown when the item sys_id is
+        // known (so update_order_item / remove_order_item can target it). These
+        // call the tools via the host bridge and re-render THIS widget in place
+        // with the refreshed order, falling back to a chat follow-up if the
+        // host gates widget-initiated tools/call.
+        if (itemSysId) {
+          var ctrls = document.createElement("div"); ctrls.className = "item-controls";
+          var qtyLabel = document.createElement("label"); qtyLabel.textContent = "Qty"; ctrls.appendChild(qtyLabel);
+          var qty = document.createElement("input");
+          qty.className = "qty-input"; qty.type = "number"; qty.min = "1";
+          var qtyVal = parseInt(readStr(it.quantity), 10);
+          qty.value = (qtyVal > 0 ? qtyVal : 1);
+          ctrls.appendChild(qty);
+
+          var saveBtn = document.createElement("button");
+          saveBtn.className = "btn-small"; saveBtn.textContent = "Update";
+          (function (itemSysId, qty, card, name) {
+            saveBtn.addEventListener("click", function () {
+              var newQty = parseInt(qty.value, 10);
+              if (!(newQty > 0)) return;
+              setBusy(card, true);
+              applyOrderResult(
+                tryCall("update_order_item", { orderItemSysId: itemSysId, orderSysId: orderSysId, updates: { quantity: newQty } }),
+                "Item updated.",
+                function () {
+                  sendFollowUp("Update item " + (name.textContent || itemSysId) + " (sys_id " + itemSysId +
+                    ") on order " + number + " to quantity " + newQty + ".");
+                }
+              );
+            });
+          })(itemSysId, qty, card, name);
+          ctrls.appendChild(saveBtn);
+
+          var removeBtn = document.createElement("button");
+          removeBtn.className = "btn-small btn-danger"; removeBtn.textContent = "Remove";
+          (function (itemSysId, card, name) {
+            removeBtn.addEventListener("click", function () {
+              setBusy(card, true); removeBtn.textContent = "Removing\u2026";
+              applyOrderResult(
+                tryCall("remove_order_item", { orderItemSysId: itemSysId, orderSysId: orderSysId }),
+                "Item removed.",
+                function () {
+                  sendFollowUp("Remove item " + (name.textContent || itemSysId) + " (sys_id " + itemSysId +
+                    ") from order " + number + ".");
+                }
+              );
+            });
+          })(itemSysId, card, name);
+          ctrls.appendChild(removeBtn);
+
+          card.appendChild(ctrls);
         }
         list.appendChild(card);
       });
@@ -212,28 +304,74 @@
       actions.appendChild(view);
     }
 
-    // Comment / cancel drive the conversation via a follow-up message so the
-    // already-authenticated agent runs update_order. Widget-initiated callTool
-    // would trigger a fresh per-tool auth prompt in Microsoft 365 Copilot, so
-    // we deliberately avoid it here.
+    // Comment / cancel call the tools via the host bridge (the same vaulted
+    // OAuth token every tool shares — no fresh auth prompt) and re-render THIS
+    // widget in place. If the host gates widget-initiated tools/call we fall
+    // back to a chat follow-up so the already-authenticated agent runs it.
     var commentBtn = document.createElement("button"); commentBtn.textContent = "Post comment";
     commentBtn.addEventListener("click", function () {
       var text = ta.value.trim(); if (!text) return;
       commentBtn.disabled = true; commentBtn.textContent = "Posting\u2026";
-      sendFollowUp("Add this comment to order " + number + " (sys_id " + orderSysId + "): " + text);
-      ta.value = "";
-      commentBtn.disabled = false; commentBtn.textContent = "Post comment";
+      applyOrderResult(
+        tryCall("update_order", { orderSysId: orderSysId, updates: { comments: text } }),
+        "Comment posted.",
+        function () {
+          sendFollowUp("Add this comment to order " + number + " (sys_id " + orderSysId + "): " + text);
+        }
+      );
     });
     var cancelBtn = document.createElement("button"); cancelBtn.textContent = "Request cancellation";
     cancelBtn.title = "Asks fulfillment to cancel — does not change order state directly.";
     cancelBtn.addEventListener("click", function () {
       cancelBtn.disabled = true; cancelBtn.textContent = "Requesting\u2026";
-      sendFollowUp("Please request cancellation of order " + number + " (sys_id " + orderSysId + ").");
-      cancelBtn.disabled = false; cancelBtn.textContent = "Request cancellation";
+      applyOrderResult(
+        tryCall("update_order", { orderSysId: orderSysId, updates: { comments: "Cancellation requested by the requestor via Microsoft 365 Copilot." } }),
+        "Cancellation requested.",
+        function () {
+          sendFollowUp("Please request cancellation of order " + number + " (sys_id " + orderSysId + ").");
+        }
+      );
     });
     actions.appendChild(commentBtn);
     actions.appendChild(cancelBtn);
     root.appendChild(actions);
+  }
+
+  // --- In-widget action plumbing -------------------------------------------
+  // Disable/enable all controls inside a card or the root while a tool runs.
+  function setBusy(el, busy) {
+    var nodes = (el || root).querySelectorAll("button, input, textarea");
+    for (var i = 0; i < nodes.length; i++) { nodes[i].disabled = !!busy; }
+  }
+  function tryCall(name, args) {
+    try { return callTool(name, args); }
+    catch (_) { return null; }
+  }
+  function reRender() { if (lastData) render(lastData); }
+  // Pull fresh order detail and re-render in place. Used after tools that don't
+  // themselves return the order-detail shape (e.g. update_order).
+  function refreshDetail(sysId) {
+    var p = tryCall("get_order_detail", { orderSysId: sysId });
+    if (!p || typeof p.then !== "function") { reRender(); return; }
+    p.then(function (r) {
+      var dat = unwrapResult(r);
+      if (dat && dat.order) { render(dat); } else { reRender(); }
+    }).catch(function () { reRender(); });
+  }
+  // Resolve a tool promise: render the returned order detail when present,
+  // otherwise refresh from the server (success without a body) or fall back to
+  // a chat follow-up (host gated tools/call or hard failure).
+  function applyOrderResult(p, okMsg, fallbackFn) {
+    if (!p || typeof p.then !== "function") { if (fallbackFn) fallbackFn(); return; }
+    p.then(function (result) {
+      var detail = unwrapResult(result);
+      if (detail && detail.order) { pendingBanner = okMsg || null; render(detail); return; }
+      if (detail && detail.success === true) { pendingBanner = okMsg || null; refreshDetail(currentOrderSysId); return; }
+      if (fallbackFn) { fallbackFn(); return; }
+      reRender();
+    }).catch(function () {
+      if (fallbackFn) { fallbackFn(); } else { reRender(); }
+    });
   }
 
   showLoading(root, "Loading order\u2026");

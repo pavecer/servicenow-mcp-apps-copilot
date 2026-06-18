@@ -3,6 +3,67 @@ import { z } from "zod";
 import { ServiceNowClient } from "../services/servicenowClient";
 import { config } from "../config";
 
+type OrderDetailToolResult = {
+  content: Array<{ type: "text"; text: string }>;
+  structuredContent?: Record<string, unknown>;
+};
+
+/**
+ * Fetch a request's full detail and shape it into the standard order-detail
+ * tool result (text summary + MCP Apps structuredContent bound to the
+ * order-detail widget). Shared by get_order_detail and the order item tools so
+ * editing/removing a line item re-renders the same widget in place.
+ */
+export async function buildOrderDetailResult(
+  client: ServiceNowClient,
+  orderSysId: string,
+  options?: { includeApprovals?: boolean }
+): Promise<OrderDetailToolResult> {
+  const includeApprovals = options?.includeApprovals !== false;
+  const detail = await client.getOrderDetail(orderSysId, { includeApprovals });
+
+  const payload: Record<string, unknown> = {
+    success: true,
+    order: detail.order,
+    items: detail.items,
+    approvals: detail.approvals,
+    itemCount: detail.items.length,
+    approvalCount: detail.approvals.length
+  };
+
+  const result: OrderDetailToolResult = {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(payload, null, 2)
+      }
+    ]
+  };
+
+  if (config.mcpApps.enabled) {
+    const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
+    const orderSysIdValue =
+      typeof detail.order.sys_id === "string" ? detail.order.sys_id : orderSysId;
+    result.structuredContent = {
+      order: detail.order,
+      items: detail.items,
+      approvals: detail.approvals,
+      link: orderSysIdValue ? `${instanceUrl}/sc_request.do?sys_id=${orderSysIdValue}` : instanceUrl
+    };
+
+    const orderNumber =
+      typeof detail.order.number === "string" ? detail.order.number : orderSysId;
+    result.content = [
+      {
+        type: "text" as const,
+        text: `Order ${orderNumber}: ${detail.items.length} item(s), ${detail.approvals.length} approval(s).`
+      }
+    ];
+  }
+
+  return result;
+}
+
 export function registerGetOrderDetailTool(server: McpServer, client: ServiceNowClient): void {
   server.tool(
     "get_order_detail",
@@ -24,61 +85,7 @@ export function registerGetOrderDetailTool(server: McpServer, client: ServiceNow
     },
     async ({ orderSysId, includeApprovals }) => {
       try {
-        const detail = await client.getOrderDetail(orderSysId, { includeApprovals });
-
-        const payload: Record<string, unknown> = {
-          success: true,
-          order: detail.order,
-          items: detail.items,
-          approvals: detail.approvals,
-          itemCount: detail.items.length,
-          approvalCount: detail.approvals.length
-        };
-
-        const result: {
-          content: Array<{ type: "text"; text: string }>;
-          structuredContent?: Record<string, unknown>;
-        } = {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify(payload, null, 2)
-            }
-          ]
-        };
-
-        // SEP-1865 MCP Apps widget consumes structuredContent at mount time.
-        // Cap is 64 KiB inlined; if oversized, the host pulls via tools/call.
-        if (config.mcpApps.enabled) {
-          const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
-          const orderSysIdValue =
-            typeof detail.order.sys_id === "string" ? detail.order.sys_id : orderSysId;
-          result.structuredContent = {
-            order: detail.order,
-            items: detail.items,
-            approvals: detail.approvals,
-            // Direct record deep link so the widget's "View in ServiceNow"
-            // button works (sandbox-safe via the host bridge openExternal).
-            link: orderSysIdValue ? `${instanceUrl}/sc_request.do?sys_id=${orderSysIdValue}` : instanceUrl
-          };
-
-          // Keep `content` a concise model-facing summary only — the
-          // order-detail widget renders the full request from
-          // structuredContent. Returning the full JSON payload here makes
-          // Microsoft 365 Copilot render a verbose text fallback instead of
-          // mounting the widget. The full JSON stays in `content` only in the
-          // default (non-MCP-Apps) surface.
-          const orderNumber =
-            typeof detail.order.number === "string" ? detail.order.number : orderSysId;
-          result.content = [
-            {
-              type: "text" as const,
-              text: `Order ${orderNumber}: ${detail.items.length} item(s), ${detail.approvals.length} approval(s).`
-            }
-          ];
-        }
-
-        return result;
+        return await buildOrderDetailResult(client, orderSysId, { includeApprovals });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         return {

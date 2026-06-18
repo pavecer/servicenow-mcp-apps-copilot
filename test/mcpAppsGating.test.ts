@@ -103,7 +103,10 @@ describe("MCP Apps gating: MCP_APPS_ENABLED=true", () => {
       ["add_to_cart", /cart\.html$/],
       ["update_cart_item", /cart\.html$/],
       ["remove_cart_item", /cart\.html$/],
-      ["submit_cart", /order-detail\.html$/]
+      ["submit_cart", /order-detail\.html$/],
+      // Order line-item tools re-render the order-detail widget in place.
+      ["update_order_item", /order-detail\.html$/],
+      ["remove_order_item", /order-detail\.html$/]
     ]);
     for (const def of defs) {
       const meta = (def as { _meta?: { ui?: { resourceUri?: string; visibility?: string[] } } })._meta;

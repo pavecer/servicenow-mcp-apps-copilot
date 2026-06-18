@@ -33,6 +33,35 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 - [Optional Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) -- run as one Docker container in Azure Container Apps
 - [Security Guidelines](SECURITY.md) -- what to never commit
 
+> AI coding agents: see [`AGENTS.md`](AGENTS.md) for build/test commands and repo invariants.
+
+---
+
+## Repository structure
+
+```
+src/
+  functions/            HTTP handlers (POST /mcp, /health, OIDC, /oauth/register)
+  server.ts             MCP server + tool registration
+  tools/                MCP tools (one file per tool) + index.ts registry
+  services/             ServiceNow client (catalog, orders, cart) + token manager
+  ui/
+    widgets.ts          ui:// widget registry (registerWidgetResources)
+    widgets/src/*.html   Self-contained MCP Apps widgets (inline CSS + JS)
+    widgets/bridge/      host-bridge.ts (OpenAI + MCP Apps dual-mode)
+    widgets/generated/   Build output (gitignored)
+  utils/                Logger (secret redaction), Entra auth, prefill helpers
+  config.ts             Env-driven config + feature flags (MCP_APPS_ENABLED)
+test/                   Vitest suites (manifest/widget/gating assert exact counts)
+infra/                  Bicep templates + parameters
+m365-agent/             Declarative-agent package for Microsoft 365 Copilot
+scripts/                Deploy/setup (PowerShell) + dev/ helpers
+docs/                   Deep-dive docs (auth, MCP Apps, cost, container deploy)
+.github/
+  agents/               Custom VS Code agents (deploy, mcp-apps-ui)
+  skills/mcp-apps-ui/   MCP Apps UI/UX guidelines + repo widget conventions
+```
+
 ---
 
 ## Prerequisites

@@ -36,11 +36,11 @@
         },
         {
             "name": "add_to_cart",
-            "description": "Add a ServiceNow catalog item to the user's cart (basket) without ordering yet. Use when collecting multiple items before checkout instead of placing a single order."
+            "description": "Add a ServiceNow catalog item to the user's cart without ordering yet. Use when collecting multiple items before checkout instead of placing a single order."
         },
         {
             "name": "view_cart",
-            "description": "Retrieve the authenticated user's current ServiceNow cart (basket) contents. Renders the cart widget."
+            "description": "Retrieve the authenticated user's current ServiceNow cart contents. Renders the cart widget."
         },
         {
             "name": "update_cart_item",
@@ -53,6 +53,14 @@
         {
             "name": "submit_cart",
             "description": "Submit the entire ServiceNow cart as a single request (one REQ with multiple requested items)."
+        },
+        {
+            "name": "update_order_item",
+            "description": "Update a single requested item (line item) on an existing order — change its quantity or add a comment/description — without touching the rest of the order."
+        },
+        {
+            "name": "remove_order_item",
+            "description": "Remove a single requested item (line item) from an existing order without cancelling the whole request."
         }
     ],
     "runtimes": [
@@ -76,7 +84,9 @@
                 "view_cart",
                 "update_cart_item",
                 "remove_cart_item",
-                "submit_cart"
+                "submit_cart",
+                "update_order_item",
+                "remove_order_item"
             ],
             "auth": {
                 "type": "OAuthPluginVault",

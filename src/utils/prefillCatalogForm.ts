@@ -576,24 +576,32 @@ function extractReplacementSignal(context: string): boolean | undefined {
 }
 
 function extractBoolean(label: string, context: string): boolean | undefined {
-  const labelTokens = [...tokenSet(label)].filter(Boolean);
+  const labelTokens = [...tokenSet(label)].filter(t => t.length >= 3);
   if (labelTokens.length === 0) {
     return undefined;
   }
 
   // Search for an affirmative/negative phrase near the label keywords.
   const lower = context.toLowerCase();
-  const labelHit = labelTokens.find(token => lower.includes(token));
-  if (!labelHit) return undefined;
 
-  // Crude proximity: look in the same sentence.
+  // ANY label token must be present before we do proximity work.
+  const anyHit = labelTokens.find(token => lower.includes(token));
+  if (!anyHit) return undefined;
+
+  // Proximity: look in the sentence containing a label token.
   const sentences = lower.split(/(?<=[.!?])\s+/);
-  const sentence = sentences.find(s => s.includes(labelHit));
+  const sentence = sentences.find(s => labelTokens.some(t => s.includes(t)));
   if (!sentence) return undefined;
 
-  if (/\b(yes|yeah|yep|sure|please|need|want|require|include|add)\b/.test(sentence)) {
+  // Affirmative: ALL label tokens must appear in context so that "adobe"
+  // alone does not match both "Adobe Photoshop" AND "Adobe Acrobat".
+  const allPresent = labelTokens.every(token => lower.includes(token));
+  if (allPresent && /\b(yes|yeah|yep|sure|please|need|want|require|include|add)\b/.test(sentence)) {
     return true;
   }
+
+  // Negative: any single label token is enough (e.g. "No Siebel needed"
+  // matches "Siebel Client" even though "client" is not in the sentence).
   if (/\b(no|nope|don'?t|do not|without|skip|exclude)\b/.test(sentence)) {
     return false;
   }

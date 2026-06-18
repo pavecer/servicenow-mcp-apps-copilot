@@ -105,7 +105,10 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
     // the created request and render it here as the confirmation, so the user
     // sees the whole ordered item (items, status, ServiceNow link) instead of
     // a plain-text request number. submit_cart reuses the same confirmation.
-    boundToolNames: ["place_order", "submit_cart"],
+    // update_order_item/remove_order_item also return order-detail
+    // structuredContent so editing or removing a line item re-renders this
+    // widget in place.
+    boundToolNames: ["place_order", "submit_cart", "update_order_item", "remove_order_item"],
     uri: `${WIDGET_URI_NAMESPACE}/order-detail.html`,
     name: "order-detail",
     description: "Show a single ServiceNow request with items, approvals, and a comment form.",
@@ -115,11 +118,11 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
   {
     toolName: "view_cart",
     // All cart-mutating tools render the same cart widget so add/update/remove
-    // re-render the basket in place.
+    // re-render the cart in place.
     boundToolNames: ["add_to_cart", "update_cart_item", "remove_cart_item"],
     uri: `${WIDGET_URI_NAMESPACE}/cart.html`,
     name: "cart",
-    description: "Show the user's ServiceNow cart (basket) with quantity controls and a submit action.",
+    description: "Show the user's ServiceNow cart with quantity controls and a submit action.",
     html: CART_HTML,
     permissions: ["clipboardWrite"]
   }
