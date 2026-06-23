@@ -1,21 +1,22 @@
 {
-  "name": "mcp-server-servicenow",
+  "name": "servicenow-mcp-apps-copilot",
   "version": "1.0.0",
-  "description": "ServiceNow MCP server with Azure Functions hosting",
+  "description": "Stateless ServiceNow Service Catalog MCP server on Azure Functions, delivering MCP Apps (SEP-1865) widgets to Microsoft 365 Copilot",
   "private": true,
   "license": "MIT",
+  "author": "Pavel Vecer",
   "main": "dist/functions/*.js",
   "engines": {
     "node": ">=20"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pavecer/mcp-server-servicenow-mcp-apps.git"
+    "url": "https://github.com/pavecer/servicenow-mcp-apps-copilot.git"
   },
   "bugs": {
-    "url": "https://github.com/pavecer/mcp-server-servicenow-mcp-apps/issues"
+    "url": "https://github.com/pavecer/servicenow-mcp-apps-copilot/issues"
   },
-  "homepage": "https://github.com/pavecer/mcp-server-servicenow-mcp-apps#readme",
+  "homepage": "https://github.com/pavecer/servicenow-mcp-apps-copilot#readme",
   "scripts": {
     "build:widgets": "node scripts/dev/build-widgets.mjs",
     "prebuild": "npm run build:widgets",

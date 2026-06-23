@@ -13,20 +13,24 @@ client can call.
 
 [sep-1865]: https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx
 
-## Live deployment
+## Deployment reference
 
-| What | Value |
+After you deploy (see [README.md](../README.md#step-3----deploy-to-azure)), record
+your own values here. The placeholders below map to the outputs of `azd up` /
+`scripts/deploy-azure.ps1`:
+
+| What | Value (example) |
 | --- | --- |
-| Function app | `func-yj453fjwuhph4` (RG `rg-snowmcpwidg-dev`, westeurope) |
-| MCP endpoint | `https://func-yj453fjwuhph4.azurewebsites.net/mcp` |
-| Feature flag | `MCP_APPS_ENABLED=true` (set on this app) |
-| azd env | `snowmcpwidg-dev` — deploy with `azd deploy api -e snowmcpwidg-dev` |
-| ServiceNow | `https://your-instance.service-now.com` (admin / password grant) |
-| Telemetry | App Insights `appi-yj453fjwuhph4` (AppId `2985a951-eef7-4587-8ff1-edf043211e08`) |
+| Function app | `<your-func-app>` (RG `<your-resource-group>`, your region) |
+| MCP endpoint | `https://<your-func-app>.azurewebsites.net/mcp` |
+| Feature flag | `MCP_APPS_ENABLED=true` (set on the Function App) |
+| azd env | `<your-azd-env>` — deploy with `azd deploy api -e <your-azd-env>` |
+| ServiceNow | `https://<your-instance>.service-now.com` (integration user / password grant) |
+| Telemetry | App Insights `<your-app-insights>` (linked Log Analytics workspace) |
 
-> The original (pre-MCP-Apps) MCP server runs on a **separate** function app
-> (`func-xflvdzmohd3e2`, RG `rg-dev-alt-tenant`, no `MCP_APPS_ENABLED`) and is
-> not affected by anything in this repo.
+> Replace every `<your-…>` placeholder with the identifiers from your own
+> deployment. The `m365-agent/` package and `docs/` examples use the same
+> placeholder convention so a fork never carries another tenant's resource names.
 
 ## TL;DR
 

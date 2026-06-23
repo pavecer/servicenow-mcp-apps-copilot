@@ -527,3 +527,58 @@ Before considering a change complete, verify:
 - `local.settings.json` was left untouched unless explicitly requested.
 - New permissions are justified and minimized.
 - User-facing and operator-facing documentation matches the implementation.
+
+---
+
+## Roadmap
+
+This is a community project; the items below are directional, not committed
+dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Now (in `main`)**
+- Catalog search, item form, single-item order, and order tracking tools.
+- ServiceNow cart flow (`add_to_cart` → `submit_cart`) behind `MCP_APPS_ENABLED`.
+- Per-item order edits (`update_order_item` / `remove_order_item`).
+- Five MCP Apps (SEP-1865) widgets for Microsoft 365 Copilot / Cowork.
+- Delegated identity attribution (`requested_for` / `opened_by` re-stamping).
+- Entra On-Behalf-Of (OBO) token exchange for per-user ServiceNow ACLs (opt-in).
+
+**Next**
+- Promote OBO from opt-in to a documented, first-class deployment profile.
+- Approval actions (approve / reject) surfaced in the order-detail widget.
+- Attachment upload on catalog requests.
+- Richer catalog faceting (category browse, variable validation hints).
+- Expanded automated test coverage for the ServiceNow client error paths.
+
+**Later / exploring**
+- Additional MCP hosts beyond Microsoft 365 Copilot (IDE clients, CLI agents).
+- Optional Okta / non-Entra identity brokering (see [docs/AUTH_ENTRA_OBO_OKTA.md](docs/AUTH_ENTRA_OBO_OKTA.md)).
+- Multi-instance / multi-tenant ServiceNow routing.
+
+Have an idea? Open an issue using the
+[feature request template](.github/ISSUE_TEMPLATE/feature_request.md).
+
+---
+
+## Contributing
+
+Pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the
+build/test workflow, the repo invariants (see [AGENTS.md](AGENTS.md)), and the
+[Code of Conduct](CODE_OF_CONDUCT.md). In short:
+
+```bash
+npm install
+npm run build   # regenerates widgets, then tsc
+npm test        # vitest — must be green before a PR
+```
+
+Release notes are tracked in [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE) — © 2026 Pavel Vecer. You are free to
+use, fork, modify, and deploy this project; see the license text for the full
+terms and the "no warranty" clause.
+

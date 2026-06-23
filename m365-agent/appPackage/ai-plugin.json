@@ -67,7 +67,7 @@
         {
             "type": "RemoteMCPServer",
             "spec": {
-                "url": "https://func-yj453fjwuhph4.azurewebsites.net/mcp",
+                "url": "https://YOUR-FUNCTION-APP.azurewebsites.net/mcp",
                 "mcp_tool_description": {
                     "file": "mcp-tools-1.json"
                 }

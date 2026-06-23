@@ -112,3 +112,22 @@ A sample dataset `evals/prompts.json` is created in this project to help you get
 Happy building! 
 
 With MCP + Declarative Agents, you’ll have a turnkey path from your existing APIs to a fully operational Copilot‑powered experience. 
+
+## Configure before deploying (placeholders to replace)
+
+This package ships with **placeholders** instead of a real deployment so a fork
+never carries another tenant's resource names. Before you provision, replace
+these or set the matching env values in `env/.env.dev`:
+
+| Placeholder / env var | Where | Set to |
+| --- | --- | --- |
+| `YOUR-FUNCTION-APP.azurewebsites.net` | `appPackage/manifest.json` (`validDomains`), `appPackage/ai-plugin.json` (`runtimes[].spec.url`), `.vscode/mcp.json` | Your deployed Function App host |
+| `MCP_SERVER_URL` | `m365agents.yml` (`baseUrl`) | `https://<your-func-app>.azurewebsites.net/mcp` |
+| `ENTRA_TENANT_ID` | `m365agents.yml` (authorize/token/refresh URLs) | Your Entra directory (tenant) ID |
+| `MCP_DA_OAUTH_CLIENT_ID` | `m365agents.yml` | Entra app registration client ID |
+| `SECRET_MCP_DA_OAUTH_CLIENT_SECRET` | `m365agents.yml` | Entra app client secret (stored in `env/.env.dev.user`) |
+| `MCP_DA_OAUTH_SCOPE` | `m365agents.yml` | `api://<ENTRA_CLIENT_ID>/access_as_user openid profile offline_access` |
+
+> `env/.env.dev` and `env/.env.dev.user` are gitignored. The two
+> `*.widget-renderer.usercontent.microsoft.com` entries in `validDomains` are the
+> Microsoft 365 Copilot widget host sandbox and should be kept as-is.

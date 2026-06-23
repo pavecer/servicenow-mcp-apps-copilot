@@ -19,22 +19,29 @@ provision:
 
   # Register the OAuth client (Microsoft Entra as the OAuth 2.0 provider) in the
   # Teams Developer Portal so the MCP plugin can obtain a per-user bearer token.
-  # Idempotent: skipped automatically when MCP_DA_AUTH_ID_FUNCYJ453F is already set.
+  # Idempotent: skipped automatically when MCP_DA_AUTH_ID is already set.
+  #
+  # Configure these in env/.env.dev before provisioning (see m365-agent/README.md):
+  #   ENTRA_TENANT_ID            - your Entra directory (tenant) ID
+  #   MCP_SERVER_URL             - https://<your-func-app>.azurewebsites.net/mcp
+  #   MCP_DA_OAUTH_CLIENT_ID     - Entra app registration client ID
+  #   SECRET_MCP_DA_OAUTH_CLIENT_SECRET - Entra app client secret
+  #   MCP_DA_OAUTH_SCOPE         - api://<ENTRA_CLIENT_ID>/access_as_user ...
   - uses: oauth/register
     with:
       name: servicenowcatalog
       appId: ${{TEAMS_APP_ID}}
       flow: authorizationCode
       identityProvider: Custom
-      clientId: ${{MCP_DA_OAUTH_CLIENT_ID_FUNCYJ453F}}
-      clientSecret: ${{SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F}}
-      scope: ${{MCP_DA_OAUTH_SCOPE_FUNCYJ453F}}
-      authorizationUrl: https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/oauth2/v2.0/authorize
-      tokenUrl: https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/oauth2/v2.0/token
-      refreshUrl: https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/oauth2/v2.0/token
-      baseUrl: https://func-yj453fjwuhph4.azurewebsites.net/mcp
+      clientId: ${{MCP_DA_OAUTH_CLIENT_ID}}
+      clientSecret: ${{SECRET_MCP_DA_OAUTH_CLIENT_SECRET}}
+      scope: ${{MCP_DA_OAUTH_SCOPE}}
+      authorizationUrl: https://login.microsoftonline.com/${{ENTRA_TENANT_ID}}/oauth2/v2.0/authorize
+      tokenUrl: https://login.microsoftonline.com/${{ENTRA_TENANT_ID}}/oauth2/v2.0/token
+      refreshUrl: https://login.microsoftonline.com/${{ENTRA_TENANT_ID}}/oauth2/v2.0/token
+      baseUrl: ${{MCP_SERVER_URL}}
     writeToEnvironmentFile:
-      configurationId: MCP_DA_AUTH_ID_FUNCYJ453F
+      configurationId: MCP_DA_AUTH_ID
 
   # Build app package with latest env value
   - uses: teamsApp/zipAppPackage
