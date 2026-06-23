@@ -1,89 +1,32 @@
 ﻿# ServiceNow MCP Server
 
-A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for ServiceNow Service Catalog, hosted on Azure Functions. It delivers ServiceNow catalog ordering — search items, fill order forms, place and track orders — directly inside **Microsoft 365 Copilot and Cowork** via **MCP Apps** (SEP-1865) interactive widgets.
-
-**MCP tools provided:**
-
-| Tool | Description |
-|------|-------------|
-| `search_catalog_items` | Full-text catalog search with Adaptive Card item picker |
-| `get_catalog_item_form` | Returns an Adaptive Card form for the selected item |
-| `place_order` | Submits the order and returns a confirmation Adaptive Card |
-| `add_to_cart` | Adds an item to the user's ServiceNow cart (basket) without ordering — MCP Apps only |
-| `view_cart` | Returns the current cart contents, rendered in the cart widget — MCP Apps only |
-| `update_cart_item` | Changes a cart line's quantity/variables — MCP Apps only |
-| `remove_cart_item` | Removes a single cart line — MCP Apps only |
-| `submit_cart` | Submits the whole cart as one `sc_request` with multiple items — MCP Apps only |
-| `update_order_item` | Changes the quantity/comments of a single line item on an existing order — MCP Apps only |
-| `remove_order_item` | Removes a single line item from an existing order without cancelling the whole request — MCP Apps only |
-| `list_user_orders` | Lists the caller's open (non-closed) catalog orders, enriched with their request items |
-| `get_order_detail` | Retrieves a single `sc_request` with its items and approvals (used by the M365 Copilot "MCP Apps" detail widget) |
-| `update_order` | Updates a small allowlist of requestor-mutable fields on the caller's order (`short_description`, `description`, `comments`, `urgency`, `priority`) |
-| `validate_servicenow_config` | Validates OAuth and catalog API access end-to-end |
-
-> **This repo is dedicated to the MCP Apps capability** — delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. The deployment map, the per-user-identity (OBO) research, and the architecture are covered in this README and the [`docs/`](docs/) folder.
-
-**Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and five `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, cart, my orders, order detail). The cart tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`) and the order line-item tools (`update_order_item`, `remove_order_item`) are registered **only** when this flag is on, so the flag-off default surface is unchanged. When the flag is **off**, tool results fall back to a legacy Adaptive Card surface in `content[0].text` (still consumable by any standard MCP client). Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
-
-**Related documentation:**
-
-- [Microsoft 365 Copilot MCP Apps integration](docs/M365_COPILOT_MCP_APPS.md) -- enable SEP-1865 widget rendering and sideload the declarative-agent package under [`m365-agent/`](m365-agent/README.md)
-- [ServiceNow Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) -- end-to-end flow of every supported scenario (search, form, order, cart, list, detail, edit, validate) and the ServiceNow APIs/tables each one touches
-- [Agent 365 BYO MCP](docs/AGENT_365_BYO_MCP.md) -- register this server in the Microsoft 365 admin center for tenant-wide governance
-- [Authentication patterns (Entra OBO / Okta)](docs/AUTH_ENTRA_OBO_OKTA.md) -- per-user ServiceNow identity via On-Behalf-Of token exchange
-- [ServiceNow Setup](docs/SERVICENOW_SETUP.md) -- OAuth app, integration user, and permissions
-- [Cost Estimation](docs/COST_ESTIMATION.md) -- Azure infrastructure cost model, per-operation pricing, and worked examples for pilot / SMB / enterprise scenarios
-- [Optional Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) -- run as one Docker container in Azure Container Apps
-- [Security Guidelines](SECURITY.md) -- what to never commit
-
-> AI coding agents: see [`AGENTS.md`](AGENTS.md) for build/test commands and repo invariants.
-
----
-
-## How the agent works (scenario flows)
-
-The agent's behavior is defined in [`m365-agent/appPackage/instruction.txt`](m365-agent/appPackage/instruction.txt). Each user intent maps to a tool call and the MCP Apps widget it renders:
-
-| User intent (example) | Tool(s) called | Widget rendered |
-|---|---|---|
-| "I need a laptop" / "what software can I request" | `search_catalog_items` | **catalog-browse** (results grid) |
-| Picks an item (or a single match is found) | `get_catalog_item_form` | **order-form** (pre-filled from the request) |
-| Submits the order form | `place_order` | **order-detail** (confirmation) |
-| "I need a laptop and a monitor" / "add to cart" | `add_to_cart` → `view_cart` → `update_cart_item` / `remove_cart_item` → `submit_cart` | **cart** → **order-detail** |
-| "show my orders" / "status of my requests" | `list_user_orders` | **my-orders** |
-| Opens a specific request | `get_order_detail` | **order-detail** (items, approvals, comment box) |
-| "change the qty / remove an item on REQ…" | `update_order_item` / `remove_order_item` | **order-detail** (re-rendered in place) |
-| "update the description / urgency" | `update_order` | **order-detail** |
-| Connectivity troubleshooting | `validate_servicenow_config` | — (text result) |
-
-Widget structure, the host bridge, and the build pipeline are documented in [`.github/skills/mcp-apps-ui/SKILL.md`](.github/skills/mcp-apps-ui/SKILL.md) and [`AGENTS.md`](AGENTS.md). The declarative-agent construct (manifest, `ai-plugin.json`, `run_for_functions`) is in [`m365-agent/`](m365-agent/README.md).
-
----
-
-## Repository structure
+**Order from ServiceNow directly inside Microsoft 365 Copilot** — a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that brings ServiceNow Service Catalog to life in Microsoft 365 Copilot and Cowork via interactive MCP Apps widgets. Search, fill forms, place orders, track status, and manage your cart — all with natural language.
 
 ```
-src/
-  functions/            HTTP handlers (POST /mcp, /health, OIDC, /oauth/register)
-  server.ts             MCP server + tool registration
-  tools/                MCP tools (one file per tool) + index.ts registry
-  services/             ServiceNow client (catalog, orders, cart) + token manager
-  ui/
-    widgets.ts          ui:// widget registry (registerWidgetResources)
-    widgets/src/*.html   Self-contained MCP Apps widgets (inline CSS + JS)
-    widgets/bridge/      host-bridge.ts (OpenAI + MCP Apps dual-mode)
-    widgets/generated/   Build output (gitignored)
-  utils/                Logger (secret redaction), Entra auth, prefill helpers
-  config.ts             Env-driven config + feature flags (MCP_APPS_ENABLED)
-test/                   Vitest suites (manifest/widget/gating assert exact counts)
-infra/                  Bicep templates + parameters
-m365-agent/             Declarative-agent package for Microsoft 365 Copilot
-scripts/                Deploy/setup (PowerShell) + dev/ helpers
-docs/                   Deep-dive docs (auth, MCP Apps, cost, container deploy)
-.github/
-  agents/               Custom VS Code agents (deploy, mcp-apps-ui)
-  skills/mcp-apps-ui/   MCP Apps UI/UX guidelines + repo widget conventions
+┌─────────────────────┐        ┌──────────────────────┐        ┌──────────────┐
+│ Microsoft 365       │        │ ServiceNow MCP       │        │ ServiceNow   │
+│ Copilot / Cowork    │────────│ Server (Azure Fn)    │────────│ Catalog      │
+│                     │        │                      │        │              │
+│ "Order a laptop"    │ OAuth  │ + 14 MCP Tools       │ OAuth  │ + Cart       │
+│ + 5 Widgets         │        │ + 5 SEP-1865 Widgets │        │ + Orders     │
+└─────────────────────┘        └──────────────────────┘        └──────────────┘
 ```
+
+**What you get:**
+- 14 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, validate config
+- 5 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail
+- Per-user authentication: orders stamped with the real user (not a service account)
+- Stateless, scalable: Flex Consumption Azure Functions + Node.js 20
+- Production-ready: 215 unit tests, secret management, audit logging, security guidelines
+
+**Quick facts:**
+| | |
+|------|-----|
+| **Runtime** | Azure Functions v4, Flex Consumption, Node.js 20+ |
+| **Auth** | Microsoft Entra ID OAuth 2.0 |
+| **Transport** | Streamable HTTP (MCP standard) |
+| **Infrastructure** | Bicep IaC + azd, optional Docker/Container Apps |
+| **Cost** | ~$2–5/mo for dev, <$50/mo for small pilot ([cost guide](docs/COST_ESTIMATION.md)) |
 
 ---
 
@@ -91,442 +34,122 @@ docs/                   Deep-dive docs (auth, MCP Apps, cost, container deploy)
 
 | Requirement | Notes |
 |-------------|-------|
-| Azure subscription | Permission to create resource groups and Entra app registrations |
-| Azure CLI (az) | [Install guide](https://learn.microsoft.com/cli/azure/install-azure-cli) |
-| Azure Developer CLI (azd) | [Install guide](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) |
-| Node.js 20+ | To build the project locally |
-| ServiceNow instance | Admin access to create OAuth apps and users |
-| Microsoft Entra ID | Permission to register an app |
-| Microsoft 365 Copilot | A Microsoft 365 Copilot license to sideload and run the declarative agent; MCP Apps widgets render inline in Copilot / Cowork |
+| **Azure subscription** | Permissions to create resource groups, Function Apps, App registrations, Key Vault |
+| **Azure CLI & azd** | [Installation guide](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) |
+| **Node.js 20+** | To build locally |
+| **ServiceNow instance** | Admin access to set up OAuth apps and integration user |
+| **Microsoft Entra ID** | Permissions to register an app |
+| **Microsoft 365 Copilot** | License required to run the declarative agent |
 
 ---
 
 ## Quick Start
 
-### Step 1 -- Set up ServiceNow
-
-See [docs/SERVICENOW_SETUP.md](docs/SERVICENOW_SETUP.md) for the complete guide, or run the automation script:
-
+**1. Prepare ServiceNow:**
 ```powershell
-pwsh -File scripts/setup-servicenow.ps1 \
-  -InstanceUrl https://<instance>.service-now.com \
-  -AdminUser <admin-username> \
-  -AdminPassword <admin-password>
+pwsh -File scripts/setup-servicenow.ps1 -InstanceUrl https://<instance>.service-now.com -AdminUser <user> -AdminPassword <pass>
 ```
+→ Save the **Client ID**, **Client Secret**, and **integration user** credentials.
 
-What you need from ServiceNow:
-- **Client ID** and **Client Secret** from the OAuth App Registry entry
-- **Integration user** username and password (with `catalog` role)
+**2. Prepare Entra ID:**
+- Go to [Azure Portal](https://portal.azure.com) > **Entra ID > App registrations > New registration**
+- Name: `ServiceNow MCP Server` → **Register**
+- Save **Application (client) ID** and **Directory (tenant) ID**
+- Add a **client secret** > save it
+- Go to **Expose an API** > set default URI, add scope `access_as_user`
+- Add **Web redirect URIs**: `https://oauth.botframework.com/callback`, `https://global.consent.azure-apim.net/redirect`
 
----
-
-### Step 2 -- Register an Entra ID Application
-
-This enables per-user OAuth 2.0 authentication for MCP clients.
-
-1. [Azure Portal](https://portal.azure.com) > **Entra ID > App registrations > New registration**
-   - Name: `ServiceNow MCP Server`
-   - Supported account types: `Accounts in this organizational directory only`
-   - Click **Register**
-   - Note **Application (client) ID** = `ENTRA_CLIENT_ID`
-   - Note **Directory (tenant) ID** = `ENTRA_TENANT_ID`
-
-2. **Certificates & secrets > New client secret** -- copy the value immediately = `ENTRA_CLIENT_SECRET`
-
-3. **Expose an API > Set** Application ID URI -- accept default `api://<ENTRA_CLIENT_ID>`
-   - **Add a scope**: name `access_as_user`, consent: Admins and users
-
-4. **Authentication > Add a platform > Web** -- add redirect URIs:
-   ```
-   https://oauth.botframework.com/callback
-   https://global.consent.azure-apim.net/redirect
-   ```
-   Enable **Access tokens** and **ID tokens** > **Save**
-
-5. *(Recommended)* **API permissions > Add > My APIs > ServiceNow MCP Server** > `access_as_user` > **Grant admin consent**
-   This lets all tenant users use the agent without individual consent prompts.
-
----
-
-### Step 3 -- Deploy to Azure
-
-**Interactive (recommended for first deployment):**
-
-```powershell
+**3. Deploy to Azure:**
+```bash
 npm run deploy:azure
 ```
+→ Prompted for values; Function App + Key Vault + App Insights provisioned.
 
-The script prompts for all values, provisions Azure resources (Function App, Key Vault, Application Insights), deploys the function, and prints client setup instructions.
+**4. Enable Widgets (optional):**
+- Set `MCP_APPS_ENABLED=true` on the Function App.
+- Sideload the agent under [`m365-agent/`](m365-agent/README.md).
 
-**GitHub Actions (automated CI/CD):**
-
-The repo ships two workflows:
-
-- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — build + test on every push and PR.
-- [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — deploys to Azure via `azd` on push to `main`, authenticating with **OIDC** (no long-lived secrets stored in GitHub). It stays **inert until configured**, so it never produces a failing run before setup. Run the one-time setup, which creates the federated credential and the variables below:
-
-  ```bash
-  azd pipeline config --provider github
-  ```
-
-  Required repository/environment **variables**: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_ENV_NAME`, `AZURE_LOCATION`. App secrets (ServiceNow / Entra) are **not** stored in GitHub — they live in Key Vault and are read via managed identity.
-
-**Non-interactive (CI/CD):**
-
-```powershell
-pwsh -File scripts/deploy-azure.ps1 \
-  -EnvironmentName prod \
-  -Location westeurope \
-  -SubscriptionId <subscription-id> \
-  -ServiceNowInstanceUrl https://<instance>.service-now.com \
-  -ServiceNowClientId <sn-client-id> \
-  -ServiceNowClientSecret <sn-client-secret> \
-  -ServiceNowUsername <integration-user> \
-  -ServiceNowPassword <integration-user-password> \
-  -EntraTenantId <entra-tenant-id> \
-  -EntraClientId <entra-client-id> \
-  -EntraClientSecret <entra-client-secret>
-```
-
-**Manual azd:**
-
-```bash
-az login && azd auth login
-azd env new <env-name>
-azd env set SERVICENOW_INSTANCE_URL  "https://<instance>.service-now.com"
-azd env set SERVICENOW_CLIENT_ID     "<sn-client-id>"
-azd env set SERVICENOW_CLIENT_SECRET "<sn-client-secret>"
-azd env set SERVICENOW_USERNAME      "<integration-user>"
-azd env set SERVICENOW_PASSWORD      "<integration-user-password>"
-azd env set ENTRA_TENANT_ID          "<entra-tenant-id>"
-azd env set ENTRA_CLIENT_ID          "<entra-client-id>"
-azd env set ENTRA_CLIENT_SECRET      "<entra-client-secret>"
-azd up
-```
-
-Get the deployed MCP endpoint URL:
-
-```bash
-azd env get-values | findstr MCP_ENDPOINT_URL
-```
-
-### Optional: Deploy as One Container (Azure Container Apps)
-
-If you prefer a single container deployment instead of Azure Functions, use the Docker + Container Apps path documented in [docs/DEPLOY_CONTAINER_AZURE.md](docs/DEPLOY_CONTAINER_AZURE.md).
-
-This path builds this repo as a single Node.js container and exposes the same MCP endpoint shape at `/mcp`.
-
----
-
-### Step 4 -- Add to Microsoft 365 Copilot (MCP Apps)
-
-1. Set `MCP_APPS_ENABLED=true` on the deployed Function App.
-2. Sideload the declarative-agent package under [`m365-agent/`](m365-agent/README.md) (the Microsoft 365 Agents Toolkit points at this server's MCP discovery URL and generates the manifests).
-3. Open the agent in Microsoft 365 Copilot and try a prompt such as `Order a new laptop` — the catalog-browse, order-form, cart, my-orders, and order-detail widgets mount inline in Copilot / Cowork.
-
-See [docs/M365_COPILOT_MCP_APPS.md](docs/M365_COPILOT_MCP_APPS.md) for the full end-to-end story (SEP-1865 widget rendering and the five `ui://servicenow-mcp/*.html` widgets).
-
----
-
-### Step 5 -- (Optional) Register with Microsoft Agent 365 (BYO MCP)
-
-To make this MCP server tenant-governed (visible in **Microsoft 365 admin center > Agents > Tools > Registry**, monitored in Defender XDR, and discoverable from MCP clients such as VS Code, Claude Code, and GitHub Copilot CLI), register it as a Bring-Your-Own MCP server with [Microsoft Agent 365](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/manage-tools-for-agent?view=o365-worldwide#bring-your-own-byo-mcp-server).
-
-The server already speaks `EntraOAuth` end-to-end, so no code changes are required. Use the helper script:
-
-```powershell
-pwsh -File scripts/register-agent365-mcp.ps1 `
-  -ServerName     "ext_ServiceNowMCP" `
-  -PublisherName  "<your-org>" `
-  -McpEndpointUrl "https://<funcapp>.azurewebsites.net/mcp" `
-  -EntraClientId  "<ENTRA_CLIENT_ID>" `
-  -TenantId       "<ENTRA_TENANT_ID>"
-```
-
-> The CLI requires the server name to start with `ext_` and be ≤ 20 characters.
-
-A tenant admin (Global admin or AI admin) then approves the request in the Microsoft 365 admin center. Full step-by-step guide, troubleshooting, and Defender hunting query: [docs/AGENT_365_BYO_MCP.md](docs/AGENT_365_BYO_MCP.md).
+**For detailed steps, see:**
+- [ServiceNow Setup](docs/SERVICENOW_SETUP.md)
+- [Entra ID Configuration](docs/) (within Deployment guide)
+- [M365 Copilot Integration](docs/M365_COPILOT_MCP_APPS.md)
+- [Container Deployment (Optional)](docs/DEPLOY_CONTAINER_AZURE.md)
+- [Agent 365 Registration (Optional)](docs/AGENT_365_BYO_MCP.md)
 
 ---
 
 ## Architecture
 
-- **Runtime**: Azure Functions v4, Node.js 20, Flex Consumption (FC1)
-- **Transport**: Streamable HTTP, stateless MCP
-- **MCP auth**: OAuth 2.0 via Microsoft Entra ID (per-user sign-in)
-- **ServiceNow auth**: OAuth 2.0 password grant with a shared integration user
-- **Secrets**: All secrets in Azure Key Vault; Function App reads via managed identity
-- **Monitoring**: Application Insights
+```
+                    Entra OAuth
+                         ↓
+┌────────────────────────────────────────────────────────────┐
+│  Microsoft 365 Copilot (Cowork)                           │
+│  • User sends natural-language intent                      │
+│  • Agent routes to MCP tools or widgets                    │
+└────────────────────────────────────────────────────────────┘
+                         ↓
+              MCP Streamable HTTP
+                    + Bearer token
+                         ↓
+┌────────────────────────────────────────────────────────────┐
+│  ServiceNow MCP Server (Azure Functions, Node.js 20)      │
+│  • Validates Entra token + extracts caller identity       │
+│  • Calls ServiceNow APIs (catalog, orders)                │
+│  • Attributes orders to real users (not service account)  │
+│  • Returns MCP tools + SEP-1865 widgets (optional)        │
+└────────────────────────────────────────────────────────────┘
+                         ↓
+                ServiceNow OAuth
+                         ↓
+┌────────────────────────────────────────────────────────────┐
+│  ServiceNow Instance                                       │
+│  • Catalog tables (sc_cat_item, sc_category)              │
+│  • Requests (sc_request, sc_req_item)                     │
+│  • Users (sys_user) — for per-user attribution            │
+└────────────────────────────────────────────────────────────┘
+```
 
-### HTTP surfaces and authentication
+**Key features:**
+- **Delegated identity**: Orders stamped with real user, not the integration account
+- **MCP Apps widgets (optional)**: When `MCP_APPS_ENABLED=true`, renders 5 interactive widgets (catalog-browse, order-form, cart, my-orders, order-detail)
+- **Secure defaults**: All secrets in Key Vault, no plaintext credentials, Entra-gated endpoints
+- **Stateless**: No session storage; every request validates OAuth token
 
-The deployed Function App exposes the routes below. Auth requirements are
-fixed in code; no extra Function-level keys, network ACLs, or RBAC are
-applied beyond what's documented here.
-
-| Method · Route | Purpose | Auth |
-|---|---|---|
-| `POST /mcp` | MCP Streamable HTTP — `tools/list`, `tools/call` | **Entra Bearer required** (validated by [src/utils/entraAuthMiddleware.ts](src/utils/entraAuthMiddleware.ts)) |
-| `GET /mcp` | SSE readiness probe (Streamable HTTP transport) | Anonymous |
-| `DELETE /mcp` | Session cleanup (stateless mode no-op) | Anonymous |
-| `OPTIONS /mcp` | CORS preflight | Anonymous |
-| `GET /health` | Liveness/readiness probe — returns `{"status":"ok","server":"servicenow-mcp"}` | Anonymous |
-| `GET /.well-known/openid-configuration` · `oauth-authorization-server` · `oauth-protected-resource` | OIDC discovery and RFC 8414/9728 metadata | Anonymous |
-| `POST /oauth/register` | RFC 7591 Dynamic Client Registration | Gated — see below |
-| `GET /oauth/register` | Lightweight capability doc for clients that probe before POST | Anonymous |
-
-`POST /oauth/register` is **closed by default**: when no `ENTRA_DCR_REGISTRATION_TOKEN` is set and `ENTRA_DCR_ALLOW_UNAUTHENTICATED` is not `"true"`, the endpoint returns **403**. With a registration token configured the request must include `Authorization: Bearer <token>` (constant-time comparison); set `ENTRA_DCR_ALLOW_UNAUTHENTICATED=true` to opt in to anonymous DCR.
-
-When `ENTRA_AUTH_DISABLED=true` (intended for local dev only), Bearer validation is bypassed on `POST /mcp`. The startup log emits a `WARN` line stating the effective tenant policy at every cold start so this is visible in App Insights.
-
-### Delegated Identity Flow
-
-Each order is correctly attributed to the Microsoft 365 Copilot user who placed it:
-
-1. Copilot sends the user's Entra Bearer token to the MCP server.
-2. The MCP server validates the token and extracts the caller's UPN/email.
-3. The server obtains a ServiceNow token for the integration user (password grant).
-4. The caller's email is looked up in `sys_user` to find their ServiceNow `sys_id`.
-5. The order is placed, then immediately PATCHed to set `requested_for` (the
-   beneficiary) and — unless `SERVICENOW_ATTRIBUTE_OWNERSHIP_TO_CALLER=false` —
-   `opened_by` and `requested_by` (the ordering user) on the `sc_request` and its
-   `sc_req_item` rows. Without the `opened_by` patch, ServiceNow stamps the
-   record with whoever authenticated the REST call (the integration user), so it
-   would read "Opened by: System Administrator".
-
-> **Integration user permissions needed**: read on `sys_user`, read+write on
-> `sc_request` and `sc_req_item` (including the `opened_by`/`requested_by`
-> fields), plus `catalog` and/or `itil` roles.
->
-> For true per-user ServiceNow ACL enforcement (the REST call itself runs as the
-> end user), see the On-Behalf-Of options in
-> [docs/AUTH_ENTRA_OBO_OKTA.md](docs/AUTH_ENTRA_OBO_OKTA.md).
+**Learn more:** [Architecture & Auth Flows](docs/), [Config Reference](docs/), [Per-User ACL / OBO](docs/AUTH_ENTRA_OBO_OKTA.md)
 
 ---
 
-## Local Development
+## Develop Locally
 
 ```bash
 npm install
 cp local.settings.sample.json local.settings.json
-# Edit local.settings.json -- ENTRA_AUTH_DISABLED is true by default for local use
-npm run start:dev
+# Edit local.settings.json with your ServiceNow + Entra credentials
+npm run build    # regenerates widgets, then tsc
+npm test         # vitest — must pass before PR
+npm run start:dev # runs on http://localhost:7071/mcp
 ```
 
-MCP endpoint: `http://localhost:7071/mcp`
-
+**Test the deployment:**
 ```bash
-# Smoke test against local
-set MCP_ENDPOINT_URL=http://localhost:7071/mcp
-npm run smoke:test
+npm run smoke:test   # validates connectivity + sample flows
 ```
+
+**See also:** [Local Development Guide](docs/LOCAL_DEVELOPMENT.md)
 
 ---
 
-## Environment Variables Reference
+## Documentation Index
 
-### Required
-
-| Variable | Description |
-|----------|-------------|
-| `SERVICENOW_INSTANCE_URL` | ServiceNow base URL (`https://instance.service-now.com`) |
-| `SERVICENOW_CLIENT_ID` | OAuth App Registry client ID |
-| `SERVICENOW_CLIENT_SECRET` | OAuth App Registry client secret |
-| `SERVICENOW_USERNAME` | Integration user login |
-| `SERVICENOW_PASSWORD` | Integration user password |
-
-### Entra ID (required for MCP client OAuth)
-
-| Variable | Description |
-|----------|-------------|
-| `ENTRA_TENANT_ID` | Entra directory (tenant) ID |
-| `ENTRA_CLIENT_ID` | App registration client ID |
-| `ENTRA_CLIENT_SECRET` | App registration client secret (for Dynamic Client Registration) |
-| `ENTRA_AUDIENCE` | Expected `aud` in tokens; defaults to `api://<ENTRA_CLIENT_ID>` |
-
-### Optional
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ENTRA_AUTH_DISABLED` | `false` | Skip Bearer validation -- local dev only, never in production |
-| `ENTRA_OAUTH_SCOPES` | `api://<ENTRA_CLIENT_ID>/access_as_user openid profile offline_access` | Scopes advertised in OIDC discovery |
-| `ENTRA_TRUSTED_TENANT_IDS` | _(empty)_ | Accepted remote tenant IDs (multi-tenant scenarios) |
-| `ENTRA_ALLOW_ANY_TENANT` | `false` | Accept any Microsoft tenant token |
-| `ENTRA_DCR_REGISTRATION_TOKEN` | _(unset)_ | Bearer token required on `POST /oauth/register` |
-| `ENTRA_DCR_ALLOW_UNAUTHENTICATED` | `false` | Allow open Dynamic Client Registration when no token is configured |
-| `ENTRA_ALLOWED_AUDIENCES` | _(empty)_ | Comma-separated extra `aud` values to accept (custom App ID URIs) |
-| `ENTRA_OBO_ENABLED` | `false` | Exchange the inbound user token for a downstream ServiceNow token via MSAL On-Behalf-Of (see [docs/AUTH_ENTRA_OBO_OKTA.md](docs/AUTH_ENTRA_OBO_OKTA.md)). Default keeps the integration-user grant path |
-| `ENTRA_OBO_DOWNSTREAM_SCOPE` | _(unset)_ | Downstream scope requested in the OBO exchange (e.g. `api://<server-app-id>/.default`). Required when `ENTRA_OBO_ENABLED=true` |
-| `CORS_ALLOWED_ORIGINS` | _(empty)_ | Comma-separated browser origins for CORS-enabled endpoints |
-| `SERVICENOW_OAUTH_TOKEN_PATH` | `/oauth_token.do` | ServiceNow token endpoint path |
-| `SERVICENOW_OAUTH_GRANT_TYPE` | `auto` | Override grant type: `password` or `client_credentials` |
-| `SERVICENOW_OAUTH_CLIENT_AUTH_STYLE` | `auto` | OAuth client auth style: `request_body` or `basic` |
-| `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN` | `false` | When `true`, refuse calls without `x-servicenow-access-token` (per-user ACL enforcement) |
-| `SERVICENOW_ATTRIBUTE_OWNERSHIP_TO_CALLER` | `true` | After placing an order, patch `opened_by`/`requested_by` on the `sc_request` (and its `sc_req_item` rows) to the real ordering user. Set `false` if the integration user lacks write access to `opened_by` |
-| `SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS` | `email,user_name` | `sys_user` fields for identity resolution |
-| `SERVICENOW_REQUESTED_FOR_CALLER_FIELDS` | `callerUpn` | Entra token claims to use as identity source |
-| `SERVICENOW_REQUESTED_FOR_FALLBACK_TO_CALLER_VALUE` | `true` | Fall back to UPN if no `sys_user` match |
-| `SERVICENOW_REQUESTED_FOR_DIAGNOSTICS` | `false` | Include requested_for diagnostics in tool/API responses |
-| `SERVICENOW_REQUESTED_FOR_DIAGNOSTICS_INCLUDE_PII` | `false` | Include raw caller identifiers in diagnostics (for short-lived troubleshooting only) |
-| `LOG_LEVEL` | `info` | Minimum log level emitted to stdout: `debug`, `info`, `warn`, or `error` |
-| `LOG_INCLUDE_CALLER_IDENTITY` | `false` | Attach caller `oid`/`upn` to every log entry. Off by default to keep PII out of App Insights |
-| `LOG_INCLUDE_ERROR_STACK` | `false` | Include error stack traces in error log entries |
-
-### Microsoft 365 Copilot MCP Apps (SEP-1865)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MCP_APPS_ENABLED` | `false` | Enable SEP-1865 widget rendering: registers the five `ui://servicenow-mcp/*.html` resources, decorates widget-backed tools with `_meta.ui.resourceUri`, and adds compact `structuredContent`. When off, tool results stay byte-identical to the legacy Adaptive Card surface |
-| `MCP_APPS_PUBLIC_ORIGIN` | _(unset)_ | Public origin where this server is reachable from the M365 Copilot widget host. Documentation only — not consumed by any runtime code path |
-
----
-
-## Local Testing Against ServiceNow
-
-Two ways to verify ServiceNow responses without going through an MCP client:
-
-### Option A — Run the full MCP server locally and call it via JSON-RPC
-
-```powershell
-# 1. Copy the sample settings file and fill in your ServiceNow credentials.
-Copy-Item local.settings.sample.json local.settings.json
-#    Set SERVICENOW_INSTANCE_URL / SERVICENOW_CLIENT_ID / SERVICENOW_CLIENT_SECRET
-#    (and SERVICENOW_USERNAME / SERVICENOW_PASSWORD for the password grant).
-#    ENTRA_AUTH_DISABLED=true is the default in the sample so no Bearer token is needed.
-
-# 2. Start the function locally on http://localhost:7071/mcp
-npm run start:dev
-
-# 3. In a second terminal, run the MCP smoke test against localhost.
-$env:MCP_ENDPOINT_URL = "http://localhost:7071/mcp"
-$env:SEARCH_QUERY = "laptop"
-npm run smoke:test
-```
-
-This exercises the full request pipeline (Express, MCP SDK, Streamable HTTP transport, `ServiceNowClient`).
-
-### Option B — Direct ServiceNow probe (no MCP, no Functions runtime)
-
-For faster iteration when you only care about ServiceNow responses, the
-`scripts/dev/test-servicenow-local.mjs` runner loads `local.settings.json`
-and calls the `ServiceNowClient` methods directly:
-
-```powershell
-npm run sn:local -- validate
-npm run sn:local -- search "vpn access" 5
-npm run sn:local -- form 04b7e94b4f7b4200086eeed18110c7fd
-npm run sn:local -- orders --upn=alice@contoso.com
-npm run sn:local -- order <itemSysId> '{"justification":"test"}' --confirm --upn=alice@contoso.com
-```
-
-Useful flags:
-- `--upn=<user@domain>` simulates the caller identity that the Express middleware would inject from a real Entra token. Required for `orders` and for testing `requested_for` resolution on `order`.
-- `--confirm` is mandatory on `order` because it creates a real ServiceNow request.
-- Existing `process.env` values win over `local.settings.json`, so you can override individual settings on the command line.
-
-Output is raw JSON — pipe through `ConvertFrom-Json` or `jq` to inspect specific fields.
-
----
-
-## Smoke Testing Deployed Endpoint
-
-Quick liveness check (no token required):
-
-```bash
-curl https://<function-app>.azurewebsites.net/health
-# → {"status":"ok","server":"servicenow-mcp"}
-```
-
-Full MCP smoke test (Entra Bearer required):
-
-```bash
-set MCP_ENDPOINT_URL=https://<function-app>.azurewebsites.net/mcp
-set ENTRA_BEARER_TOKEN=<access-token>
-npm run smoke:test
-```
-
-Get a token:
-
-```bash
-az account get-access-token --resource api://<ENTRA_CLIENT_ID> --query accessToken -o tsv
-```
-
----
-
-## Troubleshooting
-
-**401 on MCP endpoint** -- Entra auth is active and no valid Bearer token was sent. Check the MCP client connection (user must have signed in). For local testing, set `ENTRA_AUTH_DISABLED=true`.
-
-**Orders created but `requested_for` is wrong** -- The post-order PATCH failed. Verify:
-- Integration user has **write** on `sc_request` in ServiceNow.
-- Caller's Entra email matches `sys_user.email` or `sys_user.user_name`.
-- Application Insights traces for `[ServiceNowClient.placeOrder.requestedForPatchFailed]`.
-
-**Dynamic discovery fails in the MCP client** -- Verify `ENTRA_TENANT_ID` and `ENTRA_CLIENT_ID` are set. Confirm the OIDC endpoint returns 200. If you changed OAuth settings after the MCP tool was added, **delete and re-add the connection** -- Power Platform caches OIDC metadata on first connect.
-
-**validate_servicenow_config errors** -- Run with `probeOrderNow: false` first to isolate auth vs. catalog access issues.
-
----
-
-## Security
-
-All secrets are stored in Azure Key Vault. The Function App reads them via managed identity. No credentials appear in app settings in plaintext.
-
-- `local.settings.json` is excluded by `.gitignore` -- never commit it.
-- Never deploy with `ENTRA_AUTH_DISABLED=true`.
-- Keep `/oauth/register` protected with `ENTRA_DCR_REGISTRATION_TOKEN` (recommended).
-- Keep `ENTRA_DCR_ALLOW_UNAUTHENTICATED=false` in enterprise environments.
-- Keep `SERVICENOW_REQUESTED_FOR_DIAGNOSTICS_INCLUDE_PII=false` unless you are actively debugging and have an approved retention path.
-- Prefer `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` when enterprise policy requires per-user ServiceNow ACL enforcement.
-
-See [SECURITY.md](SECURITY.md) for full guidelines.
-
----
-
-## Engineering Guardrails
-
-Apply these rules for every new feature, bug fix, refactor, or deployment-related change in this repository.
-
-### Local Development Files
-
-- Treat `local.settings.json` as developer-local configuration.
-- Do not sanitize, template, overwrite, or reformat `local.settings.json` unless the user explicitly asks for that file to be changed.
-- Apply security improvements in committed source files, scripts, infrastructure, and docs instead of rewriting local developer secrets files.
-
-### Logging And Diagnostics
-
-- Route new operational logs through the structured logger in `src/utils/logger.ts`.
-- Never log secrets, bearer tokens, passwords, client secrets, function keys, cookies, or raw authorization headers.
-- Do not log caller PII by default. Any diagnostics that may expose user identity must be opt-in and disabled by default.
-- Keep error output sanitized. Avoid returning or logging full upstream payloads when they may contain tokens, identifiers, or request content.
-
-### Identity And Access
-
-- Prefer least privilege for both ServiceNow and Entra configuration.
-- Avoid broad ServiceNow roles when narrower ACLs or scoped access can satisfy the requirement.
-- Prefer delegated/per-user enforcement when enterprise requirements demand user-level authorization boundaries.
-- Do not add Microsoft Graph or unrelated Entra permissions unless they are strictly required by the implemented feature.
-
-### API And OAuth Surface
-
-- Use explicit CORS allowlists for browser-facing endpoints. Avoid wildcard origins for enterprise-exposed APIs.
-- Keep Dynamic Client Registration secure by default. Require a registration token unless open registration is an intentional, reviewed choice.
-- Preserve MCP protocol compatibility when changing transport, discovery, or tool metadata behavior.
-
-### Documentation Expectations
-
-- Update repo documentation whenever behavior, configuration, permissions, or security posture changes.
-- Add concise function-level comments when behavior is non-obvious, especially in auth, logging, transport, or security-sensitive code paths.
-- Document new environment variables, defaults, and security implications in the repo.
-
-### Review Standard
-
-Before considering a change complete, verify:
-
-- No secrets or PII were added to logs, responses, docs, or tracked files.
-- `local.settings.json` was left untouched unless explicitly requested.
-- New permissions are justified and minimized.
-- User-facing and operator-facing documentation matches the implementation.
+| Topic | Link |
+|-------|------|
+| **Getting Started** | [ServiceNow Setup](docs/SERVICENOW_SETUP.md) • [Deployment](docs/) |
+| **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO_OKTA.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
+| **Operations** | [Environment Variables](docs/CONFIG_REFERENCE.md) • [Troubleshooting](docs/TROUBLESHOOTING.md) • [Cost Model](docs/COST_ESTIMATION.md) |
+| **Advanced** | [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO_OKTA.md) • [Agent 365 Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
+| **Development** | [Contributing](CONTRIBUTING.md) • [Engineering Guardrails](docs/ENGINEERING_GUARDRAILS.md) • [Build/Test Commands](AGENTS.md) |
+| **Security** | [Security Guidelines](SECURITY.md) • [Code of Conduct](CODE_OF_CONDUCT.md) |
 
 ---
 
