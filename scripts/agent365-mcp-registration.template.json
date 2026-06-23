@@ -29,6 +29,10 @@
       "description": "Update a small allowlist of fields (short_description, description, comments, urgency, priority) on the caller's catalog order."
     },
     {
+      "name": "get_order_detail",
+      "description": "Retrieve a single ServiceNow request (sc_request) by sys_id, including its items and approval records."
+    },
+    {
       "name": "validate_servicenow_config",
       "description": "Validate ServiceNow authentication and catalog access end-to-end."
     }

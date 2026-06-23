@@ -9,6 +9,25 @@ type OrderDetailToolResult = {
 };
 
 /**
+ * Read a ServiceNow field that may be a plain string or, when fetched with
+ * sysparm_display_value=all, a { display_value, value } object.
+ */
+function readField(
+  value: unknown,
+  prefer: "value" | "display_value"
+): string | undefined {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const primary = obj[prefer];
+    if (typeof primary === "string" && primary) return primary;
+    const fallback = prefer === "value" ? obj.display_value : obj.value;
+    if (typeof fallback === "string" && fallback) return fallback;
+  }
+  return undefined;
+}
+
+/**
  * Fetch a request's full detail and shape it into the standard order-detail
  * tool result (text summary + MCP Apps structuredContent bound to the
  * order-detail widget). Shared by get_order_detail and the order item tools so
@@ -42,8 +61,7 @@ export async function buildOrderDetailResult(
 
   if (config.mcpApps.enabled) {
     const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
-    const orderSysIdValue =
-      typeof detail.order.sys_id === "string" ? detail.order.sys_id : orderSysId;
+    const orderSysIdValue = readField(detail.order.sys_id, "value") ?? orderSysId;
     result.structuredContent = {
       order: detail.order,
       items: detail.items,
@@ -51,8 +69,7 @@ export async function buildOrderDetailResult(
       link: orderSysIdValue ? `${instanceUrl}/sc_request.do?sys_id=${orderSysIdValue}` : instanceUrl
     };
 
-    const orderNumber =
-      typeof detail.order.number === "string" ? detail.order.number : orderSysId;
+    const orderNumber = readField(detail.order.number, "display_value") ?? orderSysId;
     result.content = [
       {
         type: "text" as const,

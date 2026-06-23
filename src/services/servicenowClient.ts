@@ -1229,7 +1229,7 @@ export class ServiceNowClient {
 
       const requestResponse = await client.get<{ result: Record<string, unknown> }>(
         `/api/now/table/sc_request/${requestSysId}`,
-        { params: { sysparm_fields: requestFields } }
+        { params: { sysparm_fields: requestFields, sysparm_display_value: "all" } }
       );
 
       const order = requestResponse.data.result;
@@ -1243,6 +1243,7 @@ export class ServiceNowClient {
           params: {
             sysparm_query: `request=${requestSysId}`,
             sysparm_limit: itemsLimit,
+            sysparm_display_value: "all",
             sysparm_fields: [
               "sys_id",
               "number",
@@ -1287,6 +1288,7 @@ export class ServiceNowClient {
               params: {
                 sysparm_query: `sysapproval=${requestSysId}`,
                 sysparm_limit: 25,
+                sysparm_display_value: "all",
                 sysparm_fields: [
                   "sys_id",
                   "state",

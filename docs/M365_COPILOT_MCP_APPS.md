@@ -66,6 +66,7 @@ in production, then flip it after validating in dev.
 | `get_catalog_item_form` | `ui://servicenow-mcp/order-form.html`            | Inline form; submit → invokes `place_order`              |
 | `list_user_orders`      | `ui://servicenow-mcp/my-orders.html`             | Table of open orders; click row → opens detail widget    |
 | `get_order_detail`      | `ui://servicenow-mcp/order-detail.html`          | Single request: items, approvals, comment / cancel form  |
+| `view_cart`             | `ui://servicenow-mcp/cart.html`                  | Shopping cart with quantity controls; submit → one request |
 
 All widgets are vanilla HTML with inline CSS/JS (no external CDN), authored
 under [`src/ui/widgets/src/`](../src/ui/widgets/src/) and embedded as TS
@@ -152,7 +153,7 @@ and the journal's *"last task"* section.
 # 1. Local dev — flag on
 export MCP_APPS_ENABLED=true
 npm install       # node_modules is NOT copied into this fork
-npm test          # 188 tests pass; the gating + widget + field suites cover the flag-on path
+npm test          # 215 tests pass; the gating + widget + field suites cover the flag-on path
 npm run build
 npm run smoke:test  # against `func start` if you have one
 
@@ -190,7 +191,7 @@ The repo's vitest suite includes explicit gating tests that prove this:
 
 The pre-existing test suite (manifest content parity, prefill,
 adaptive-card emission, update_order, list-orders concurrency, …) continues
-to pass unchanged — **188 tests across 25 files**. Run `npm test` to verify.
+to pass unchanged — **215 tests across 28 files**. Run `npm test` to verify.
 The widget-specific suites also include `test/widgetFieldExploration.test.ts`,
 which maps real catalog-item variable types against the widget field schema
 using captured fixtures in `test/fixtures/catalogItems.json`.

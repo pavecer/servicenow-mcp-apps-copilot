@@ -14,14 +14,22 @@ A **medium-traffic deployment** (≈500 daily active users, each placing one tic
 
 Per-tool unit costs (Azure-only, list, West Europe, mid-2026):
 
-| MCP tool | Backend cost per invocation | Notes |
-|---|---|---|
-| `validate_servicenow_config` | **~$0.0000005** | Single config read, no ServiceNow call |
-| `search_catalog_items` | **~$0.0001 – $0.0003** | One ServiceNow REST query, small response |
-| `get_catalog_item_form` | **~$0.0003 – $0.0008** | One ServiceNow REST call returning the full variable schema; larger payload |
-| `place_order` | **~$0.0005 – $0.0010** | Two ServiceNow calls: order submit + read-back |
-| `list_user_orders` | **~$0.0002 – $0.0005** | One ServiceNow REST query |
-| `update_order` | **~$0.0003 – $0.0006** | One PATCH against the order record |
+| MCP tool | Surface | Backend cost per invocation | Notes |
+|---|---|---|---|
+| `validate_servicenow_config` | base | **~$0.0000005** | Single config read, no ServiceNow call |
+| `search_catalog_items` | base | **~$0.0001 – $0.0003** | One ServiceNow REST query, small response |
+| `get_catalog_item_form` | base | **~$0.0003 – $0.0008** | One ServiceNow REST call returning the full variable schema; larger payload |
+| `place_order` | base | **~$0.0005 – $0.0010** | Two ServiceNow calls: order submit + read-back |
+| `list_user_orders` | base | **~$0.0002 – $0.0005** | One ServiceNow REST query, enriched with request items (bounded fan-out) |
+| `get_order_detail` | base | **~$0.0004 – $0.0012** | Request header + items + approvals, plus per-item catalog enrichment (bounded fan-out) |
+| `update_order` | base | **~$0.0003 – $0.0006** | One PATCH against the order record |
+| `add_to_cart` | MCP Apps | **~$0.0003 – $0.0006** | One ServiceNow cart POST |
+| `view_cart` | MCP Apps | **~$0.0002 – $0.0005** | One ServiceNow cart GET |
+| `update_cart_item` / `remove_cart_item` | MCP Apps | **~$0.0003 – $0.0006** | One cart mutation + cart read-back |
+| `submit_cart` | MCP Apps | **~$0.0005 – $0.0010** | Collapses the cart into one `sc_request` with multiple items |
+| `update_order_item` / `remove_order_item` | MCP Apps | **~$0.0004 – $0.0012** | One item PATCH/DELETE + order-detail read-back (bounded fan-out) |
+
+The **MCP Apps** tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`, `update_order_item`, `remove_order_item`) are only registered when `MCP_APPS_ENABLED=true`. They cost the same order of magnitude as the base tools — one or two ServiceNow round-trips each.
 
 The Azure infrastructure bill is **flat and small** for any realistic ServiceNow ticketing workload — the MCP server itself is not a cost driver.
 
@@ -52,7 +60,7 @@ Each tool invocation is a single HTTP POST to `/mcp`. Empirical timings against 
 | JWT validation + audience check | ~10 ms | In-memory after first cache hit |
 | OBO token exchange (if enabled) | ~150-300 ms | One outbound call to Entra; cached per user for ~50 minutes |
 | ServiceNow REST call | ~200-800 ms | The wall-clock dominates the per-call cost; depends on instance load |
-| Response serialization | ~10-30 ms | Adaptive Card rendering for selection/form/confirmation cards |
+| Response serialization | ~10-30 ms | `structuredContent` for the MCP Apps widgets (catalog-browse, order-form, cart, my-orders, order-detail), with a legacy Adaptive Card / text fallback when `MCP_APPS_ENABLED` is off |
 
 So a typical tool call spends **400-1000 ms** of Functions execution time at ~256 MB of memory.
 
@@ -66,6 +74,7 @@ Plus **$0.0000002** per call for the execution count.
 
 #### Plus ServiceNow side-effect costs (Azure-side)
 - Outbound bandwidth (egress) is **free** within the same region; out-of-region or cross-cloud charges $0.087/GB. ServiceNow calls are typically <10 KB so even cross-region this is <$0.000001/call.
+- MCP Apps widget resources (`ui://servicenow-mcp/*.html`) are self-contained HTML bundles served via `resources/read`. Each is on the order of tens to a few hundred KB and is fetched by the host roughly once per widget per session (the host caches them), not per tool call. Even at 200 KB cross-region that is ~$0.000017 per fetch — negligible, and free when the host is in the same region.
 - Key Vault references are cached in the Function App after first cold read, so KV ops are bounded at ~1-10 per cold start, not per call.
 - App Insights ingestion: a typical tool invocation logs ~3-5 KB of telemetry. At **$2.30/GB** beyond the 5 GB/month free tier, that's ~$0.0000115 per call once you've blown through the free quota.
 
@@ -87,7 +96,7 @@ In other words: an MCP server with no traffic at all costs essentially nothing.
 
 ### Cost scenarios (Azure only)
 
-Assumptions: 22 working days/month, 8 hours/working day, each user makes the listed number of tool calls. Each "ticket" = 1 search + 1 form + 1 place_order = 3 tool calls (~2.1 GB-seconds, ~15 KB of telemetry).
+Assumptions: 22 working days/month, 8 hours/working day, each user makes the listed number of tool calls. Each "ticket" = 1 search + 1 form + 1 place_order = 3 tool calls (~2.1 GB-seconds, ~15 KB of telemetry). A multi-item MCP Apps cart flow (search → add_to_cart × N → view_cart → submit_cart) is a handful more calls of the same order of magnitude, so it does not change the conclusions below.
 
 | Scenario | Users | Tool calls/month | Functions exec | Telemetry | Other | **Total/month (USD, list)** |
 |---|---|---|---|---|---|---|

@@ -14,6 +14,8 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 | `update_cart_item` | Changes a cart line's quantity/variables — MCP Apps only |
 | `remove_cart_item` | Removes a single cart line — MCP Apps only |
 | `submit_cart` | Submits the whole cart as one `sc_request` with multiple items — MCP Apps only |
+| `update_order_item` | Changes the quantity/comments of a single line item on an existing order — MCP Apps only |
+| `remove_order_item` | Removes a single line item from an existing order without cancelling the whole request — MCP Apps only |
 | `list_user_orders` | Lists the caller's open (non-closed) catalog orders, enriched with their request items |
 | `get_order_detail` | Retrieves a single `sc_request` with its items and approvals (used by the M365 Copilot "MCP Apps" detail widget) |
 | `update_order` | Updates a small allowlist of requestor-mutable fields on the caller's order (`short_description`, `description`, `comments`, `urgency`, `priority`) |
@@ -21,11 +23,12 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) server for
 
 > **This repo is dedicated to the MCP Apps capability** — delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. The deployment map, the per-user-identity (OBO) research, and the architecture are covered in this README and the [`docs/`](docs/) folder.
 
-**Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and five `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, cart, my orders, order detail). The cart tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`) are registered **only** when this flag is on, so the flag-off default surface is unchanged. When the flag is **off**, tool results fall back to a legacy Adaptive Card surface in `content[0].text` (still consumable by any standard MCP client). Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
+**Microsoft 365 Copilot "MCP Apps" widget rendering** (SEP-1865): set the app setting `MCP_APPS_ENABLED=true` and five `ui://servicenow-mcp/*.html` widgets become available (catalog browse, order form, cart, my orders, order detail). The cart tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`) and the order line-item tools (`update_order_item`, `remove_order_item`) are registered **only** when this flag is on, so the flag-off default surface is unchanged. When the flag is **off**, tool results fall back to a legacy Adaptive Card surface in `content[0].text` (still consumable by any standard MCP client). Declarative-agent package: [`m365-agent/`](m365-agent/README.md). See [`docs/M365_COPILOT_MCP_APPS.md`](docs/M365_COPILOT_MCP_APPS.md) for the end-to-end story.
 
 **Related documentation:**
 
 - [Microsoft 365 Copilot MCP Apps integration](docs/M365_COPILOT_MCP_APPS.md) -- enable SEP-1865 widget rendering and sideload the declarative-agent package under [`m365-agent/`](m365-agent/README.md)
+- [ServiceNow Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) -- end-to-end flow of every supported scenario (search, form, order, cart, list, detail, edit, validate) and the ServiceNow APIs/tables each one touches
 - [Agent 365 BYO MCP](docs/AGENT_365_BYO_MCP.md) -- register this server in the Microsoft 365 admin center for tenant-wide governance
 - [Authentication patterns (Entra OBO / Okta)](docs/AUTH_ENTRA_OBO_OKTA.md) -- per-user ServiceNow identity via On-Behalf-Of token exchange
 - [ServiceNow Setup](docs/SERVICENOW_SETUP.md) -- OAuth app, integration user, and permissions
@@ -219,9 +222,9 @@ This path builds this repo as a single Node.js container and exposes the same MC
 
 1. Set `MCP_APPS_ENABLED=true` on the deployed Function App.
 2. Sideload the declarative-agent package under [`m365-agent/`](m365-agent/README.md) (the Microsoft 365 Agents Toolkit points at this server's MCP discovery URL and generates the manifests).
-3. Open the agent in Microsoft 365 Copilot and try a prompt such as `Order a new laptop` — the catalog-browse, order-form, my-orders, and order-detail widgets mount inline in Copilot / Cowork.
+3. Open the agent in Microsoft 365 Copilot and try a prompt such as `Order a new laptop` — the catalog-browse, order-form, cart, my-orders, and order-detail widgets mount inline in Copilot / Cowork.
 
-See [docs/M365_COPILOT_MCP_APPS.md](docs/M365_COPILOT_MCP_APPS.md) for the full end-to-end story (SEP-1865 widget rendering and the four `ui://servicenow-mcp/*.html` widgets).
+See [docs/M365_COPILOT_MCP_APPS.md](docs/M365_COPILOT_MCP_APPS.md) for the full end-to-end story (SEP-1865 widget rendering and the five `ui://servicenow-mcp/*.html` widgets).
 
 ---
 
@@ -373,7 +376,7 @@ npm run smoke:test
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_APPS_ENABLED` | `false` | Enable SEP-1865 widget rendering: registers the four `ui://servicenow-mcp/*.html` resources, decorates widget-backed tools with `_meta.ui.resourceUri`, and adds compact `structuredContent`. When off, tool results stay byte-identical to the legacy Adaptive Card surface |
+| `MCP_APPS_ENABLED` | `false` | Enable SEP-1865 widget rendering: registers the five `ui://servicenow-mcp/*.html` resources, decorates widget-backed tools with `_meta.ui.resourceUri`, and adds compact `structuredContent`. When off, tool results stay byte-identical to the legacy Adaptive Card surface |
 | `MCP_APPS_PUBLIC_ORIGIN` | _(unset)_ | Public origin where this server is reachable from the M365 Copilot widget host. Documentation only — not consumed by any runtime code path |
 
 ---

@@ -136,7 +136,7 @@ requesting their own client credentials.
 
 A starter payload is included at
 [`scripts/agent365-mcp-registration.template.json`](../scripts/agent365-mcp-registration.template.json).
-It declares the six tools this server exposes and uses `EntraOAuth` with the
+It declares the seven tools this server exposes and uses `EntraOAuth` with the
 `api://<ENTRA_CLIENT_ID>/.default` scope.
 
 > ❗ **Server name constraints** (Agent 365 CLI rules):
@@ -220,7 +220,7 @@ a365 develop-mcp register-external-mcp-server `
   --description "ServiceNow Service Catalog: search items, fill forms, place and manage orders." `
   --auth-type EntraOAuth `
   --remote-scopes "api://<ENTRA_CLIENT_ID>/.default" `
-  --tools "search_catalog_items,get_catalog_item_form,place_order,list_user_orders,update_order,validate_servicenow_config" `
+  --tools "search_catalog_items,get_catalog_item_form,place_order,list_user_orders,update_order,get_order_detail,validate_servicenow_config" `
   --tenant-id "<ENTRA_TENANT_ID>"
 ```
 
@@ -301,6 +301,7 @@ you submit to Agent 365.
 | `place_order` | Place a ServiceNow catalog order with the collected form values. |
 | `list_user_orders` | Retrieve all current (non-closed) orders for the authenticated user. |
 | `update_order` | Update a small allowlist of fields on the caller's catalog order. |
+| `get_order_detail` | Retrieve a single ServiceNow request (sc_request) by sys_id, including its items and approval records. |
 | `validate_servicenow_config` | Validate ServiceNow authentication and catalog access end-to-end. |
 
 If you add or remove a tool in code, you must re-register the server. Per the
