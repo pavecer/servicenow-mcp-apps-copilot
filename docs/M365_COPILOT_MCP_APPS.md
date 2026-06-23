@@ -1,10 +1,5 @@
 # Microsoft 365 Copilot MCP Apps integration
 
-> This repo is a **standalone project dedicated to the MCP Apps capability** —
-> delivering ServiceNow catalog ordering to Microsoft 365 Copilot / Cowork. (It
-> began as a fork of `mcp-server-servicenow` and was promoted to its own repo on
-> 2026-06-15.) For deeper background, see the other docs in this folder.
-
 This server optionally exposes [SEP-1865 "MCP Apps"][sep-1865] widget UIs that
 render inline inside Microsoft 365 Copilot. When you ask the agent to "order a
 laptop" or "show my open ServiceNow orders", Copilot mounts a sandboxed
@@ -13,20 +8,19 @@ client can call.
 
 [sep-1865]: https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx
 
-## Live deployment
+## Your deployment
+
+After running `azd up` (see the [Quick Start](../README.md#quick-start) in the
+main README), your deployment will look like this:
 
 | What | Value |
 | --- | --- |
-| Function app | `func-yj453fjwuhph4` (RG `rg-snowmcpwidg-dev`, westeurope) |
-| MCP endpoint | `https://func-yj453fjwuhph4.azurewebsites.net/mcp` |
-| Feature flag | `MCP_APPS_ENABLED=true` (set on this app) |
-| azd env | `snowmcpwidg-dev` — deploy with `azd deploy api -e snowmcpwidg-dev` |
-| ServiceNow | `https://your-instance.service-now.com` (admin / password grant) |
-| Telemetry | App Insights `appi-yj453fjwuhph4` (AppId `2985a951-eef7-4587-8ff1-edf043211e08`) |
-
-> The original (pre-MCP-Apps) MCP server runs on a **separate** function app
-> (`func-xflvdzmohd3e2`, RG `rg-dev-alt-tenant`, no `MCP_APPS_ENABLED`) and is
-> not affected by anything in this repo.
+| Function app | `<your-funcapp>` (RG `<your-resource-group>`, `<your-location>`) |
+| MCP endpoint | `https://<your-funcapp>.azurewebsites.net/mcp` |
+| Feature flag | `MCP_APPS_ENABLED=true` (set this on the deployed app to enable widgets) |
+| azd env | `<your-azd-env>` — deploy with `azd deploy api -e <your-azd-env>` |
+| ServiceNow | `https://<your-instance>.service-now.com` |
+| Telemetry | App Insights `appi-<suffix>` (visible in the Azure Portal) |
 
 ## TL;DR
 

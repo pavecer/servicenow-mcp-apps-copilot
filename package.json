@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pavecer/mcp-server-servicenow-mcp-apps.git"
+    "url": "https://github.com/pavecer/servicenow-mcp-apps-copilot.git"
   },
   "bugs": {
-    "url": "https://github.com/pavecer/mcp-server-servicenow-mcp-apps/issues"
+    "url": "https://github.com/pavecer/servicenow-mcp-apps-copilot/issues"
   },
-  "homepage": "https://github.com/pavecer/mcp-server-servicenow-mcp-apps#readme",
+  "homepage": "https://github.com/pavecer/servicenow-mcp-apps-copilot#readme",
   "scripts": {
     "build:widgets": "node scripts/dev/build-widgets.mjs",
     "prebuild": "npm run build:widgets",
