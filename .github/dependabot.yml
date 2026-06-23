@@ -1,0 +1,52 @@
+version: 2
+updates:
+  # npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "pavecer"
+    commit-message:
+      prefix: "chore(deps):"
+      prefix-development: "chore(deps-dev):"
+      include: "scope"
+    # Allow automatic merge for patch/minor updates
+    allow:
+      - dependency-type: "all"
+    # Don't create PRs for docs-only changes to dependencies
+    ignore:
+      # Ignore major versions of critical packages — review manually
+      - dependency-name: "@azure/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "pavecer"
+    commit-message:
+      prefix: "ci(github-actions):"
+
+  # Docker (Dockerfile)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "pavecer"
+    commit-message:
+      prefix: "chore(docker):"
