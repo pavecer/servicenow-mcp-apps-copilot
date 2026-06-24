@@ -4,7 +4,10 @@ import {
   CATALOG_BROWSE_HTML,
   MY_ORDERS_HTML,
   ORDER_DETAIL_HTML,
-  ORDER_FORM_HTML
+  ORDER_FORM_HTML,
+  INCIDENT_FORM_HTML,
+  MY_INCIDENTS_HTML,
+  INCIDENT_DETAIL_HTML
 } from "./widgets/generated";
 import Logger from "../utils/logger";
 
@@ -123,6 +126,33 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
     name: "cart",
     description: "Show the user's ServiceNow cart with quantity controls and a submit action.",
     html: CART_HTML,
+    permissions: ["clipboardWrite"]
+  },
+  {
+    toolName: "get_incident_form",
+    uri: `${WIDGET_URI_NAMESPACE}/incident-form.html`,
+    name: "incident-form",
+    description: "Render the 'report an incident' form and submit report_incident.",
+    html: INCIDENT_FORM_HTML,
+    permissions: ["clipboardWrite"]
+  },
+  {
+    toolName: "list_user_incidents",
+    uri: `${WIDGET_URI_NAMESPACE}/my-incidents.html`,
+    name: "my-incidents",
+    description: "List the authenticated user's open ServiceNow incidents; click to open detail.",
+    html: MY_INCIDENTS_HTML,
+    permissions: ["clipboardWrite"]
+  },
+  {
+    toolName: "get_incident_detail",
+    // report_incident renders this widget as the confirmation, and
+    // add_incident_comment re-renders it in place after a comment is posted.
+    boundToolNames: ["report_incident", "add_incident_comment"],
+    uri: `${WIDGET_URI_NAMESPACE}/incident-detail.html`,
+    name: "incident-detail",
+    description: "Show a single ServiceNow incident with status, activity, and a comment form.",
+    html: INCIDENT_DETAIL_HTML,
     permissions: ["clipboardWrite"]
   }
 ];

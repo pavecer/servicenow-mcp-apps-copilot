@@ -10,7 +10,11 @@ import {
   AddToCartInput,
   ServiceNowCart,
   ServiceNowCartItem,
-  ServiceNowSubmitCartResponse
+  ServiceNowSubmitCartResponse,
+  CreateIncidentInput,
+  ServiceNowIncidentResult,
+  ServiceNowIncidentComment,
+  ServiceNowIncidentDetail
 } from "../types/servicenow";
 import { TokenManager } from "./tokenManager";
 import { getDownstreamTokenForCaller, isOboEnabled } from "./oboTokenService";
@@ -1316,6 +1320,231 @@ export class ServiceNowClient {
       Logger.error("Failed to fetch order detail", {
         operation: "orders.detail_failed",
         requestSysId
+      }, error);
+      throw error;
+    }
+  }
+
+  // ── Incident management (end-user "report a problem" flow) ──────────────────
+  // End users are ServiceNow *callers*, not ITIL agents. These methods let a
+  // user report an incident, list/track their own incidents, read the
+  // customer-visible comment journal, and add an additional comment. The
+  // incident is attributed to the real end user via `caller_id` (resolved from
+  // the caller identity the same way orders resolve `requested_for`). Under
+  // caller-token / OBO mode ServiceNow ACLs enforce per-user visibility.
+
+  /**
+   * Report (create) a ServiceNow incident on behalf of the end user. Sets
+   * `caller_id` to the resolved caller so the incident shows up under the
+   * user's own incidents, and best-effort stamps `opened_by` to the caller when
+   * attributeOwnershipToCaller is enabled. Returns the created number + sys_id.
+   */
+  async createIncident(input: CreateIncidentInput): Promise<ServiceNowIncidentResult> {
+    const client = await this.getClient();
+
+    // Resolve the caller (the end user the incident is for). An explicit
+    // callerFor (sys_id or email) wins; otherwise default to the authenticated
+    // caller. Reuse the same resolution the order flow uses for requested_for.
+    const resolution = await this.resolveRequestedFor(client, input.callerFor);
+    const callerSysId =
+      typeof resolution.value === "string" && this.isLikelyServiceNowSysId(resolution.value)
+        ? resolution.value
+        : await this.resolveCallerSysId(client);
+
+    const payload: Record<string, unknown> = {
+      short_description: input.shortDescription,
+      // ServiceNow incident "Contact type" — flag self-service origin.
+      contact_type: "self-service"
+    };
+    if (input.description) payload.description = input.description;
+    if (input.urgency) payload.urgency = input.urgency;
+    if (input.impact) payload.impact = input.impact;
+    if (input.category) payload.category = input.category;
+    if (callerSysId) payload.caller_id = callerSysId;
+    if (callerSysId && config.serviceNow.attributeOwnershipToCaller) {
+      payload.opened_by = callerSysId;
+    }
+
+    Logger.info("Creating ServiceNow incident", {
+      operation: "incident.create",
+      hasCaller: Boolean(callerSysId),
+      usedCallerServiceNowToken: Boolean(getRequestContext()?.serviceNowAccessToken)
+    });
+
+    try {
+      const response = await client.post<{ result: { number?: string; sys_id?: string } }>(
+        "/api/now/table/incident",
+        payload
+      );
+      const result = response.data.result ?? {};
+      if (!result.number || !result.sys_id) {
+        throw new Error("ServiceNow did not return a number/sys_id for the created incident");
+      }
+      Logger.info("Incident created", {
+        operation: "incident.created",
+        incidentSysId: result.sys_id
+      });
+      return { number: result.number, sys_id: result.sys_id };
+    } catch (error) {
+      Logger.error("Failed to create incident", { operation: "incident.create_failed" }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * List the authenticated user's own incidents (caller_id = caller), newest
+   * activity first. Excludes Closed (7) and Canceled (8) so the list stays a
+   * tracking view of open + recently resolved incidents. Returns display-value
+   * rows for direct rendering in the my-incidents widget.
+   */
+  async listUserIncidents(limit?: number): Promise<Array<Record<string, unknown>>> {
+    const client = await this.getClient();
+
+    const callerSysId = await this.resolveCallerSysId(client);
+    if (!callerSysId) {
+      Logger.warn("Unable to determine caller sys_id for incident list", {
+        operation: "incident.list_user_unresolved"
+      });
+      return [];
+    }
+
+    const sysparmQuery = `caller_id=${callerSysId}^state!=7^state!=8^ORDERBYDESCsys_updated_on`;
+    const params: Record<string, string | number> = {
+      sysparm_query: sysparmQuery,
+      sysparm_limit: limit ?? 20,
+      sysparm_display_value: "true",
+      sysparm_fields: [
+        "sys_id",
+        "number",
+        "short_description",
+        "state",
+        "priority",
+        "urgency",
+        "impact",
+        "category",
+        "opened_at",
+        "sys_created_on",
+        "sys_updated_on"
+      ].join(",")
+    };
+
+    try {
+      const response = await client.get<{ result: Array<Record<string, unknown>> }>(
+        "/api/now/table/incident",
+        { params }
+      );
+      return response.data.result ?? [];
+    } catch (error) {
+      Logger.error("Failed to list user incidents", { operation: "incident.list_failed" }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch a single incident (display values) plus its customer-visible comment
+   * journal (the "Additional comments" the user can see). Work notes are
+   * intentionally excluded — they are internal to ITIL agents.
+   */
+  async getIncidentDetail(incidentSysId: string): Promise<ServiceNowIncidentDetail> {
+    const client = await this.getClient();
+
+    const incidentFields = [
+      "sys_id",
+      "number",
+      "short_description",
+      "description",
+      "state",
+      "priority",
+      "urgency",
+      "impact",
+      "category",
+      "caller_id",
+      "assigned_to",
+      "assignment_group",
+      "opened_by",
+      "opened_at",
+      "resolved_at",
+      "close_notes",
+      "sys_created_on",
+      "sys_updated_on"
+    ].join(",");
+
+    try {
+      const incidentResponse = await client.get<{ result: Record<string, unknown> }>(
+        `/api/now/table/incident/${incidentSysId}`,
+        { params: { sysparm_fields: incidentFields, sysparm_display_value: "all" } }
+      );
+      const incident = incidentResponse.data.result;
+      if (!incident) {
+        throw new Error(`ServiceNow incident ${incidentSysId} not found`);
+      }
+
+      const comments = await this.getIncidentComments(client, incidentSysId);
+      return { incident, comments };
+    } catch (error) {
+      Logger.error("Failed to fetch incident detail", {
+        operation: "incident.detail_failed",
+        incidentSysId
+      }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Read the customer-visible comment journal (element=comments) for an
+   * incident, oldest first so the widget renders a natural conversation. Failure
+   * is non-fatal — the detail still renders without the activity feed.
+   */
+  private async getIncidentComments(
+    client: AxiosInstance,
+    incidentSysId: string
+  ): Promise<ServiceNowIncidentComment[]> {
+    try {
+      const response = await client.get<{ result: Array<Record<string, unknown>> }>(
+        "/api/now/table/sys_journal_field",
+        {
+          params: {
+            sysparm_query: `name=incident^element_id=${incidentSysId}^element=comments^ORDERBYsys_created_on`,
+            sysparm_limit: 100,
+            sysparm_display_value: "true",
+            sysparm_fields: ["value", "sys_created_on", "sys_created_by", "element"].join(",")
+          }
+        }
+      );
+      return (response.data.result ?? [])
+        .map(row => ({
+          value: String(row.value ?? "").trim(),
+          createdOn: String(row.sys_created_on ?? ""),
+          createdBy: String(row.sys_created_by ?? ""),
+          field: "comments" as const
+        }))
+        .filter(entry => entry.value.length > 0);
+    } catch (error) {
+      Logger.warn("Failed to fetch incident comments journal", {
+        operation: "incident.comments_failed",
+        incidentSysId
+      }, error);
+      return [];
+    }
+  }
+
+  /**
+   * Add a customer-visible additional comment to an incident. ServiceNow
+   * appends the text to the `comments` journal (it does not overwrite). Returns
+   * nothing — callers re-fetch detail to render the updated activity.
+   */
+  async addIncidentComment(incidentSysId: string, comment: string): Promise<void> {
+    const client = await this.getClient();
+    try {
+      Logger.info("Adding incident comment", {
+        operation: "incident.add_comment",
+        incidentSysId
+      });
+      await client.patch(`/api/now/table/incident/${incidentSysId}`, { comments: comment });
+    } catch (error) {
+      Logger.error("Failed to add incident comment", {
+        operation: "incident.add_comment_failed",
+        incidentSysId
       }, error);
       throw error;
     }

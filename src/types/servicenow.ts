@@ -112,3 +112,45 @@ export interface ServiceNowSubmitCartResponse {
   result: ServiceNowOrderResult;
   requestedForDiagnostics: RequestedForDiagnostics;
 }
+
+// ── Incident management (end-user "report a problem" flow) ──────────────────
+
+/** Input for reporting (creating) a ServiceNow incident as an end user. */
+export interface CreateIncidentInput {
+  /** One-line summary (incident.short_description). Required. */
+  shortDescription: string;
+  /** Optional longer description (incident.description). */
+  description?: string;
+  /** ServiceNow urgency choice value: "1" High, "2" Medium, "3" Low. */
+  urgency?: string;
+  /** ServiceNow impact choice value: "1" High, "2" Medium, "3" Low. */
+  impact?: string;
+  /** Optional incident category (e.g. "hardware", "software", "network"). */
+  category?: string;
+  /**
+   * Optional sys_id or email of the caller the incident is for. Defaults to the
+   * authenticated end user (resolved to caller_id).
+   */
+  callerFor?: string;
+}
+
+/** Result of creating an incident. */
+export interface ServiceNowIncidentResult {
+  number: string;
+  sys_id: string;
+}
+
+/** A single journal (comments / work notes) entry on an incident. */
+export interface ServiceNowIncidentComment {
+  value: string;
+  createdOn: string;
+  createdBy: string;
+  /** "comments" (customer-visible) or "work_notes" (internal). */
+  field: "comments" | "work_notes";
+}
+
+/** Full detail for a single incident, shaped for the incident-detail widget. */
+export interface ServiceNowIncidentDetail {
+  incident: Record<string, unknown>;
+  comments: ServiceNowIncidentComment[];
+}

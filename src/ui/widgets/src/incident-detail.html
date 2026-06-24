@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Incident</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b; --border: #e0e0e0;
+    --accent: #0078d4; --accent-fg: #ffffff; --error: #c50f1f; --field-bg: #fafafa;
+    --chip-bg: #eef3fb; --chip-fg: #0b5cab;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3; --border: #3b3a39;
+    --accent: #2899f5; --field-bg: #2a2a2a; --chip-bg: #16314e; --chip-fg: #7fc0ff;
+  }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  h2 { font-size: 13px; margin: 18px 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 13px; }
+  .grid .k { color: var(--muted); }
+  .chip { background: var(--chip-bg); color: var(--chip-fg); border-radius: 10px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+  .comments { display: flex; flex-direction: column; gap: 10px; }
+  .comment { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--field-bg); }
+  .comment .who { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .comment .body { font-size: 13px; white-space: pre-wrap; }
+  textarea {
+    width: 100%; box-sizing: border-box; background: var(--field-bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; font: inherit;
+    min-height: 70px; resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    border: 1px solid var(--border); background: var(--field-bg); color: var(--fg);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  .btn-link { display: inline-block; text-decoration: none; border: 1px solid var(--border); padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer; }
+  .banner-ok { background: #107c10; color: #fff; border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  .error { color: var(--error); font-size: 13px; margin-top: 6px; }
+  .empty { color: var(--muted); font-size: 13px; }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) {
+    var h = host();
+    if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
+    return Promise.reject(new Error("MCP Apps host bridge unavailable."));
+  }
+  function sendFollowUp(text) {
+    var h = host();
+    if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
+  }
+  function openExternal(url) {
+    var h = host();
+    if (h && typeof h.openExternal === "function") { try { if (h.openExternal(url)) return; } catch (_) {} }
+    try { window.open(url, "_blank", "noopener"); } catch (_) {}
+  }
+  function subscribe(cb) {
+    var h = host();
+    if (h && typeof h.onData === "function") { h.onData(cb); return true; }
+    return false;
+  }
+  function showLoading(el, msg) {
+    el.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty";
+    p.textContent = msg || "Loading\u2026"; el.appendChild(p);
+  }
+  function readDV(v) {
+    if (v == null) return "";
+    if (typeof v === "object") return v.display_value || v.value || "";
+    return String(v);
+  }
+  function readVal(v) {
+    if (v == null) return "";
+    if (typeof v === "object") return v.value || v.display_value || "";
+    return String(v);
+  }
+  function unwrapResult(result) {
+    if (result && typeof result === "object") {
+      var r = result;
+      if (r.structuredContent) return r.structuredContent;
+      if (r.result && r.result.structuredContent) return r.result.structuredContent;
+    }
+    return result || {};
+  }
+
+  var root = document.getElementById("root");
+  applyTheme();
+  var pendingBanner = null;
+
+  function render(data) {
+    data = data || {};
+    var inc = data.incident || {};
+    var comments = Array.isArray(data.comments) ? data.comments : [];
+    var link = data.link || "";
+    var number = data.number || readDV(inc.number) || "";
+    var sysId = readVal(inc.sys_id);
+
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+
+    if (data.submitted) {
+      var sb = document.createElement("div"); sb.className = "banner-ok";
+      sb.textContent = "\u2713 Incident " + (number || "reported") + " logged";
+      root.appendChild(sb);
+    } else if (pendingBanner) {
+      var pb = document.createElement("div"); pb.className = "banner-ok";
+      pb.textContent = "\u2713 " + pendingBanner; root.appendChild(pb);
+    }
+    pendingBanner = null;
+
+    var h1 = document.createElement("h1"); h1.textContent = "Incident " + (number || ""); root.appendChild(h1);
+    var sd = readDV(inc.short_description);
+    var meta = document.createElement("div"); meta.className = "meta"; meta.textContent = sd || "ServiceNow incident";
+    root.appendChild(meta);
+
+    var grid = document.createElement("div"); grid.className = "grid";
+    function row(k, v) {
+      if (!v) return;
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = k;
+      var vEl = document.createElement("div"); vEl.className = "v"; vEl.textContent = v;
+      grid.appendChild(kEl); grid.appendChild(vEl);
+    }
+    var state = readDV(inc.state);
+    if (state) {
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = "Status";
+      var vEl = document.createElement("div");
+      var chip = document.createElement("span"); chip.className = "chip"; chip.textContent = state;
+      vEl.appendChild(chip); grid.appendChild(kEl); grid.appendChild(vEl);
+    }
+    row("Priority", readDV(inc.priority));
+    row("Urgency", readDV(inc.urgency));
+    row("Category", readDV(inc.category));
+    row("Opened", readDV(inc.opened_at) || readDV(inc.sys_created_on));
+    row("Updated", readDV(inc.sys_updated_on));
+    row("Assigned to", readDV(inc.assigned_to));
+    var desc = readDV(inc.description);
+    if (desc && desc !== sd) row("Description", desc);
+    root.appendChild(grid);
+
+    // Activity / comments
+    var ch = document.createElement("h2"); ch.textContent = "Activity"; root.appendChild(ch);
+    if (comments.length === 0) {
+      var none = document.createElement("p"); none.className = "empty"; none.textContent = "No comments yet."; root.appendChild(none);
+    } else {
+      var clist = document.createElement("div"); clist.className = "comments";
+      comments.forEach(function (c) {
+        var card = document.createElement("div"); card.className = "comment";
+        var who = document.createElement("div"); who.className = "who";
+        who.textContent = (c.createdBy || "User") + (c.createdOn ? " \u2022 " + c.createdOn : "");
+        var body = document.createElement("div"); body.className = "body"; body.textContent = c.value || "";
+        card.appendChild(who); card.appendChild(body); clist.appendChild(card);
+      });
+      root.appendChild(clist);
+    }
+
+    // Add a comment
+    if (sysId) {
+      var ch2 = document.createElement("h2"); ch2.textContent = "Add a comment"; root.appendChild(ch2);
+      var ta = document.createElement("textarea"); ta.placeholder = "Add information or a question for the agent\u2026"; root.appendChild(ta);
+      var err = document.createElement("div"); err.className = "error"; err.style.display = "none"; root.appendChild(err);
+      var act = document.createElement("div"); act.className = "actions";
+      var addBtn = document.createElement("button");
+      addBtn.type = "button"; addBtn.className = "primary"; addBtn.textContent = "Add comment";
+      addBtn.addEventListener("click", function () {
+        var text = ta.value.trim();
+        err.style.display = "none"; err.textContent = "";
+        if (!text) { err.style.display = "block"; err.textContent = "Type a comment first."; return; }
+        addBtn.disabled = true; addBtn.textContent = "Adding\u2026";
+        addComment(sysId, text, number, addBtn, err);
+      });
+      act.appendChild(addBtn);
+      if (link) {
+        var a = document.createElement("a");
+        a.className = "btn-link"; a.textContent = "View in ServiceNow";
+        a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
+        a.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(link); });
+        act.appendChild(a);
+      }
+      root.appendChild(act);
+    }
+  }
+
+  // PRIMARY: add_incident_comment via host bridge, then re-render THIS widget
+  // with the refreshed detail. FALLBACK: drive through chat.
+  function addComment(sysId, text, number, btn, errEl) {
+    var settled = false;
+    function fallback() {
+      if (settled) return; settled = true;
+      sendFollowUp("Add this comment to incident " + (number || sysId) + ": \"" + text + "\".");
+      if (btn) btn.textContent = "Adding in chat\u2026";
+    }
+    var p;
+    try { p = callTool("add_incident_comment", { incidentSysId: sysId, comment: text }); }
+    catch (e) { fallback(); return; }
+    if (!p || typeof p.then !== "function") { fallback(); return; }
+    p.then(function (result) {
+      if (settled) return; settled = true;
+      var data = unwrapResult(result);
+      if (data && data.success === false) { fallback(); return; }
+      pendingBanner = "Comment added";
+      render(data);
+    }).catch(function () { fallback(); });
+  }
+
+  showLoading(root, "Loading incident\u2026");
+  if (!subscribe(render)) { render(getData()); }
+})();
+</script>
+</body>
+</html>

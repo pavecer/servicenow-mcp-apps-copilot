@@ -64,6 +64,9 @@ Preferred enterprise approach:
 - Replace broad `itil` with explicit table/API ACLs for only:
   - `sc_request` (read + update of requestor-owned records)
   - `sc_req_item` (read + update for request enrichment)
+  - `incident` (create + read + update of caller-owned records — the end-user
+    incident flow)
+  - `sys_journal_field` (read — the customer-visible incident comment activity)
   - `sys_user` (read only for identity resolution)
 - Restrict visibility to approved catalogs/categories using user criteria.
 - If your security policy requires strict per-user access enforcement, set `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` and provide `x-servicenow-access-token` per caller.
@@ -140,8 +143,11 @@ The MCP server calls these standard ServiceNow Service Catalog APIs:
 | `/api/sn_sc/servicecatalog/items` | GET | Search catalog items |
 | `/api/sn_sc/servicecatalog/items/{sys_id}` | GET | Get item details and variables |
 | `/api/sn_sc/servicecatalog/items/{sys_id}/order_now` | POST | Place an order |
-| `/api/now/table/sys_user` | GET | Resolve caller identity (for requested_for) |
+| `/api/now/table/sys_user` | GET | Resolve caller identity (for requested_for / caller_id) |
 | `/api/now/table/sc_request/{sys_id}` | PATCH | Correct requested_for after order creation |
+| `/api/now/table/incident` | GET / POST | List caller incidents; report a new incident |
+| `/api/now/table/incident/{sys_id}` | GET / PATCH | Read incident detail; add a customer-visible comment |
+| `/api/now/table/sys_journal_field` | GET | Read the customer-visible incident comment activity |
 
 Ensure no firewall rules, IP allow-lists, or network policies block access from the Azure Function App to these endpoints.
 

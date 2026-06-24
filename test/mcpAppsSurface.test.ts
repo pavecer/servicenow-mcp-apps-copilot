@@ -7,12 +7,15 @@ import { WIDGETS, getWidgetForTool } from "../src/ui/widgets";
 // the widget-resource registration are all wired up.
 
 describe("MCP Apps surface", () => {
-  it("WIDGETS registry exposes exactly five widgets with ui:// URIs", () => {
-    expect(WIDGETS.length).toBe(5);
+  it("WIDGETS registry exposes exactly eight widgets with ui:// URIs", () => {
+    expect(WIDGETS.length).toBe(8);
     const toolNames = WIDGETS.map(w => w.toolName).sort();
     expect(toolNames).toEqual([
       "get_catalog_item_form",
+      "get_incident_detail",
+      "get_incident_form",
       "get_order_detail",
+      "list_user_incidents",
       "list_user_orders",
       "search_catalog_items",
       "view_cart"
@@ -50,7 +53,14 @@ describe("MCP Apps surface", () => {
       ["submit_cart", /order-detail\.html$/],
       // Order line-item tools re-render the order-detail widget in place.
       ["update_order_item", /order-detail\.html$/],
-      ["remove_order_item", /order-detail\.html$/]
+      ["remove_order_item", /order-detail\.html$/],
+      // Incident tools: form, list, detail. report_incident + add_incident_comment
+      // render the incident-detail widget.
+      ["get_incident_form", /incident-form\.html$/],
+      ["list_user_incidents", /my-incidents\.html$/],
+      ["get_incident_detail", /incident-detail\.html$/],
+      ["report_incident", /incident-detail\.html$/],
+      ["add_incident_comment", /incident-detail\.html$/]
     ]);
     for (const def of defs) {
       const meta = (def as { _meta?: { ui?: { resourceUri?: string; visibility?: string[] } } })._meta;

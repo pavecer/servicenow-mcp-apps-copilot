@@ -32,11 +32,14 @@ describe("registerWidgetResources", () => {
     resources = fake.resources;
   });
 
-  it("registers exactly five ui:// widget resources", () => {
-    expect(resources).toHaveLength(5);
+  it("registers exactly eight ui:// widget resources", () => {
+    expect(resources).toHaveLength(8);
     expect(resources.map(r => r.uri).sort()).toEqual([
       "ui://servicenow-mcp/cart.html",
       "ui://servicenow-mcp/catalog-browse.html",
+      "ui://servicenow-mcp/incident-detail.html",
+      "ui://servicenow-mcp/incident-form.html",
+      "ui://servicenow-mcp/my-incidents.html",
       "ui://servicenow-mcp/my-orders.html",
       "ui://servicenow-mcp/order-detail.html",
       "ui://servicenow-mcp/order-form.html"

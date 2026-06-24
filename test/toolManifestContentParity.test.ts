@@ -52,13 +52,18 @@ describe("MCP tool manifest content parity (FU#8)", () => {
 
   it("derives the expected tools from the Zod registrations", () => {
     expect(Object.keys(expectedShapes).sort()).toEqual([
+      "add_incident_comment",
       "add_to_cart",
       "get_catalog_item_form",
+      "get_incident_detail",
+      "get_incident_form",
       "get_order_detail",
+      "list_user_incidents",
       "list_user_orders",
       "place_order",
       "remove_cart_item",
       "remove_order_item",
+      "report_incident",
       "search_catalog_items",
       "submit_cart",
       "update_cart_item",

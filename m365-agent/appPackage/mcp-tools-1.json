@@ -544,6 +544,162 @@
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
             }
+        },
+        {
+            "name": "get_incident_form",
+            "description": "Open the 'report an incident' form so the user can describe a problem with IT. Renders the incident-form widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/incident-form.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/incident-form.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/incident-form.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "report_incident",
+            "description": "Report (create) a ServiceNow incident for the end user from the report form values. Renders the incident-detail widget as the confirmation.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "shortDescription": {
+                        "type": "string",
+                        "description": "One-line summary of the problem (incident short description)"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Optional longer description: what happened, when, any error messages"
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Optional category, e.g. inquiry, software, hardware, network, database"
+                    },
+                    "urgency": {
+                        "type": "string",
+                        "description": "Optional ServiceNow urgency value: 1 High, 2 Medium, 3 Low"
+                    },
+                    "impact": {
+                        "type": "string",
+                        "description": "Optional ServiceNow impact value: 1 High, 2 Medium, 3 Low"
+                    }
+                },
+                "required": [
+                    "shortDescription"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "list_user_incidents",
+            "description": "Retrieve the authenticated user's own open and recently resolved ServiceNow incidents. Renders the my-incidents widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Maximum number of incidents to return (default: 20)"
+                    }
+                }
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/my-incidents.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/my-incidents.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/my-incidents.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "get_incident_detail",
+            "description": "Retrieve a single ServiceNow incident by sys_id, including status and customer-visible comments. Renders the incident-detail widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "incidentSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the incident to retrieve"
+                    }
+                },
+                "required": [
+                    "incidentSysId"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "add_incident_comment",
+            "description": "Add a customer-visible additional comment to one of the user's ServiceNow incidents. Re-renders the incident-detail widget.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "incidentSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the incident to comment on"
+                    },
+                    "comment": {
+                        "type": "string",
+                        "description": "The additional comment text to add"
+                    }
+                },
+                "required": [
+                    "incidentSysId",
+                    "comment"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
         }
     ]
 }

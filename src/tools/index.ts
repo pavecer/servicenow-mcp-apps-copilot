@@ -19,6 +19,11 @@ import {
   registerRemoveCartItemTool,
   registerSubmitCartTool
 } from "./cart";
+import { registerGetIncidentFormTool } from "./getIncidentForm";
+import { registerReportIncidentTool } from "./reportIncident";
+import { registerListUserIncidentsTool } from "./listUserIncidents";
+import { registerGetIncidentDetailTool } from "./getIncidentDetail";
+import { registerAddIncidentCommentTool } from "./addIncidentComment";
 import { getWidgetForTool, registerWidgetResources } from "../ui/widgets";
 /**
  * Single source of truth for the names of MCP tools this server exposes.
@@ -64,17 +69,29 @@ const ORDER_ITEM_TOOL_NAMES = [
   "remove_order_item"
 ] as const;
 
+// Incident-management tools — the end-user "report a problem & track it" flow.
+// report/list/detail/comment each mount a SEP-1865 widget (incident-form,
+// my-incidents, incident-detail).
+const INCIDENT_TOOL_NAMES = [
+  "get_incident_form",
+  "report_incident",
+  "list_user_incidents",
+  "get_incident_detail",
+  "add_incident_comment"
+] as const;
+
 export type RegisteredToolName =
   | (typeof BASE_TOOL_NAMES)[number]
   | (typeof CART_TOOL_NAMES)[number]
-  | (typeof ORDER_ITEM_TOOL_NAMES)[number];
+  | (typeof ORDER_ITEM_TOOL_NAMES)[number]
+  | (typeof INCIDENT_TOOL_NAMES)[number];
 
 // The effective set of tool names this server exposes. The MCP Apps surface is
-// always on, so the base tools, cart/basket tools, and order line-item tools
-// are all exposed. The minimal manifest and registerTools() both derive from
-// this single list so the import-time drift guard stays consistent.
+// always on, so the base tools, cart/basket tools, order line-item tools, and
+// incident tools are all exposed. The minimal manifest and registerTools() both
+// derive from this single list so the import-time drift guard stays consistent.
 function effectiveToolNames(): string[] {
-  return [...BASE_TOOL_NAMES, ...CART_TOOL_NAMES, ...ORDER_ITEM_TOOL_NAMES];
+  return [...BASE_TOOL_NAMES, ...CART_TOOL_NAMES, ...ORDER_ITEM_TOOL_NAMES, ...INCIDENT_TOOL_NAMES];
 }
 
 export function getMinimalToolDefinitions() {
@@ -425,6 +442,97 @@ export function getMinimalToolDefinitions() {
       }
     );
 
+  // Incident-management tools — end-user report/track flow.
+  definitions.push(
+    {
+      name: "get_incident_form",
+      description: "Open the 'report an incident' form so the user can describe a problem with IT.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {}
+      }
+    },
+    {
+      name: "report_incident",
+      description: "Report (create) a ServiceNow incident for the end user from the report form values.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          shortDescription: {
+            type: "string",
+            description: "One-line summary of the problem (incident short description)"
+          },
+          description: {
+            type: "string",
+            description: "Optional longer description: what happened, when, any error messages"
+          },
+          category: {
+            type: "string",
+            description: "Optional category, e.g. inquiry, software, hardware, network, database"
+          },
+          urgency: {
+            type: "string",
+            description: "Optional ServiceNow urgency value: 1 High, 2 Medium, 3 Low"
+          },
+          impact: {
+            type: "string",
+            description: "Optional ServiceNow impact value: 1 High, 2 Medium, 3 Low"
+          }
+        },
+        required: ["shortDescription"]
+      }
+    },
+    {
+      name: "list_user_incidents",
+      description: "Retrieve the authenticated user's own open and recently resolved ServiceNow incidents.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "integer",
+            minimum: 1,
+            description: "Maximum number of incidents to return (default: 20)"
+          }
+        }
+      }
+    },
+    {
+      name: "get_incident_detail",
+      description: "Retrieve a single ServiceNow incident by sys_id, including status and customer-visible comments.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {
+          incidentSysId: {
+            type: "string",
+            description: "The sys_id of the incident to retrieve"
+          }
+        },
+        required: ["incidentSysId"]
+      }
+    },
+    {
+      name: "add_incident_comment",
+      description: "Add a customer-visible additional comment to one of the user's ServiceNow incidents.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          incidentSysId: {
+            type: "string",
+            description: "The sys_id of the incident to comment on"
+          },
+          comment: {
+            type: "string",
+            description: "The additional comment text to add"
+          }
+        },
+        required: ["incidentSysId", "comment"]
+      }
+    }
+  );
+
   // Decorate widget-backed tools with `_meta.ui.resourceUri`. The matching
   // M365 Copilot host keys off this to mount the widget for a tool result.
   for (const definition of definitions) {
@@ -472,6 +580,13 @@ export function registerTools(
   registerSubmitCartTool(server, client);
   registerUpdateOrderItemTool(server, client);
   registerRemoveOrderItemTool(server, client);
+
+  // Incident-management tools — end-user report/track flow.
+  registerGetIncidentFormTool(server);
+  registerReportIncidentTool(server, client);
+  registerListUserIncidentsTool(server, client);
+  registerGetIncidentDetailTool(server, client);
+  registerAddIncidentCommentTool(server, client);
 
   // SEP-1865 widget resources.
   registerWidgetResources(server);

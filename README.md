@@ -112,7 +112,7 @@ npm run deploy:azure
 
 **Key features:**
 - **Delegated identity**: Orders stamped with real user, not the integration account
-- **MCP Apps widgets**: Renders 5 interactive widgets (catalog-browse, order-form, cart, my-orders, order-detail) with compact `structuredContent` per tool result
+- **MCP Apps widgets**: Renders 8 interactive widgets (catalog-browse, order-form, cart, my-orders, order-detail, incident-form, my-incidents, incident-detail) with compact `structuredContent` per tool result
 - **Secure defaults**: All secrets in Key Vault, no plaintext credentials, Entra-gated endpoints
 - **Stateless**: No session storage; every request validates OAuth token
 
@@ -162,11 +162,15 @@ dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - Catalog search, item form, single-item order, and order tracking tools.
 - ServiceNow cart flow (`add_to_cart` → `submit_cart`).
 - Per-item order edits (`update_order_item` / `remove_order_item`).
-- Five MCP Apps (SEP-1865) widgets for Microsoft 365 Copilot / Cowork.
-- Delegated identity attribution (`requested_for` / `opened_by` re-stamping).
+- Incident management for end users: report a problem, track your incidents,
+  read the comment activity, and add a comment (`report_incident`,
+  `list_user_incidents`, `get_incident_detail`, `add_incident_comment`).
+- Eight MCP Apps (SEP-1865) widgets for Microsoft 365 Copilot / Cowork.
+- Delegated identity attribution (`requested_for` / `opened_by` / `caller_id`).
 - Entra On-Behalf-Of (OBO) token exchange for per-user ServiceNow ACLs (opt-in).
 
 **Next**
+- Incident attachments (upload a screenshot/file with a report).
 - Promote OBO from opt-in to a documented, first-class deployment profile.
 - Approval actions (approve / reject) surfaced in the order-detail widget.
 - Attachment upload on catalog requests.

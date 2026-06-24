@@ -136,7 +136,7 @@ requesting their own client credentials.
 
 A starter payload is included at
 [`scripts/agent365-mcp-registration.template.json`](../scripts/agent365-mcp-registration.template.json).
-It declares the fourteen tools this server exposes and uses `EntraOAuth` with the
+It declares the nineteen tools this server exposes and uses `EntraOAuth` with the
 `api://<ENTRA_CLIENT_ID>/.default` scope.
 
 > ❗ **Server name constraints** (Agent 365 CLI rules):
@@ -220,7 +220,7 @@ a365 develop-mcp register-external-mcp-server `
   --description "ServiceNow Service Catalog: search items, fill forms, place and manage orders." `
   --auth-type EntraOAuth `
   --remote-scopes "api://<ENTRA_CLIENT_ID>/.default" `
-  --tools "search_catalog_items,get_catalog_item_form,place_order,list_user_orders,update_order,get_order_detail,validate_servicenow_config,add_to_cart,view_cart,update_cart_item,remove_cart_item,submit_cart,update_order_item,remove_order_item" `
+  --tools "search_catalog_items,get_catalog_item_form,place_order,list_user_orders,update_order,get_order_detail,validate_servicenow_config,add_to_cart,view_cart,update_cart_item,remove_cart_item,submit_cart,update_order_item,remove_order_item,get_incident_form,report_incident,list_user_incidents,get_incident_detail,add_incident_comment" `
   --tenant-id "<ENTRA_TENANT_ID>"
 ```
 
@@ -310,6 +310,11 @@ you submit to Agent 365.
 | `submit_cart` | Submit the entire ServiceNow cart as a single request (one REQ with multiple RITMs). |
 | `update_order_item` | Update a single requested item (line item) on an existing order. |
 | `remove_order_item` | Remove a single requested item (line item) from an existing order. |
+| `get_incident_form` | Open the 'report an incident' form so the user can describe a problem. |
+| `report_incident` | Report (create) a ServiceNow incident for the end user. |
+| `list_user_incidents` | Retrieve the user's own open and recently resolved incidents. |
+| `get_incident_detail` | Retrieve a single incident with status and customer-visible comments. |
+| `add_incident_comment` | Add a customer-visible additional comment to an incident. |
 
 If you add or remove a tool in code, you must re-register the server. Per the
 preview limitation, Microsoft does not yet support republishing — coordinate

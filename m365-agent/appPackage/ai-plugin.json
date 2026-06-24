@@ -61,6 +61,26 @@
         {
             "name": "remove_order_item",
             "description": "Remove a single requested item (line item) from an existing order without cancelling the whole request."
+        },
+        {
+            "name": "get_incident_form",
+            "description": "Open the 'report an incident' form so the user can describe a problem with IT."
+        },
+        {
+            "name": "report_incident",
+            "description": "Report (create) a ServiceNow incident for the end user from the report form values."
+        },
+        {
+            "name": "list_user_incidents",
+            "description": "Retrieve the authenticated user's own open and recently resolved ServiceNow incidents."
+        },
+        {
+            "name": "get_incident_detail",
+            "description": "Retrieve a single ServiceNow incident by sys_id, including status and customer-visible comments."
+        },
+        {
+            "name": "add_incident_comment",
+            "description": "Add a customer-visible additional comment to one of the user's ServiceNow incidents."
         }
     ],
     "runtimes": [
@@ -86,7 +106,12 @@
                 "remove_cart_item",
                 "submit_cart",
                 "update_order_item",
-                "remove_order_item"
+                "remove_order_item",
+                "get_incident_form",
+                "report_incident",
+                "list_user_incidents",
+                "get_incident_detail",
+                "add_incident_comment"
             ],
             "auth": {
                 "type": "OAuthPluginVault",

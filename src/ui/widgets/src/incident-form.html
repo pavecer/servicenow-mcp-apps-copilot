@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Report an Incident</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b; --border: #e0e0e0;
+    --accent: #0078d4; --accent-fg: #ffffff; --error: #c50f1f; --required: #c50f1f;
+    --field-bg: #fafafa;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3; --border: #3b3a39;
+    --accent: #2899f5; --field-bg: #2a2a2a;
+  }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  form { display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 13px; font-weight: 600; }
+  .req { color: var(--required); margin-left: 4px; }
+  input[type=text], textarea, select {
+    background: var(--field-bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 8px 10px; font: inherit;
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea { min-height: 90px; resize: vertical; }
+  .actions { display: flex; gap: 8px; margin-top: 8px; }
+  button {
+    border: 1px solid var(--border); background: var(--field-bg); color: var(--fg);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: progress; }
+  .btn-link {
+    display: inline-block; text-decoration: none; border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  .btn-link.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .banner-ok {
+    background: #107c10; color: #fff; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  .error { color: var(--error); font-size: 13px; }
+  .empty { color: var(--muted); font-size: 13px; }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) {
+    var h = host();
+    if (h && typeof h.callTool === "function") return h.callTool(name, args || {});
+    return Promise.reject(new Error("MCP Apps host bridge unavailable."));
+  }
+  function sendFollowUp(text) {
+    var h = host();
+    if (h && typeof h.sendFollowUp === "function") { try { h.sendFollowUp(text); } catch (_) {} }
+  }
+  function openExternal(url) {
+    var h = host();
+    if (h && typeof h.openExternal === "function") { try { if (h.openExternal(url)) return; } catch (_) {} }
+    try { window.open(url, "_blank", "noopener"); } catch (_) {}
+  }
+  function subscribe(cb) {
+    var h = host();
+    if (h && typeof h.onData === "function") { h.onData(cb); return true; }
+    return false;
+  }
+  function showLoading(el, msg) {
+    el.innerHTML = "";
+    var p = document.createElement("p"); p.className = "empty";
+    p.textContent = msg || "Loading\u2026"; el.appendChild(p);
+  }
+  function unwrapResult(result) {
+    if (result && typeof result === "object") {
+      var r = result;
+      if (r.structuredContent) return r.structuredContent;
+      if (r.result && r.result.structuredContent) return r.result.structuredContent;
+    }
+    return result || {};
+  }
+
+  var root = document.getElementById("root");
+  applyTheme();
+
+  function render(data) {
+    data = data || {};
+    var fields = Array.isArray(data.fields) ? data.fields : [];
+    var defaults = (data.defaults && typeof data.defaults === "object") ? data.defaults : {};
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+
+    var h1 = document.createElement("h1"); h1.textContent = "Report an issue"; root.appendChild(h1);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = "Tell us what's wrong and we'll log a ticket for you.";
+    root.appendChild(meta);
+
+    if (fields.length === 0) {
+      var p = document.createElement("p"); p.className = "empty";
+      p.textContent = "The report form is unavailable right now.";
+      root.appendChild(p);
+      return;
+    }
+
+    var form = document.createElement("form");
+    form.addEventListener("submit", function (ev) { ev.preventDefault(); submit(); });
+
+    var inputs = {};
+    fields.forEach(function (field) {
+      var wrap = document.createElement("div"); wrap.className = "field";
+      var label = document.createElement("label"); label.htmlFor = "f_" + field.name;
+      label.textContent = field.label || field.name;
+      if (field.required) { var r = document.createElement("span"); r.className = "req"; r.textContent = "*"; label.appendChild(r); }
+      wrap.appendChild(label);
+
+      var el;
+      var current = defaults[field.name];
+      if (Array.isArray(field.choices) && field.choices.length > 0) {
+        el = document.createElement("select");
+        if (!field.required) {
+          var blank = document.createElement("option"); blank.value = ""; blank.textContent = "\u2014"; el.appendChild(blank);
+        }
+        field.choices.forEach(function (c) {
+          var o = document.createElement("option");
+          o.value = c.value != null ? String(c.value) : "";
+          o.textContent = c.title || c.label || o.value;
+          if (current != null && String(current) === o.value) o.selected = true;
+          el.appendChild(o);
+        });
+      } else if (field.type === "longtext" || field.type === "multiline") {
+        el = document.createElement("textarea");
+        if (current != null) el.value = String(current);
+      } else {
+        el = document.createElement("input"); el.type = "text";
+        if (current != null) el.value = String(current);
+      }
+      el.name = field.name; el.id = "f_" + field.name;
+      if (field.required) el.required = true;
+      inputs[field.name] = el;
+      wrap.appendChild(el);
+      form.appendChild(wrap);
+    });
+
+    var error = document.createElement("div"); error.className = "error"; error.style.display = "none";
+    form.appendChild(error);
+
+    var actions = document.createElement("div"); actions.className = "actions";
+    var submitBtn = document.createElement("button");
+    submitBtn.type = "submit"; submitBtn.className = "primary"; submitBtn.textContent = "Submit report";
+    actions.appendChild(submitBtn);
+    form.appendChild(actions);
+    root.appendChild(form);
+
+    function gather() {
+      var out = {};
+      Object.keys(inputs).forEach(function (k) {
+        var v = inputs[k].value;
+        if (v !== "" && v != null) out[k] = v;
+      });
+      return out;
+    }
+
+    function submit() {
+      error.style.display = "none"; error.textContent = "";
+      var args = gather();
+      if (!args.shortDescription) {
+        error.style.display = "block"; error.textContent = "Please describe the problem first.";
+        return;
+      }
+      submitBtn.disabled = true; submitBtn.textContent = "Submitting\u2026";
+      reportIncident(args, submitBtn, error);
+    }
+  }
+
+  // PRIMARY: call report_incident through the host bridge (authenticated MCP
+  // channel, fully traceable). On success render THIS widget as the
+  // confirmation. FALLBACK: drive it through chat so the agent reports it.
+  function reportIncident(args, btn, errEl) {
+    var settled = false;
+    function fallback() {
+      if (settled) return; settled = true;
+      sendFollowUp("Report a ServiceNow incident with exactly these values: " + JSON.stringify(args) + ".");
+      if (btn) btn.textContent = "Submitting in chat\u2026";
+    }
+    var p;
+    try { p = callTool("report_incident", args); }
+    catch (e) { fallback(); return; }
+    if (!p || typeof p.then !== "function") { fallback(); return; }
+    p.then(function (result) {
+      if (settled) return; settled = true;
+      var data = unwrapResult(result);
+      if (data && data.success === false) { fallback(); return; }
+      renderConfirmation(data);
+    }).catch(function () { fallback(); });
+  }
+
+  function readDV(v) {
+    if (v == null) return "";
+    if (typeof v === "object") return v.display_value || v.value || "";
+    return String(v);
+  }
+
+  function renderConfirmation(data) {
+    data = data || {};
+    var inc = data.incident || {};
+    var number = data.number || readDV(inc.number) || "";
+    var link = data.link || "";
+    root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    var banner = document.createElement("div"); banner.className = "banner-ok";
+    banner.textContent = "\u2713 Incident " + (number || "reported") + " logged";
+    root.appendChild(banner);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = "We've logged your issue. You can track it any time.";
+    root.appendChild(meta);
+    var act = document.createElement("div"); act.className = "actions";
+    var track = document.createElement("button");
+    track.type = "button"; track.className = "primary"; track.textContent = "Track my incidents";
+    track.addEventListener("click", function () { sendFollowUp("Show my ServiceNow incidents."); });
+    act.appendChild(track);
+    if (link) {
+      var a = document.createElement("a");
+      a.className = "btn-link"; a.textContent = "View in ServiceNow";
+      a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(link); });
+      act.appendChild(a);
+    }
+    root.appendChild(act);
+  }
+
+  showLoading(root, "Loading report form\u2026");
+  if (!subscribe(render)) { render(getData()); }
+})();
+</script>
+</body>
+</html>

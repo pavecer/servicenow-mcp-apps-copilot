@@ -7,13 +7,18 @@ describe("getMinimalToolDefinitions", () => {
 
   it("exposes exactly the expected MCP Apps tools", () => {
     expect(tools.map(t => t.name).sort()).toEqual([
+      "add_incident_comment",
       "add_to_cart",
       "get_catalog_item_form",
+      "get_incident_detail",
+      "get_incident_form",
       "get_order_detail",
+      "list_user_incidents",
       "list_user_orders",
       "place_order",
       "remove_cart_item",
       "remove_order_item",
+      "report_incident",
       "search_catalog_items",
       "submit_cart",
       "update_cart_item",

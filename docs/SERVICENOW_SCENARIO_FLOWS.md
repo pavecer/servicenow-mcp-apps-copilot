@@ -298,8 +298,20 @@ sequenceDiagram
 | `update_order` | order-detail | `PATCH /table/sc_request/{id}` |
 | `update_order_item` | order-detail | `PATCH /table/sc_req_item/{id}` |
 | `remove_order_item` | order-detail | `DELETE /table/sc_req_item/{id}` |
+| `get_incident_form` | incident-form | _(static form — no ServiceNow call)_ |
+| `report_incident` | incident-detail | `POST /table/incident` |
+| `list_user_incidents` | my-incidents | `GET /table/incident` (caller_id scoped) |
+| `get_incident_detail` | incident-detail | `GET /table/incident/{id}` + `sys_journal_field` |
+| `add_incident_comment` | incident-detail | `PATCH /table/incident/{id}` (comments) |
 | `validate_servicenow_config` | — | `GET /servicecatalog/items` (probe) |
 
-> MCP Apps is always on: the cart and order-item tools (and all widgets) are
-> always registered, and every widget-backed tool returns compact
+> MCP Apps is always on: the cart, order-item, and incident tools (and all
+> widgets) are always registered, and every widget-backed tool returns compact
 > `structuredContent` plus a concise, neutral `content` summary.
+>
+> **Incident management (end users)** mirrors the catalog flow: `get_incident_form`
+> opens the report form → `report_incident` creates the incident and renders the
+> incident-detail confirmation → `list_user_incidents` / `get_incident_detail`
+> track it → `add_incident_comment` adds a customer-visible comment. Incidents
+> are attributed to the real end user via `caller_id` and the list/detail views
+> are scoped to the caller's own incidents.

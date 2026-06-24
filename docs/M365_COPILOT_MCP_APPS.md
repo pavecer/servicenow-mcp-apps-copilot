@@ -66,6 +66,9 @@ widget) plus a concise, neutral `content` summary for the model.
 | `list_user_orders`      | `ui://servicenow-mcp/my-orders.html`             | Table of open orders; click row → opens detail widget    |
 | `get_order_detail`      | `ui://servicenow-mcp/order-detail.html`          | Single request: items, approvals, comment / cancel form  |
 | `view_cart`             | `ui://servicenow-mcp/cart.html`                  | Shopping cart with quantity controls; submit → one request |
+| `get_incident_form`     | `ui://servicenow-mcp/incident-form.html`         | Report-an-issue form; submit → invokes `report_incident`  |
+| `list_user_incidents`   | `ui://servicenow-mcp/my-incidents.html`          | Table of the user's incidents; click row → opens detail   |
+| `get_incident_detail`   | `ui://servicenow-mcp/incident-detail.html`       | Single incident: status, comment activity, add-comment form |
 
 All widgets are vanilla HTML with inline CSS/JS (no external CDN), authored
 under [`src/ui/widgets/src/`](../src/ui/widgets/src/) and embedded as TS
