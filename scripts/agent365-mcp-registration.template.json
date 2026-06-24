@@ -35,6 +35,34 @@
     {
       "name": "validate_servicenow_config",
       "description": "Validate ServiceNow authentication and catalog access end-to-end."
+    },
+    {
+      "name": "add_to_cart",
+      "description": "Add a ServiceNow catalog item to the user's cart without ordering yet."
+    },
+    {
+      "name": "view_cart",
+      "description": "Retrieve the authenticated user's current ServiceNow cart contents."
+    },
+    {
+      "name": "update_cart_item",
+      "description": "Update a line item in the ServiceNow cart — change its quantity and/or variable values."
+    },
+    {
+      "name": "remove_cart_item",
+      "description": "Remove a single line item from the ServiceNow cart."
+    },
+    {
+      "name": "submit_cart",
+      "description": "Submit the entire ServiceNow cart as a single request (one REQ with multiple requested items)."
+    },
+    {
+      "name": "update_order_item",
+      "description": "Update a single requested item (line item) on an existing order — quantity, comments, short_description, description."
+    },
+    {
+      "name": "remove_order_item",
+      "description": "Remove a single requested item (line item) from an existing order without cancelling the whole request."
     }
   ]
 }

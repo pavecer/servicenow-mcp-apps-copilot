@@ -22,8 +22,9 @@ Closes #<!-- issue number, if any -->
       updated together (tool file + Zod schema, `src/tools/index.ts`,
       `registerTools()`, `src/ui/widgets.ts`, exact-count tests, and
       `m365-agent/appPackage/` manifests). See [AGENTS.md](AGENTS.md).
-- [ ] Feature-flag parity preserved: with `MCP_APPS_ENABLED` off, tool responses
-      stay byte-identical to the legacy Adaptive Card surface.
+- [ ] MCP Apps surface preserved: widget-backed tools emit compact
+      `structuredContent` plus a concise, neutral `content` summary (no verbose
+      JSON or Adaptive Card payloads in `content`).
 - [ ] Docs / environment-variable table updated for any config or behavior change.
 - [ ] No secrets, tokens, PII, or tenant-specific resource names were added.
 - [ ] Added an entry to [CHANGELOG.md](CHANGELOG.md) under *Unreleased*.

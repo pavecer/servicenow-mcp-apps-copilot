@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
+import * as widgets from "../src/ui/widgets";
 
-// Verifies the SEP-1865 widget resource registration honours the
-// MCP_APPS_ENABLED feature flag. We load each flag state once per describe
-// block to keep parallel test runs cheap (re-importing the src tree is
-// expensive).
+// Verifies the SEP-1865 widget resource registration. MCP Apps is always on, so
+// the widget resources are always registered.
 
 interface FakeRegisteredResource {
   name: string;
@@ -24,45 +23,13 @@ function createFakeServer() {
   };
 }
 
-async function loadWidgets(enabled: boolean) {
-  process.env.MCP_APPS_ENABLED = enabled ? "true" : "false";
-  vi.resetModules();
-  return await import("../src/ui/widgets");
-}
-
-describe("registerWidgetResources: flag off", () => {
-  const originalFlag = process.env.MCP_APPS_ENABLED;
-  let widgets: typeof import("../src/ui/widgets");
-
-  beforeAll(async () => {
-    widgets = await loadWidgets(false);
-  });
-  afterAll(() => {
-    if (originalFlag === undefined) delete process.env.MCP_APPS_ENABLED;
-    else process.env.MCP_APPS_ENABLED = originalFlag;
-  });
-
-  it("registers no resources", () => {
-    const fake = createFakeServer();
-    widgets.registerWidgetResources(fake.server as never);
-    expect(fake.resources).toHaveLength(0);
-  });
-});
-
-describe("registerWidgetResources: flag on", () => {
-  const originalFlag = process.env.MCP_APPS_ENABLED;
-  let widgets: typeof import("../src/ui/widgets");
+describe("registerWidgetResources", () => {
   let resources: FakeRegisteredResource[];
 
-  beforeAll(async () => {
-    widgets = await loadWidgets(true);
+  beforeAll(() => {
     const fake = createFakeServer();
     widgets.registerWidgetResources(fake.server as never);
     resources = fake.resources;
-  });
-  afterAll(() => {
-    if (originalFlag === undefined) delete process.env.MCP_APPS_ENABLED;
-    else process.env.MCP_APPS_ENABLED = originalFlag;
   });
 
   it("registers exactly five ui:// widget resources", () => {

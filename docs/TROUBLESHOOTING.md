@@ -199,14 +199,14 @@ Then restart the server. **Never use this in production.**
 **Symptom:** Tools work but widgets appear as plain text (not interactive cards).
 
 **Causes:**
-- `MCP_APPS_ENABLED` is not set to `true` on the Function App
+- The declarative agent isn't sideloaded, or the host isn't an MCP Apps host
 - Widget HTML files weren't regenerated during build
 - Browser doesn't support the widget sandbox
 
 **Solution:**
-1. **Enable widgets**:
-   - Set `MCP_APPS_ENABLED=true` on the Function App
-   - Wait 2–3 minutes for the setting to take effect
+1. **Confirm the agent + host**:
+   - Sideload the [`m365-agent/`](../m365-agent/README.md) package and use an
+     MCP Apps host (Microsoft 365 Copilot / Cowork)
 
 2. **Verify widgets are registered**:
    ```bash

@@ -111,19 +111,13 @@ export const config = {
   },
 
   // Microsoft 365 Copilot "MCP Apps" (SEP-1865) widget rendering.
-  // When enabled, the server:
+  // This server always targets the MCP Apps surface:
   //   - Registers `ui://` HTML resources via `resources/read` with mime type
   //     `text/html;profile=mcp-app`.
   //   - Decorates widget-backed tools in `tools/list` with `_meta.ui.resourceUri`.
-  //   - Adds compact `structuredContent` (alongside the legacy text payload)
-  //     so the widget can render immediately on tool result.
-  // When disabled (default), the server emits the exact same `tools/list`,
-  // `initialize` capabilities, and tool responses it has historically — so any
-  // generic MCP client that consumes the default (non-MCP-Apps) surface is
-  // unaffected.
-  // Flip to "true" only in environments validated for the M365 Copilot host.
+  //   - Emits compact `structuredContent` so the widget can render immediately
+  //     on tool result.
   mcpApps: {
-    enabled: process.env.MCP_APPS_ENABLED === "true",
     // Optional: the public origin where this MCP server is reachable from the
     // M365 Copilot widget host. Documentation only — not consumed by any
     // runtime code path. Pair with https://aka.ms/mcpwidgeturlgenerator if

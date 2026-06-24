@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { computePrefillValues } from "../src/utils/prefillCatalogForm";
-import { buildOrderFormAdaptiveCard } from "../src/utils/adaptiveCards";
 import type { ServiceNowCatalogItemDetail } from "../src/types/servicenow";
 
 /**
@@ -443,10 +442,10 @@ describe("computePrefillValues (iPhone scenario)", () => {
   });
 });
 
-describe("buildOrderFormAdaptiveCard with prefilledValues", () => {
-  it("applies prefilled values to Input.ChoiceSet and Input.Text", () => {
+describe("computePrefillValues propagation to the widget form", () => {
+  it("resolves choice and text fields from prefill hints", () => {
     const item = iphoneItem();
-    const { values: prefilled } = computePrefillValues(item.variables, {
+    const { values } = computePrefillValues(item.variables, {
       prefillHints: {
         color: "Black",
         storage: "256GB",
@@ -456,38 +455,24 @@ describe("buildOrderFormAdaptiveCard with prefilledValues", () => {
       }
     });
 
-    const card = buildOrderFormAdaptiveCard(item, prefilled);
-    const body = card.body as Array<Record<string, unknown>>;
-    const byId = Object.fromEntries(
-      body.filter(b => typeof b.id === "string").map(b => [b.id as string, b])
-    );
-
-    expect(byId.color.value).toBe("Black");
-    expect(byId.storage.value).toBe("256GB");
-    expect(byId.carrier.value).toBe("Verizon");
-    expect(byId.model.value).toBe("iPhone 15 Pro");
-    expect(byId.justification.value).toBe("Replacement for damaged phone");
+    expect(values.color).toBe("Black");
+    expect(values.storage).toBe("256GB");
+    expect(values.carrier).toBe("Verizon");
+    expect(values.model).toBe("iPhone 15 Pro");
+    expect(values.justification).toBe("Replacement for damaged phone");
   });
 
-  it("shows a prefill banner only when at least one field was prefilled", () => {
+  it("returns no values when no hints resolve", () => {
     const item = iphoneItem();
-
-    const empty = buildOrderFormAdaptiveCard(item, {});
-    const emptyBody = empty.body as Array<Record<string, unknown>>;
-    expect(emptyBody.some(b => String(b.text ?? "").includes("prefilled"))).toBe(false);
-
-    const filled = buildOrderFormAdaptiveCard(item, { color: "Black" });
-    const filledBody = filled.body as Array<Record<string, unknown>>;
-    expect(filledBody.some(b => String(b.text ?? "").includes("prefilled"))).toBe(true);
+    const { values } = computePrefillValues(item.variables, {});
+    expect(Object.keys(values)).toHaveLength(0);
   });
 
-  it("does not break when no prefilledValues argument is provided", () => {
+  it("fills only the fields that resolve", () => {
     const item = iphoneItem();
-    const card = buildOrderFormAdaptiveCard(item);
-    expect(card.type).toBe("AdaptiveCard");
-    const body = card.body as Array<Record<string, unknown>>;
-    const colorInput = body.find(b => b.id === "color") as Record<string, unknown>;
-    expect(colorInput.value).toBe("");
+    const { values } = computePrefillValues(item.variables, { prefillHints: { color: "Black" } });
+    expect(values.color).toBe("Black");
+    expect(values.storage).toBeUndefined();
   });
 });
 
@@ -700,76 +685,6 @@ describe("extractDuration (natural-language duration inference)", () => {
       userContext: "Order 256GB storage if possible, costs about 999 dollars."
     });
     expect(values.how_long_do_need_it).toBeUndefined();
-  });
-});
-
-describe("Input.Date rendering for numeric type codes", () => {
-  it("renders ServiceNow type 6 (date/time) as Input.Date even when friendly_type lies", () => {
-    // Mirrors what the demo ServiceNow instance returns for Loaner Laptop's `when_do_need_it`:
-    // numeric type 6 (date/time) but friendly_type "single_line_text".
-    const item: ServiceNowCatalogItemDetail = {
-      sys_id: "loaner_sys_id",
-      name: "Loaner Laptop",
-      variables: [
-        {
-          name: "when_do_need_it",
-          label: "When do you need it ?",
-          type: 6 as unknown as string,
-          friendly_type: "single_line_text",
-          display_type: "Single Line Text"
-        }
-      ]
-    };
-
-    const card = buildOrderFormAdaptiveCard(item, { when_do_need_it: "2026-05-25" });
-    const body = card.body as Array<Record<string, unknown>>;
-    const input = body.find(b => b.id === "when_do_need_it") as Record<string, unknown>;
-    expect(input.type).toBe("Input.Date");
-    expect(input.value).toBe("2026-05-25");
-  });
-
-  it("renders ServiceNow type 8 (date) as Input.Date", () => {
-    const item: ServiceNowCatalogItemDetail = {
-      sys_id: "x",
-      name: "X",
-      variables: [
-        {
-          name: "need_by",
-          label: "Need by",
-          type: 8 as unknown as string
-        }
-      ]
-    };
-
-    const card = buildOrderFormAdaptiveCard(item);
-    const body = card.body as Array<Record<string, unknown>>;
-    const input = body.find(b => b.id === "need_by") as Record<string, unknown>;
-    expect(input.type).toBe("Input.Date");
-  });
-
-  it("does NOT promote a non-date text field that happens to share type code 6", () => {
-    // Real Install Software item on the demo ServiceNow instance has a variable named "software"
-    // with type=6 and friendly_type="single_line_text" - despite numeric 6 being
-    // ServiceNow's date/time code. The label is "What software do you need
-    // installed ?" so we must leave it as Input.Text.
-    const item: ServiceNowCatalogItemDetail = {
-      sys_id: "install_software",
-      name: "Install Software",
-      variables: [
-        {
-          name: "software",
-          label: "What software do you need installed ?",
-          type: 6 as unknown as string,
-          friendly_type: "single_line_text",
-          display_type: "Single Line Text"
-        }
-      ]
-    };
-
-    const card = buildOrderFormAdaptiveCard(item);
-    const body = card.body as Array<Record<string, unknown>>;
-    const input = body.find(b => b.id === "software") as Record<string, unknown>;
-    expect(input.type).toBe("Input.Text");
   });
 });
 

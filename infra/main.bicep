@@ -122,10 +122,6 @@ param logIncludeCallerIdentity string = 'false'
 @allowed([ 'true', 'false' ])
 param logIncludeErrorStack string = 'false'
 
-@description('Enable SEP-1865 "MCP Apps" widget rendering for Microsoft 365 Copilot (true/false). Default false keeps the default (non-MCP-Apps) surface byte-identical. Flip to true once the Entra redirect URIs for M365 Copilot are added to the app registration.')
-@allowed([ 'true', 'false' ])
-param mcpAppsEnabled string = 'false'
-
 // ---------------------------------------------------------------------------
 // Variables
 // ---------------------------------------------------------------------------
@@ -336,9 +332,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'LOG_LEVEL', value: logLevel }
         { name: 'LOG_INCLUDE_CALLER_IDENTITY', value: logIncludeCallerIdentity }
         { name: 'LOG_INCLUDE_ERROR_STACK', value: logIncludeErrorStack }
-        // SEP-1865 MCP Apps widget rendering (Microsoft 365 Copilot). Default
-        // "false" preserves the default (non-MCP-Apps) surface byte-identical.
-        { name: 'MCP_APPS_ENABLED', value: mcpAppsEnabled }
       ]
     }
     functionAppConfig: {

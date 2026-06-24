@@ -5,15 +5,22 @@ describe("getMinimalToolDefinitions", () => {
   const tools = getMinimalToolDefinitions();
   const byName = Object.fromEntries(tools.map(t => [t.name, t]));
 
-  it("exposes exactly the seven expected MCP tools", () => {
+  it("exposes exactly the expected MCP Apps tools", () => {
     expect(tools.map(t => t.name).sort()).toEqual([
+      "add_to_cart",
       "get_catalog_item_form",
       "get_order_detail",
       "list_user_orders",
       "place_order",
+      "remove_cart_item",
+      "remove_order_item",
       "search_catalog_items",
+      "submit_cart",
+      "update_cart_item",
       "update_order",
-      "validate_servicenow_config"
+      "update_order_item",
+      "validate_servicenow_config",
+      "view_cart"
     ]);
   });
 

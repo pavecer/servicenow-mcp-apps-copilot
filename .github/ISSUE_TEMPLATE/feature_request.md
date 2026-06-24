@@ -23,7 +23,6 @@ Any workarounds or alternative approaches you've thought about.
 
 - [ ] Would this require a new tool or widget? (remember the tool/widget
       lockstep invariant in [AGENTS.md](../../AGENTS.md))
-- [ ] Should it be gated behind `MCP_APPS_ENABLED` or another flag?
 
 ## Additional context
 

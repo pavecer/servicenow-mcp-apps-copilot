@@ -43,9 +43,10 @@ This repo enforces several invariants via import-time guards and exact-count
 tests. Violating them breaks the build or the test suite. The authoritative list
 is in [AGENTS.md](AGENTS.md); the highlights:
 
-1. **Feature-flag parity.** With `MCP_APPS_ENABLED` **off**, the manifest and
-   tool responses must stay byte-identical to the legacy Adaptive Card surface.
-   `structuredContent` / `_meta.ui` are emitted **only** when the flag is on.
+1. **MCP Apps is the only surface.** Every widget-backed tool emits compact
+   `structuredContent` plus a concise, neutral `content` summary, and widget
+   resources / `_meta.ui` are always registered. Tool `content` must never carry
+   verbose JSON or Adaptive Card payloads.
 2. **Tool/widget lockstep.** Adding or renaming a tool or widget requires
    updating *all* of: the tool file + Zod schema, `src/tools/index.ts`,
    `registerTools()`, `src/ui/widgets.ts` (for widgets), the exact-count tests

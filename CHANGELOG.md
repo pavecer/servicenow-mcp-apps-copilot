@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- The `MCP_APPS_ENABLED` feature flag and the legacy Adaptive Card surface. MCP
+  Apps is now the only surface: widget resources and `_meta.ui` are always
+  registered, the cart and order line-item tools are always exposed, and every
+  widget-backed tool returns compact `structuredContent` plus a concise, neutral
+  `content` summary. The `buildOrderFormAdaptiveCard` /
+  `buildCatalogItemSelectionAdaptiveCard` / `buildOrderConfirmationAdaptiveCard`
+  builders and `src/utils/adaptiveCards.ts` are gone; the shared field helpers
+  moved to `src/utils/catalogFields.ts`.
+
 ### Added
 - Public-readiness pass: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, this changelog,
   GitHub issue/PR templates, and README **Roadmap**, **Contributing**, and

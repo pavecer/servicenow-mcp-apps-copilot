@@ -100,9 +100,6 @@
     },
     "logIncludeErrorStack": {
       "value": "${LOG_INCLUDE_ERROR_STACK=false}"
-    },
-    "mcpAppsEnabled": {
-      "value": "${MCP_APPS_ENABLED=false}"
     }
   }
 }

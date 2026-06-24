@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildOrderFormFields } from "../src/tools/getCatalogItemForm";
-import { collectVariables, normalizeVariableType, isReferenceVariable } from "../src/utils/adaptiveCards";
+import { collectVariables, normalizeVariableType, isReferenceVariable } from "../src/utils/catalogFields";
 import type { ServiceNowVariable } from "../src/types/servicenow";
 
 interface Fixture {

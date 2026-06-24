@@ -139,7 +139,7 @@ sequenceDiagram
   F->>S: Bearer = Entra token
   S->>S: Validates against Entra OIDC provider config
   S-->>F: Catalog / order data
-  F-->>K-->>C-->>U: Adaptive card response
+  F-->>K-->>C-->>U: Widget (structuredContent) response
 ```
 
 ### ServiceNow configuration (one-time)
@@ -220,7 +220,7 @@ sequenceDiagram
   F->>S: Bearer = Okta token
   S->>S: Validates against Okta (existing trust)
   S-->>F: Catalog / order data
-  F-->>K-->>C-->>U: Adaptive card response
+  F-->>K-->>C-->>U: Widget (structuredContent) response
 ```
 
 ServiceNow is **unchanged**. Okta becomes a *token broker* between Entra (who authenticated the user) and ServiceNow (who already trusts Okta).

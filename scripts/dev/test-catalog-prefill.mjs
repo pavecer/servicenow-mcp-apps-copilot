@@ -8,7 +8,7 @@
  *    few representative user contexts (free-text only, structured hints
  *    only, both combined) or against a custom scenario you supply.
  * 3. Prints the (recursively-expanded) variable inventory, prefilled
- *    values, diagnostics, and the final Adaptive Card so you can see
+ *    values, diagnostics, and the final widget form fields so you can see
  *    exactly what the agent would return to the end user.
  *
  * Usage:
@@ -29,7 +29,7 @@
  *   --scenario=custom            Run only the custom scenario
  *
  * Other flags:
- *   --dump-card                  Include the full Adaptive Card JSON in output
+ *   --dump-card                  Include the full widget field schema in output
  */
 
 import fs from "node:fs";
@@ -106,13 +106,15 @@ const { computePrefillValues } = await import(
   url.pathToFileURL(path.join(distRoot, "utils", "prefillCatalogForm.js"))
 );
 const {
-  buildOrderFormAdaptiveCard,
   collectVariables,
   isReferenceVariable,
   getReferenceTable,
   getReferenceQualifier
 } = await import(
-  url.pathToFileURL(path.join(distRoot, "utils", "adaptiveCards.js"))
+  url.pathToFileURL(path.join(distRoot, "utils", "catalogFields.js"))
+);
+const { buildOrderFormFields } = await import(
+  url.pathToFileURL(path.join(distRoot, "tools", "getCatalogItemForm.js"))
 );
 
 const tokenManager = new TokenManager();
@@ -337,24 +339,21 @@ try {
     console.log(JSON.stringify(diagnostics, null, 2));
     console.log("");
 
-    const card = buildOrderFormAdaptiveCard(item, values, referenceChoices);
-    const inputs = (card.body ?? [])
-      .filter(b => typeof b.id === "string")
-      .map(b => ({
-        id: b.id,
-        type: b.type,
-        value: b.value,
-        style: b.style,
-        choicesCount: Array.isArray(b.choices) ? b.choices.length : undefined,
-        prefilled: Object.prototype.hasOwnProperty.call(values, b.id)
-      }));
-    console.log("Adaptive Card inputs after prefill:");
+    const fields = buildOrderFormFields(item, referenceChoices);
+    const inputs = fields.map(f => ({
+      name: f.name,
+      type: f.type,
+      choicesCount: Array.isArray(f.choices) ? f.choices.length : undefined,
+      required: f.required,
+      prefilled: Object.prototype.hasOwnProperty.call(values, f.name)
+    }));
+    console.log("Widget form fields after prefill:");
     console.log(JSON.stringify(inputs, null, 2));
     console.log("");
 
     if (flags["dump-card"]) {
-      console.log("Full Adaptive Card JSON:");
-      console.log(JSON.stringify(card, null, 2));
+      console.log("Full widget field schema:");
+      console.log(JSON.stringify(fields, null, 2));
       console.log("");
     }
   }

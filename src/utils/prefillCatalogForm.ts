@@ -5,10 +5,10 @@ import {
   isMultiSelectType,
   normalizeChoices,
   normalizeVariableType
-} from "./adaptiveCards";
+} from "./catalogFields";
 
 /**
- * Smart prefill engine for ServiceNow catalog item Adaptive Cards.
+ * Smart prefill engine for ServiceNow catalog items.
  *
  * Design rationale
  * ----------------

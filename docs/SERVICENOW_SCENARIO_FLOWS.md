@@ -300,6 +300,6 @@ sequenceDiagram
 | `remove_order_item` | order-detail | `DELETE /table/sc_req_item/{id}` |
 | `validate_servicenow_config` | — | `GET /servicecatalog/items` (probe) |
 
-> The cart and order-item tools (and all widgets) are registered **only** when
-> `MCP_APPS_ENABLED=true`. With the flag off, the server exposes the seven base
-> tools and returns the legacy Adaptive Card / text surface.
+> MCP Apps is always on: the cart and order-item tools (and all widgets) are
+> always registered, and every widget-backed tool returns compact
+> `structuredContent` plus a concise, neutral `content` summary.

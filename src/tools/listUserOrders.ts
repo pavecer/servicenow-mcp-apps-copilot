@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ServiceNowClient } from "../services/servicenowClient";
-import { config } from "../config";
 
 // Compact field projection delivered to the SEP-1865 widget. The widget
 // itself re-fetches the full record via tools/call when the user clicks an
@@ -93,70 +92,33 @@ export function registerListUserOrdersTool(server: McpServer, client: ServiceNow
         const orders = await client.listUserOrders(effectiveLimit, fields);
 
         if (orders.length === 0) {
-          const emptyResult: {
-            content: Array<{ type: "text"; text: string }>;
-            structuredContent?: Record<string, unknown>;
-          } = {
+          return {
             content: [
-              {
-                type: "text" as const,
-                text: JSON.stringify({
-                  success: true,
-                  message: "No open orders found for the current user",
-                  orders: [],
-                  count: 0
-                }, null, 2)
-              }
-            ]
-          };
-          if (config.mcpApps.enabled) {
-            emptyResult.structuredContent = { count: 0, orders: [] };
-            emptyResult.content = [
               {
                 type: "text" as const,
                 text: "No open orders."
               }
-            ];
-          }
-          return emptyResult;
+            ],
+            structuredContent: { count: 0, orders: [] }
+          };
         }
-
-        const result: {
-          content: Array<{ type: "text"; text: string }>;
-          structuredContent?: Record<string, unknown>;
-        } = {
-          content: [
-            {
-              type: "text" as const,
-              text: JSON.stringify({
-                success: true,
-                count: orders.length,
-                orders: orders
-              }, null, 2)
-            }
-          ]
-        };
 
         // SEP-1865 MCP Apps: the my-orders widget renders the orders from
         // structuredContent. Keep `content` a concise model-facing summary only
         // — returning the full JSON list makes Microsoft 365 Copilot render a
-        // verbose text fallback instead of mounting the widget. The full
-        // enrichment stays in the text payload only in the flag-off Copilot
-        // Studio surface.
-        if (config.mcpApps.enabled) {
-          result.structuredContent = {
-            count: orders.length,
-            orders: orders.map(toWidgetOrder)
-          };
-          result.content = [
+        // verbose text fallback instead of mounting the widget.
+        return {
+          content: [
             {
               type: "text" as const,
               text: `${orders.length} open order(s).`
             }
-          ];
-        }
-
-        return result;
+          ],
+          structuredContent: {
+            count: orders.length,
+            orders: orders.map(toWidgetOrder)
+          }
+        };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         return {

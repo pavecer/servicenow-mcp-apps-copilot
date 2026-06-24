@@ -113,7 +113,7 @@ logger.info("Calling ServiceNow API", { endpoint, method });  // Safe to log
 - ✅ Widgets are in `src/ui/widgets/src/*.html` (self-contained: inline CSS + JS)
 - ✅ After editing widget HTML, run `npm run build` to regenerate `src/ui/widgets/generated/`
 - ✅ Test locally: `npm run start:dev` then check the MCP endpoint returns the widget
-- ✅ Verify the widget renders in Microsoft 365 Copilot with `MCP_APPS_ENABLED=true`
+- ✅ Verify the widget renders in Microsoft 365 Copilot (the sideloaded agent)
 
 ### JavaScript:
 - ✅ Consume only `window.mcpHost` facade: `onData`, `getData`, `callTool`, `sendFollowUp`, `openExternal`, `applyTheme`
@@ -194,7 +194,7 @@ These are checked by the test suite and will fail if violated:
 |-----------|------|--------|
 | Tool count exact (14 MCP tools) | `test/toolManifest.test.ts` | Prevents accidental tool registration |
 | Widget count exact (5 SEP-1865 widgets) | `test/widgetResources.test.ts` | Ensures all widgets are tracked |
-| Feature flag gating | `test/mcpAppsGating.test.ts` | When `MCP_APPS_ENABLED=off`, cart+edit tools disappear |
+| MCP Apps surface wiring | `test/mcpAppsSurface.test.ts` | Widget registry, `_meta.ui` binding, and resource registration stay wired |
 | Tool schema matches Zod | `test/toolManifest.test.ts` | Prevents invalid tool definitions |
 | No secrets in code | (manual review) | Checked during PR review |
 

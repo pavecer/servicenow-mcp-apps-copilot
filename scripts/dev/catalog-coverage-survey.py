@@ -4,7 +4,7 @@
 Enumerates every variable type used by active catalog items, fetches a sample
 item per type through the SAME catalog API the MCP server uses
 (/api/sn_sc/servicecatalog/items/{sys_id}), and prints the friendly_type the
-API returns so we can confirm the widget/Adaptive Card field mapper covers it.
+API returns so we can confirm the widget field mapper covers it.
 
 Usage: SN_AUTH='admin:pwd' python3 scripts/dev/catalog-coverage-survey.py
 """

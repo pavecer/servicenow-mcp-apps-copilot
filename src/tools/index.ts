@@ -19,9 +19,7 @@ import {
   registerRemoveCartItemTool,
   registerSubmitCartTool
 } from "./cart";
-import { config } from "../config";
 import { getWidgetForTool, registerWidgetResources } from "../ui/widgets";
-
 /**
  * Single source of truth for the names of MCP tools this server exposes.
  *
@@ -48,10 +46,8 @@ const BASE_TOOL_NAMES = [
   "get_order_detail"
 ] as const;
 
-// Cart/basket tools are part of the SEP-1865 "MCP Apps" experience and are
-// only exposed when MCP_APPS_ENABLED=true. Gating them on the flag keeps the
-// default tools/list byte-identical (still the seven base tools) and avoids
-// surfacing widget-only tools to generic MCP clients.
+// Cart/basket tools are part of the SEP-1865 "MCP Apps" experience. They let
+// the user build a multi-item basket and submit it as a single request.
 const CART_TOOL_NAMES = [
   "add_to_cart",
   "view_cart",
@@ -62,8 +58,7 @@ const CART_TOOL_NAMES = [
 
 // Order line-item tools are also part of the SEP-1865 "MCP Apps" experience —
 // they let the user edit/remove individual items in an existing order and
-// re-render the order-detail widget in place. Gated on the same flag as the
-// cart tools so the default tools/list stays the seven base tools.
+// re-render the order-detail widget in place.
 const ORDER_ITEM_TOOL_NAMES = [
   "update_order_item",
   "remove_order_item"
@@ -74,13 +69,12 @@ export type RegisteredToolName =
   | (typeof CART_TOOL_NAMES)[number]
   | (typeof ORDER_ITEM_TOOL_NAMES)[number];
 
-// The effective set of tool names for the current configuration. Both the
-// minimal manifest and registerTools() derive from the same gate so the
-// import-time drift guard stays consistent in either flag state.
+// The effective set of tool names this server exposes. The MCP Apps surface is
+// always on, so the base tools, cart/basket tools, and order line-item tools
+// are all exposed. The minimal manifest and registerTools() both derive from
+// this single list so the import-time drift guard stays consistent.
 function effectiveToolNames(): string[] {
-  return config.mcpApps.enabled
-    ? [...BASE_TOOL_NAMES, ...CART_TOOL_NAMES, ...ORDER_ITEM_TOOL_NAMES]
-    : [...BASE_TOOL_NAMES];
+  return [...BASE_TOOL_NAMES, ...CART_TOOL_NAMES, ...ORDER_ITEM_TOOL_NAMES];
 }
 
 export function getMinimalToolDefinitions() {
@@ -91,10 +85,8 @@ export function getMinimalToolDefinitions() {
   // negative numeric bounds, etc.). KEEP IN SYNC with the Zod schemas in each
   // tool file when adding/removing parameters or changing types.
   //
-  // When config.mcpApps.enabled is true, widget-backed tools are decorated
-  // with `_meta.ui.resourceUri` (SEP-1865 "MCP Apps"). When false, the
-  // manifest is byte-identical to the default (non-MCP-Apps) surface so
-  // generic MCP clients keep working.
+  // Widget-backed tools are decorated with `_meta.ui.resourceUri` (SEP-1865
+  // "MCP Apps") so the M365 Copilot host mounts the matching widget.
   const definitions: Array<{
     name: string;
     description: string;
@@ -293,10 +285,9 @@ export function getMinimalToolDefinitions() {
     }
   ];
 
-  // Cart/basket tools — exposed only in the MCP Apps surface. Pushed before the
-  // `_meta.ui` decoration loop so they pick up their widget binding too.
-  if (config.mcpApps.enabled) {
-    definitions.push(
+  // Cart/basket tools — pushed before the `_meta.ui` decoration loop so they
+  // pick up their widget binding too.
+  definitions.push(
       {
         name: "add_to_cart",
         description: "Add a ServiceNow catalog item to the user's cart (basket) without ordering yet.",
@@ -433,34 +424,28 @@ export function getMinimalToolDefinitions() {
         }
       }
     );
-  }
 
-  // Decorate widget-backed tools with `_meta.ui.resourceUri` when the
-  // MCP Apps feature is enabled. `getWidgetForTool()` already returns
-  // undefined when the flag is off, so this is a no-op in the default state
-  // and keeps the manifest byte-identical to the default (non-MCP-Apps)
-  // surface.
-  if (config.mcpApps.enabled) {
-    for (const definition of definitions) {
-      const widget = getWidgetForTool(definition.name);
-      if (!widget) continue;
-      definition._meta = {
-        ...(definition._meta ?? {}),
-        ui: {
-          resourceUri: widget.uri,
-          // visibility defaults to ["model","app"] per spec — be explicit so
-          // hosts that fail-close on unknown shape see the intent.
-          visibility: ["model", "app"]
-        },
-        // Also emit the flat `ui/resourceUri` key alongside the nested form.
-        // This is exactly what the official `@modelcontextprotocol/ext-apps`
-        // `registerAppTool` helper produces, and Microsoft 365 Copilot's MCP
-        // Apps host keys off this flat field to bind a tool result to its
-        // widget. Without it the tool runs but Copilot renders the result as
-        // plain text instead of mounting the widget.
-        "ui/resourceUri": widget.uri
-      };
-    }
+  // Decorate widget-backed tools with `_meta.ui.resourceUri`. The matching
+  // M365 Copilot host keys off this to mount the widget for a tool result.
+  for (const definition of definitions) {
+    const widget = getWidgetForTool(definition.name);
+    if (!widget) continue;
+    definition._meta = {
+      ...(definition._meta ?? {}),
+      ui: {
+        resourceUri: widget.uri,
+        // visibility defaults to ["model","app"] per spec — be explicit so
+        // hosts that fail-close on unknown shape see the intent.
+        visibility: ["model", "app"]
+      },
+      // Also emit the flat `ui/resourceUri` key alongside the nested form.
+      // This is exactly what the official `@modelcontextprotocol/ext-apps`
+      // `registerAppTool` helper produces, and Microsoft 365 Copilot's MCP
+      // Apps host keys off this flat field to bind a tool result to its
+      // widget. Without it the tool runs but Copilot renders the result as
+      // plain text instead of mounting the widget.
+      "ui/resourceUri": widget.uri
+    };
   }
 
   return definitions;
@@ -479,19 +464,16 @@ export function registerTools(
   registerUpdateOrderTool(server, client);
   registerGetOrderDetailTool(server, client);
 
-  // Cart/basket + order line-item tools — MCP Apps surface only (see
-  // effectiveToolNames()).
-  if (config.mcpApps.enabled) {
-    registerAddToCartTool(server, client);
-    registerViewCartTool(server, client);
-    registerUpdateCartItemTool(server, client);
-    registerRemoveCartItemTool(server, client);
-    registerSubmitCartTool(server, client);
-    registerUpdateOrderItemTool(server, client);
-    registerRemoveOrderItemTool(server, client);
-  }
+  // Cart/basket + order line-item tools — part of the MCP Apps surface.
+  registerAddToCartTool(server, client);
+  registerViewCartTool(server, client);
+  registerUpdateCartItemTool(server, client);
+  registerRemoveCartItemTool(server, client);
+  registerSubmitCartTool(server, client);
+  registerUpdateOrderItemTool(server, client);
+  registerRemoveOrderItemTool(server, client);
 
-  // SEP-1865 widget resources. No-op when MCP_APPS_ENABLED != "true".
+  // SEP-1865 widget resources.
   registerWidgetResources(server);
 }
 

@@ -750,8 +750,8 @@ export class ServiceNowClient {
 
   /**
    * Fetch candidate records for a ServiceNow reference variable so the
-   * Adaptive Card can render them as a ChoiceSet rather than a free-text
-   * input. Returns at most `limit` rows.
+   * order-form widget can render them as a choice picker rather than a
+   * free-text input. Returns at most `limit` rows.
    *
    *   table:        the referenced ServiceNow table (e.g. "sys_user",
    *                 "cmn_location", "std_change_record_producer").

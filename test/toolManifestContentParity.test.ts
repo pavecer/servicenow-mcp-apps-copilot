@@ -50,15 +50,22 @@ describe("MCP tool manifest content parity (FU#8)", () => {
   const expectedShapes = deriveExpectedShapes();
   const manifest = getMinimalToolDefinitions();
 
-  it("derives the seven expected tools from the Zod registrations", () => {
+  it("derives the expected tools from the Zod registrations", () => {
     expect(Object.keys(expectedShapes).sort()).toEqual([
+      "add_to_cart",
       "get_catalog_item_form",
       "get_order_detail",
       "list_user_orders",
       "place_order",
+      "remove_cart_item",
+      "remove_order_item",
       "search_catalog_items",
+      "submit_cart",
+      "update_cart_item",
       "update_order",
-      "validate_servicenow_config"
+      "update_order_item",
+      "validate_servicenow_config",
+      "view_cart"
     ]);
   });
 

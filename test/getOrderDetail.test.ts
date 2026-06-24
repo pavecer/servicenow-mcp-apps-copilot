@@ -53,15 +53,20 @@ describe("get_order_detail tool", () => {
     expect(getOrderDetailMock).toHaveBeenCalledWith("abc", { includeApprovals: false });
   });
 
-  it("returns success payload with order, items, approvals in text content", async () => {
+  it("returns the order, items, approvals in structuredContent with a concise summary", async () => {
     const result = await registered.handler({ orderSysId: "abc" }) as {
       content: Array<{ type: string; text: string }>;
+      structuredContent?: Record<string, unknown>;
     };
-    const payload = JSON.parse(result.content[0].text) as Record<string, unknown>;
-    expect(payload.success).toBe(true);
-    expect((payload.order as Record<string, unknown>).number).toBe("REQ0001");
-    expect(payload.itemCount).toBe(1);
-    expect(payload.approvalCount).toBe(0);
+    // Content is a concise, neutral model-facing summary (not a JSON blob).
+    expect(result.content[0].text).toContain("REQ0001");
+    expect(() => JSON.parse(result.content[0].text)).toThrow();
+    // The full record travels in structuredContent for the order-detail widget.
+    const sc = result.structuredContent as Record<string, unknown>;
+    expect(sc).toBeDefined();
+    expect((sc.order as Record<string, unknown>).number).toBe("REQ0001");
+    expect((sc.items as unknown[]).length).toBe(1);
+    expect((sc.approvals as unknown[]).length).toBe(0);
   });
 
   it("returns a structured failure when the client throws", async () => {

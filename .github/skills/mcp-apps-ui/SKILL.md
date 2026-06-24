@@ -212,7 +212,7 @@ host bridge. Do not introduce React/Vite per-widget; match what exists.
 - `src/ui/widgets.ts` — the `WIDGETS` registry: `toolName`, optional
   `boundToolNames`, `uri` (`ui://servicenow-mcp/…`), `name`, `description`,
   `html`, optional `frameDomains` / `permissions`. `registerWidgetResources()`
-  and `getWidgetForTool()` are **no-ops when `config.mcpApps.enabled` is false**.
+  and `getWidgetForTool()` are always active (MCP Apps is the only surface).
 
 ### Widget bridge facade (`window.mcpHost`)
 Consume only this facade from widget JS:
@@ -242,9 +242,10 @@ mounting new widgets or forcing model round-trips. Always provide a graceful
 - Keep inline widgets glanceable: ≤2 primary actions at the bottom; no internal
   tabs/filters/pagination; avoid forcing vertical scroll.
 
-### Flag gating + lockstep invariants (CRITICAL)
-`MCP_APPS_ENABLED` OFF must keep the manifest + tool responses byte-identical to
-the Copilot Studio surface. When adding a tool or widget, update ALL of these or
+### Surface + lockstep invariants (CRITICAL)
+MCP Apps is the only surface: every widget-backed tool always emits compact
+`structuredContent` + a concise, neutral `content` summary, and `_meta.ui` is
+always present. When adding a tool or widget, update ALL of these or
 cold-start/tests throw (see `/memories/repo/widget-and-tool-invariants.md`):
 1. `src/tools/index.ts` `TOOL_NAMES` + minimal tool definitions (drift guard).
 2. Tool Zod schema must match the minimal manifest (same property names +
@@ -253,7 +254,7 @@ cold-start/tests throw (see `/memories/repo/widget-and-tool-invariants.md`):
 4. `test/toolManifest.test.ts` exact tool-name list + count.
 5. `test/widgetResources.test.ts` EXACT `ui://` resource count.
 6. `m365-agent/appPackage/mcp-tools-1.json` + `ai-plugin.json` enumerate tools.
-7. `structuredContent` + `_meta.ui` only emitted when `config.mcpApps.enabled`.
+7. Tool `content` must never carry verbose JSON or Adaptive Card payloads.
 
 ### Build + verify
 - `npm run build` runs `build-widgets.mjs` then `tsc` (generated widgets must

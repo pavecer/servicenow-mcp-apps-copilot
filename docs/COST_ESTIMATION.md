@@ -29,7 +29,7 @@ Per-tool unit costs (Azure-only, list, West Europe, mid-2026):
 | `submit_cart` | MCP Apps | **~$0.0005 – $0.0010** | Collapses the cart into one `sc_request` with multiple items |
 | `update_order_item` / `remove_order_item` | MCP Apps | **~$0.0004 – $0.0012** | One item PATCH/DELETE + order-detail read-back (bounded fan-out) |
 
-The **MCP Apps** tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`, `update_order_item`, `remove_order_item`) are only registered when `MCP_APPS_ENABLED=true`. They cost the same order of magnitude as the base tools — one or two ServiceNow round-trips each.
+The **MCP Apps** tools (`add_to_cart`, `view_cart`, `update_cart_item`, `remove_cart_item`, `submit_cart`, `update_order_item`, `remove_order_item`) cost the same order of magnitude as the base tools — one or two ServiceNow round-trips each.
 
 The Azure infrastructure bill is **flat and small** for any realistic ServiceNow ticketing workload — the MCP server itself is not a cost driver.
 
@@ -60,7 +60,7 @@ Each tool invocation is a single HTTP POST to `/mcp`. Empirical timings against 
 | JWT validation + audience check | ~10 ms | In-memory after first cache hit |
 | OBO token exchange (if enabled) | ~150-300 ms | One outbound call to Entra; cached per user for ~50 minutes |
 | ServiceNow REST call | ~200-800 ms | The wall-clock dominates the per-call cost; depends on instance load |
-| Response serialization | ~10-30 ms | `structuredContent` for the MCP Apps widgets (catalog-browse, order-form, cart, my-orders, order-detail), with a legacy Adaptive Card / text fallback when `MCP_APPS_ENABLED` is off |
+| Response serialization | ~10-30 ms | Compact `structuredContent` for the MCP Apps widgets (catalog-browse, order-form, cart, my-orders, order-detail) plus a concise text summary |
 
 So a typical tool call spends **400-1000 ms** of Functions execution time at ~256 MB of memory.
 

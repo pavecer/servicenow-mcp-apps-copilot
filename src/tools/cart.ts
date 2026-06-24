@@ -5,12 +5,12 @@ import { config } from "../config";
 import Logger from "../utils/logger";
 import type { ServiceNowCart } from "../types/servicenow";
 
-// ── ServiceNow cart / basket MCP tools (SEP-1865 MCP Apps only) ─────────────
-// These tools are registered ONLY when MCP_APPS_ENABLED=true. They let the user
-// build a multi-item basket (the same server-side cart the ServiceNow portal
-// uses) and submit it as a single request. The cart is keyed to the
-// authenticated ServiceNow user, so this is only correct under per-user
-// identity (caller token / OBO) — the same auth path the other tools use.
+// ── ServiceNow cart / basket MCP tools (SEP-1865 MCP Apps) ──────────────────
+// These tools let the user build a multi-item basket (the same server-side
+// cart the ServiceNow portal uses) and submit it as a single request. The cart
+// is keyed to the authenticated ServiceNow user, so this is only correct under
+// per-user identity (caller token / OBO) — the same auth path the other tools
+// use.
 
 type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
@@ -51,21 +51,10 @@ function summarizeCart(cart: ServiceNowCart): string {
 /** Builds the standard tool result for any cart-mutating/read operation. */
 function cartResult(cart: ServiceNowCart): ToolResult {
   const projected = projectCart(cart);
-  const result: ToolResult = {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify({ success: true, cart: projected }, null, 2)
-      }
-    ]
+  return {
+    content: [{ type: "text" as const, text: summarizeCart(cart) }],
+    structuredContent: { cart: projected }
   };
-
-  if (config.mcpApps.enabled) {
-    result.structuredContent = { cart: projected };
-    result.content = [{ type: "text" as const, text: summarizeCart(cart) }];
-  }
-
-  return result;
 }
 
 function cartFailure(operation: string, error: unknown, extra?: Record<string, unknown>): ToolResult {
@@ -224,61 +213,51 @@ export function registerSubmitCartTool(server: McpServer, client: ServiceNowClie
         const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
         const requestLink = requestId ? `${instanceUrl}/sc_request.do?sys_id=${requestId}` : instanceUrl;
 
-        const payload: Record<string, unknown> = {
-          success: true,
-          requestNumber,
-          requestId
-        };
-        if (config.serviceNow.requestedForDiagnosticsEnabled) {
-          payload.requestedForDiagnostics = response.requestedForDiagnostics;
-        }
-
-        const result: ToolResult = {
-          content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }]
-        };
-
         // SEP-1865 MCP Apps: render the submitted cart as the order-detail
         // widget (the same confirmation place_order uses). Fetch the created
         // request; on failure still mount a minimal confirmation so checkout is
         // never a dead end.
-        if (config.mcpApps.enabled) {
-          let order: Record<string, unknown> = {
-            number: requestNumber,
-            sys_id: requestId ?? "",
-            state: "Submitted",
-            short_description: `Order ${requestNumber}`
-          };
-          let items: Array<Record<string, unknown>> = [];
-          let approvals: Array<Record<string, unknown>> = [];
+        let order: Record<string, unknown> = {
+          number: requestNumber,
+          sys_id: requestId ?? "",
+          state: "Submitted",
+          short_description: `Order ${requestNumber}`
+        };
+        let items: Array<Record<string, unknown>> = [];
+        let approvals: Array<Record<string, unknown>> = [];
 
-          if (requestId) {
-            try {
-              const detail = await client.getOrderDetail(requestId, { includeApprovals: true });
-              order = detail.order;
-              items = detail.items;
-              approvals = detail.approvals;
-            } catch (error) {
-              Logger.warn("Cart submitted but detail lookup failed; rendering minimal confirmation", {
-                operation: "cart.submit_detail_lookup_failed",
-                requestId
-              }, error);
-            }
+        if (requestId) {
+          try {
+            const detail = await client.getOrderDetail(requestId, { includeApprovals: true });
+            order = detail.order;
+            items = detail.items;
+            approvals = detail.approvals;
+          } catch (error) {
+            Logger.warn("Cart submitted but detail lookup failed; rendering minimal confirmation", {
+              operation: "cart.submit_detail_lookup_failed",
+              requestId
+            }, error);
           }
-
-          result.structuredContent = {
-            submitted: true,
-            requestNumber,
-            link: requestLink,
-            order,
-            items,
-            approvals
-          };
-          result.content = [
-            { type: "text" as const, text: `Cart submitted to ServiceNow as ${requestNumber}.` }
-          ];
         }
 
-        return result;
+        const structuredContent: Record<string, unknown> = {
+          submitted: true,
+          requestNumber,
+          link: requestLink,
+          order,
+          items,
+          approvals
+        };
+        if (config.serviceNow.requestedForDiagnosticsEnabled) {
+          structuredContent.requestedForDiagnostics = response.requestedForDiagnostics;
+        }
+
+        return {
+          content: [
+            { type: "text" as const, text: `Cart submitted to ServiceNow as ${requestNumber}.` }
+          ],
+          structuredContent
+        };
       } catch (error) {
         Logger.warn("submit_cart tool failed", { operation: "tool.submit_cart" }, error);
         return cartFailure("submit_cart", error);

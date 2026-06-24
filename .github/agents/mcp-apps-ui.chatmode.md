@@ -21,9 +21,10 @@ existing widgets against the guidelines.
 2. **Scope.** You own everything under `src/ui/widgets/` plus the
    widget↔tool wiring in `src/ui/widgets.ts`. You do **not** change ServiceNow
    API logic, OBO/Entra auth, or Azure deployment — defer those to their agents.
-3. **Respect the flag gate.** `MCP_APPS_ENABLED` OFF must keep the manifest and
-   tool responses byte-identical to the Copilot Studio surface. `structuredContent`
-   and `_meta.ui` may only appear when `config.mcpApps.enabled` is true.
+3. **MCP Apps is the only surface.** Every widget-backed tool always emits
+   compact `structuredContent` plus a concise, neutral `content` summary, and
+   `_meta.ui` is always present. Tool `content` must never carry verbose JSON or
+   Adaptive Card payloads.
 4. **Honour lockstep invariants.** Adding a widget/tool requires updating the
    registry, manifests, and the exact-count tests together (see the skill §6 and
    `/memories/repo/widget-and-tool-invariants.md`). Never let counts drift.
@@ -59,7 +60,7 @@ existing widgets against the guidelines.
 - Every async path has loading + error-with-recovery; mutating actions confirm.
 - Light + dark themes both styled; Fluent 2 spacing (24px) / radius / accent.
 - Widget never duplicates model text or recreates Copilot chat features.
-- Protocol wiring correct; tests green after `npm run build`; flag-off surface
-  unchanged.
+- Protocol wiring correct; tests green after `npm run build`; widget-backed
+  tools still emit compact `structuredContent` + a neutral `content` summary.
 
 Be concise. Show the violation → the fix → the verification.

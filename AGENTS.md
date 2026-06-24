@@ -30,7 +30,7 @@ npm start              # run the Functions host locally (func start)
 ```
 src/
   app.ts                  Functions app entrypoint / route wiring
-  config.ts               Env-driven config (flags incl. MCP_APPS_ENABLED)
+  config.ts               Env-driven config
   server.ts               MCP server + tool registration
   functions/              HTTP handlers (mcp, health, oidc, oauth/register)
   services/               ServiceNow client (catalog, orders, cart) + token mgr
@@ -54,10 +54,11 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
 
 ## Critical invariants (violating these breaks cold start or tests)
 
-1. **Feature flag gate.** `MCP_APPS_ENABLED` OFF must keep the manifest and tool
-   responses **byte-identical** to the legacy Adaptive Card surface.
-   `structuredContent` and `_meta.ui` are emitted **only** when
-   `config.mcpApps.enabled`. Cart tools + widgets register only when the flag is on.
+1. **MCP Apps is the only surface.** Every widget-backed tool emits compact
+   `structuredContent` plus a concise, neutral `content` summary, and widget
+   resources + `_meta.ui` are always registered. Tool `content` must never carry
+   verbose JSON blobs or Adaptive Card payloads (they make Copilot render a text
+   fallback instead of mounting the widget).
 2. **Tool/widget lockstep.** Adding or renaming a tool/widget requires updating
    ALL of these together or import-time guards / tests throw:
    - `src/tools/index.ts` tool-name sets + minimal tool definitions (drift guard)

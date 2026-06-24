@@ -2,7 +2,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ServiceNowClient } from "../services/servicenowClient";
 import {
-  buildOrderFormAdaptiveCard,
   collectVariables,
   getReferenceQualifier,
   getReferenceTable,
@@ -11,9 +10,8 @@ import {
   isReferenceVariable,
   normalizeChoices,
   normalizeVariableType
-} from "../utils/adaptiveCards";
+} from "../utils/catalogFields";
 import { computePrefillValues } from "../utils/prefillCatalogForm";
-import { config } from "../config";
 import Logger from "../utils/logger";
 import type { ServiceNowVariable } from "../types/servicenow";
 
@@ -21,8 +19,7 @@ import type { ServiceNowVariable } from "../types/servicenow";
 // understands. `normalizeVariableType` prefers `friendly_type`, so values here
 // are mostly canonicalized friendly names (e.g. "check_box", "container_start",
 // "multi_line_text") with the numeric ServiceNow type codes as a fallback.
-// Mirrors the Adaptive Card classification in utils/adaptiveCards.ts so both
-// renderers agree on field shapes. Anything unclassified becomes plain text.
+// Anything unclassified becomes plain text.
 function toWidgetFieldType(rawType: string): string {
   // Static section headers / labels. ServiceNow container_start (type 0) and
   // Label (type 11) carry no user input - render them as headings, not boxes.
@@ -47,8 +44,8 @@ function toWidgetFieldType(rawType: string): string {
   ) {
     return "label";
   }
-  // Renderer-only types with no Adaptive Card / widget analog. The widget drops
-  // these so they don't show up as empty inputs.
+  // Renderer-only types with no widget analog. The widget drops these so they
+  // don't show up as empty inputs.
   if (
     ["macro", "ui_macro", "custom", "break", "container_end", "end_split", "split_end"].includes(rawType)
   ) {
@@ -118,15 +115,15 @@ export function registerGetCatalogItemFormTool(server: McpServer, client: Servic
   server.tool(
     "get_catalog_item_form",
     [
-      "Retrieve the order form for a selected ServiceNow catalog item and return it as an Adaptive Card definition.",
+      "Retrieve the order form for a selected ServiceNow catalog item.",
       "Use this tool after the user has chosen a specific catalog item from the search results.",
-      "The returned Adaptive Card contains all required and optional input fields the user must fill in to place the order.",
+      "The returned form contains all required and optional input fields the user must fill in to place the order.",
       "Pass the sys_id from the search_catalog_items result.",
       "If you only have an item name, pass the exact item name and this tool will attempt to resolve it to a sys_id.",
       "SMART PREFILL: Pass `prefillHints` with any field values you have already extracted from the conversation,",
       "for example { color: 'black', storage: '256GB', carrier: 'Verizon', justification: 'Replacement for damaged device' }.",
       "Hint keys can be either the ServiceNow variable name or a normalized label keyword (color, storage, carrier, model, justification, quantity, date, location).",
-      "The tool normalizes hint values against the actual catalog choice list so the rendered Adaptive Card is pre-populated for the user to review.",
+      "The tool normalizes hint values against the actual catalog choice list so the rendered form is pre-populated for the user to review.",
       "You can also pass `userContext` (a short free-text summary of the relevant conversation) as a fallback - the tool will extract common patterns from it.",
       "The response includes `prefilledValues` and `prefillDiagnostics` so you can see what was filled and why."
     ].join(" "),
@@ -173,21 +170,20 @@ export function registerGetCatalogItemFormTool(server: McpServer, client: Servic
 
       const item = await client.getCatalogItem(resolvedItemSysId);
 
-      const { values: prefilledValues, diagnostics: prefillDiagnostics } = computePrefillValues(
+      const { values: prefilledValues } = computePrefillValues(
         item.variables,
         { userContext, prefillHints }
       );
 
       // Pre-resolve reference variables (e.g. `requested_for` -> sys_user,
-      // `internal_destination` -> cmn_location) so the Adaptive Card can
-      // render them as ChoiceSets the user can pick from. Each lookup is
+      // `internal_destination` -> cmn_location) so the widget can render them
+      // as choice pickers the user can select from. Each lookup is
       // bounded and any single failure falls back to a free-text input, so
       // a flaky reference table never breaks the whole form.
       const referenceVariables = collectVariables(item.variables).filter(
         v => isReferenceVariable(v) && v.visible !== false && getReferenceTable(v)
       );
       const referenceChoices: Record<string, Array<{ title: string; value: string }>> = {};
-      const referenceDiagnostics: Record<string, { table: string; count: number; refQualifier?: string }> = {};
 
       if (referenceVariables.length > 0) {
         const lookups = await Promise.all(
@@ -211,69 +207,39 @@ export function registerGetCatalogItemFormTool(server: McpServer, client: Servic
           })
         );
 
-        for (const { variable, table, refQualifier, records } of lookups) {
+        for (const { variable, records } of lookups) {
           if (records.length === 0) continue;
           referenceChoices[variable.name] = records.map(record => ({
             title: record.display,
             value: record.sys_id
           }));
-          referenceDiagnostics[variable.name] = {
-            table,
-            count: records.length,
-            ...(refQualifier ? { refQualifier } : {})
-          };
         }
       }
 
-      const adaptiveCard = buildOrderFormAdaptiveCard(item, prefilledValues, referenceChoices);
+      // SEP-1865 MCP App widget payload. Compact field schema (no diagnostics)
+      // so it stays well under Cowork's 64 KiB inlined limit. The order-form
+      // widget renders these fields and the prefilled values.
+      const fields = buildOrderFormFields(item, referenceChoices);
 
-      const result: {
-        content: Array<{ type: "text"; text: string }>;
-        structuredContent?: Record<string, unknown>;
-      } = {
+      // `content` must be a concise model-facing summary only. The full form
+      // (fields/prefilledValues) travels in structuredContent and is rendered
+      // by the order-form widget. Returning a large JSON blob in `content`
+      // makes Microsoft 365 Copilot render a verbose text fallback instead of
+      // mounting the widget.
+      return {
         content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              itemSysId: item.sys_id,
-              itemName: item.name,
-              variableCount: item.variables?.length ?? 0,
-              prefilledValues,
-              prefillDiagnostics,
-              referenceLookups: referenceDiagnostics,
-              adaptiveCard
-            }, null, 2)
-          }
-        ]
-      };
-
-      // SEP-1865 MCP App widget payload. Compact field schema (no Adaptive
-      // Card JSON, no diagnostics) so it stays well under Cowork's 64 KiB
-      // inlined limit. Only emitted when the feature flag is on.
-      if (config.mcpApps.enabled) {
-        const fields = buildOrderFormFields(item, referenceChoices);
-        result.structuredContent = {
-          itemSysId: item.sys_id,
-          itemName: item.name,
-          fields,
-          prefilledValues
-        };
-
-        // MCP Apps: `content` must be a concise model-facing summary only.
-        // The full form (fields/adaptiveCard) travels in structuredContent and
-        // is rendered by the order-form widget. Returning the large Adaptive
-        // Card JSON in `content` makes Microsoft 365 Copilot render a verbose
-        // text fallback instead of mounting the widget (see the MCP Apps
-        // troubleshooting guidance on duplicate data in widget and text).
-        result.content = [
           {
             type: "text" as const,
             text: `Order form for "${item.name}" (${fields.length} field(s)).`
           }
-        ];
-      }
-
-      return result;
+        ],
+        structuredContent: {
+          itemSysId: item.sys_id,
+          itemName: item.name,
+          fields,
+          prefilledValues
+        }
+      };
     }
   );
 }

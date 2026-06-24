@@ -23,7 +23,6 @@ your own values here. The placeholders below map to the outputs of `azd up` /
 | --- | --- |
 | Function app | `<your-func-app>` (RG `<your-resource-group>`, your region) |
 | MCP endpoint | `https://<your-func-app>.azurewebsites.net/mcp` |
-| Feature flag | `MCP_APPS_ENABLED=true` (set on the Function App) |
 | azd env | `<your-azd-env>` — deploy with `azd deploy api -e <your-azd-env>` |
 | ServiceNow | `https://<your-instance>.service-now.com` (integration user / password grant) |
 | Telemetry | App Insights `<your-app-insights>` (linked Log Analytics workspace) |
@@ -36,7 +35,6 @@ your own values here. The placeholders below map to the outputs of `azd up` /
 
 | What | Where |
 | --- | --- |
-| **Feature flag (server)** | `MCP_APPS_ENABLED=true` on the deployed function app |
 | **Widget resources** | Served at `ui://servicenow-mcp/{name}.html` via MCP `resources/read` |
 | **Tool decoration** | `_meta.ui.resourceUri` injected into `tools/list` for the widget-backed tools |
 | **Declarative agent** | [`m365-agent/`](../m365-agent/README.md) — sideload with M365 Agents Toolkit |
@@ -45,22 +43,19 @@ your own values here. The placeholders below map to the outputs of `azd up` /
 [learn-plugin]: https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/plugin-mcp-apps
 [learn-cowork]: https://learn.microsoft.com/en-us/microsoft-365/copilot/cowork/mcp-apps-support
 
-## Why a feature flag?
+## MCP surfaces
 
-The widget integration is purely additive, but enabling it changes two MCP
-surfaces:
+MCP Apps is the only surface this server targets, so it always:
 
-1. `tools/list` entries for `search_catalog_items`, `get_catalog_item_form`,
-   `list_user_orders`, and `get_order_detail` gain a `_meta.ui.resourceUri`
-   field.
-2. `initialize` advertises the `resources` capability so the host can call
+1. Adds a `_meta.ui.resourceUri` field to the `tools/list` entries for
+   `search_catalog_items`, `get_catalog_item_form`, `list_user_orders`,
+   `get_order_detail`, `view_cart`, and the tools bound to the order-detail
+   widget.
+2. Advertises the `resources` capability in `initialize` so the host can call
    `resources/list` / `resources/read`.
 
-Generic MCP clients that only consume
-the `adaptiveCard` field inside `content[0].text` get that text payload
-preserved **byte-for-byte** regardless of the flag. The flag is **off by
-default** so you can deploy this code without disturbing any client currently
-in production, then flip it after validating in dev.
+Every widget-backed tool returns compact `structuredContent` (rendered by the
+widget) plus a concise, neutral `content` summary for the model.
 
 ## Widgets shipped
 
@@ -151,13 +146,12 @@ and per-user ServiceNow ACLs then apply. **Pilot in a test ServiceNow instance
 first.** Full runbook: [`docs/AUTH_ENTRA_OBO_OKTA.md`](AUTH_ENTRA_OBO_OKTA.md)
 and the journal's *"last task"* section.
 
-## Enable & validate
+## Build & validate
 
 ```bash
-# 1. Local dev — flag on
-export MCP_APPS_ENABLED=true
+# 1. Local dev
 npm install       # node_modules is NOT copied into this fork
-npm test          # 215 tests pass; the gating + widget + field suites cover the flag-on path
+npm test          # the surface + widget + field suites cover the MCP Apps path
 npm run build
 npm run smoke:test  # against `func start` if you have one
 
@@ -171,31 +165,25 @@ npx @modelcontextprotocol/inspector http://localhost:8080/mcp
 cd m365-agent
 cp env/.env.dev env/.env.dev.user      # fill in MCP_SERVER_URL / DOMAIN
 #   then use the M365 Agents Toolkit VS Code extension → Provision
-
-# 4. Production — set the app setting and recycle
-az functionapp config appsettings set \
-  --name <function-app> \
-  --resource-group <rg> \
-  --settings MCP_APPS_ENABLED=true
 ```
 
-## Regression — default surface stays byte-identical
+## Tests — MCP Apps surface wiring
 
-The repo's vitest suite includes explicit gating tests that prove this:
+The repo's vitest suite includes explicit tests that prove the surface is wired:
 
-- [`test/mcpAppsGating.test.ts`](../test/mcpAppsGating.test.ts) — when the
-  flag is off, `getMinimalToolDefinitions()` carries no `_meta` field on any
-  tool and `getWidgetForTool()` returns `undefined`.
+- [`test/mcpAppsSurface.test.ts`](../test/mcpAppsSurface.test.ts) —
+  `getMinimalToolDefinitions()` carries `_meta.ui.resourceUri` on the
+  widget-backed tools (and only those), and `getWidgetForTool()` resolves them.
 - [`test/widgetResources.test.ts`](../test/widgetResources.test.ts) —
-  flag-off registers zero resources; flag-on registers exactly five with the
-  spec-mandated `text/html;profile=mcp-app` mime.
+  registers exactly five resources with the spec-mandated
+  `text/html;profile=mcp-app` mime.
 - [`test/widgetStructuredContent.test.ts`](../test/widgetStructuredContent.test.ts) —
-  flag-off responses do not include `structuredContent`; flag-on responses
-  stay well under the 64 KiB cap.
+  widget-backed tools emit compact `structuredContent` (well under the 64 KiB
+  cap) plus a concise, neutral `content` summary.
 
-The pre-existing test suite (manifest content parity, prefill,
-adaptive-card emission, update_order, list-orders concurrency, …) continues
-to pass unchanged — **215 tests across 28 files**. Run `npm test` to verify.
-The widget-specific suites also include `test/widgetFieldExploration.test.ts`,
-which maps real catalog-item variable types against the widget field schema
-using captured fixtures in `test/fixtures/catalogItems.json`.
+The rest of the suite (manifest content parity, prefill, field classification,
+update_order, list-orders concurrency, …) continues to pass. Run `npm test` to
+verify. The widget-specific suites also include
+`test/widgetFieldExploration.test.ts`, which maps real catalog-item variable
+types against the widget field schema using captured fixtures in
+`test/fixtures/catalogItems.json`.

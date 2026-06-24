@@ -23,7 +23,6 @@ What you expected to happen instead.
 ## Environment
 
 - Deployment: <!-- Azure Functions (Flex Consumption) / Container Apps / local `func start` -->
-- `MCP_APPS_ENABLED`: <!-- true / false -->
 - MCP host / client: <!-- M365 Copilot, VS Code, smoke-test, other -->
 - Node.js version: <!-- node -v -->
 - Commit / version:

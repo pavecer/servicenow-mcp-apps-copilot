@@ -65,9 +65,9 @@ npm run deploy:azure
 ```
 → Prompted for values; Function App + Key Vault + App Insights provisioned.
 
-**4. Enable Widgets (optional):**
-- Set `MCP_APPS_ENABLED=true` on the Function App.
-- Sideload the agent under [`m365-agent/`](m365-agent/README.md).
+**4. Sideload the agent:**
+- Sideload the agent under [`m365-agent/`](m365-agent/README.md) to render the
+  interactive widgets in Microsoft 365 Copilot.
 
 **For detailed steps, see:**
 - [ServiceNow Setup](docs/SERVICENOW_SETUP.md)
@@ -97,7 +97,7 @@ npm run deploy:azure
 │  • Validates Entra token + extracts caller identity       │
 │  • Calls ServiceNow APIs (catalog, orders)                │
 │  • Attributes orders to real users (not service account)  │
-│  • Returns MCP tools + SEP-1865 widgets (optional)        │
+│  • Returns MCP tools + SEP-1865 widgets                   │
 └────────────────────────────────────────────────────────────┘
                          ↓
                 ServiceNow OAuth
@@ -112,7 +112,7 @@ npm run deploy:azure
 
 **Key features:**
 - **Delegated identity**: Orders stamped with real user, not the integration account
-- **MCP Apps widgets (optional)**: When `MCP_APPS_ENABLED=true`, renders 5 interactive widgets (catalog-browse, order-form, cart, my-orders, order-detail)
+- **MCP Apps widgets**: Renders 5 interactive widgets (catalog-browse, order-form, cart, my-orders, order-detail) with compact `structuredContent` per tool result
 - **Secure defaults**: All secrets in Key Vault, no plaintext credentials, Entra-gated endpoints
 - **Stateless**: No session storage; every request validates OAuth token
 
@@ -160,7 +160,7 @@ dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Now (in `main`)**
 - Catalog search, item form, single-item order, and order tracking tools.
-- ServiceNow cart flow (`add_to_cart` → `submit_cart`) behind `MCP_APPS_ENABLED`.
+- ServiceNow cart flow (`add_to_cart` → `submit_cart`).
 - Per-item order edits (`update_order_item` / `remove_order_item`).
 - Five MCP Apps (SEP-1865) widgets for Microsoft 365 Copilot / Cowork.
 - Delegated identity attribution (`requested_for` / `opened_by` re-stamping).

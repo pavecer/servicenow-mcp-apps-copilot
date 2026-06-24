@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ServiceNowClient } from "../src/services/servicenowClient";
+import * as cart from "../src/tools/cart";
+import { getMinimalToolDefinitions } from "../src/tools/index";
 
 interface RegisteredTool {
   name: string;
@@ -39,42 +41,9 @@ const SAMPLE_CART = {
   ]
 };
 
-async function loadCart(enabled: boolean) {
-  process.env.MCP_APPS_ENABLED = enabled ? "true" : "false";
-  vi.resetModules();
-  return await import("../src/tools/cart");
-}
-
-async function loadIndex(enabled: boolean) {
-  process.env.MCP_APPS_ENABLED = enabled ? "true" : "false";
-  vi.resetModules();
-  return await import("../src/tools/index");
-}
-
-describe("cart tool manifest gating", () => {
-  const original = process.env.MCP_APPS_ENABLED;
-  afterEach(() => {
-    if (original === undefined) delete process.env.MCP_APPS_ENABLED;
-    else process.env.MCP_APPS_ENABLED = original;
-  });
-
-  it("flag OFF: manifest exposes only the seven base tools (no cart tools)", async () => {
-    const mod = await loadIndex(false);
-    const names = mod.getMinimalToolDefinitions().map(t => t.name).sort();
-    expect(names).toEqual([
-      "get_catalog_item_form",
-      "get_order_detail",
-      "list_user_orders",
-      "place_order",
-      "search_catalog_items",
-      "update_order",
-      "validate_servicenow_config"
-    ]);
-  });
-
-  it("flag ON: manifest adds the five cart tools (fourteen total)", async () => {
-    const mod = await loadIndex(true);
-    const names = mod.getMinimalToolDefinitions().map(t => t.name).sort();
+describe("cart tool manifest", () => {
+  it("manifest includes the cart + order line-item tools (fourteen total)", () => {
+    const names = getMinimalToolDefinitions().map(t => t.name).sort();
     expect(names).toContain("add_to_cart");
     expect(names).toContain("view_cart");
     expect(names).toContain("update_cart_item");
@@ -85,9 +54,8 @@ describe("cart tool manifest gating", () => {
     expect(names).toHaveLength(14);
   });
 
-  it("flag ON: cart tools are decorated with their widget resourceUri", async () => {
-    const mod = await loadIndex(true);
-    const byName = Object.fromEntries(mod.getMinimalToolDefinitions().map(t => [t.name, t]));
+  it("cart tools are decorated with their widget resourceUri", () => {
+    const byName = Object.fromEntries(getMinimalToolDefinitions().map(t => [t.name, t]));
     const meta = byName.view_cart._meta as Record<string, unknown> | undefined;
     expect(meta).toBeTruthy();
     expect((meta as Record<string, unknown>)["ui/resourceUri"]).toBe("ui://servicenow-mcp/cart.html");
@@ -123,14 +91,7 @@ describe("cart tool handlers", () => {
     } as unknown as ServiceNowClient;
   });
 
-  const original = process.env.MCP_APPS_ENABLED;
-  afterEach(() => {
-    if (original === undefined) delete process.env.MCP_APPS_ENABLED;
-    else process.env.MCP_APPS_ENABLED = original;
-  });
-
   it("add_to_cart forwards itemSysId, variables, quantity", async () => {
-    const cart = await loadCart(true);
     const fake = createFakeServer();
     cart.registerAddToCartTool(fake.server as never, fakeClient);
     const tool = fake.tools[0];
@@ -144,8 +105,7 @@ describe("cart tool handlers", () => {
     expect((result.structuredContent as { cart: { items: unknown[] } }).cart.items).toHaveLength(1);
   });
 
-  it("view_cart returns structuredContent when flag on", async () => {
-    const cart = await loadCart(true);
+  it("view_cart returns structuredContent", async () => {
     const fake = createFakeServer();
     cart.registerViewCartTool(fake.server as never, fakeClient);
     const result = (await fake.tools[0].handler({})) as { structuredContent?: Record<string, unknown> };
@@ -153,16 +113,7 @@ describe("cart tool handlers", () => {
     expect(result.structuredContent).toBeTruthy();
   });
 
-  it("view_cart omits structuredContent when flag off", async () => {
-    const cart = await loadCart(false);
-    const fake = createFakeServer();
-    cart.registerViewCartTool(fake.server as never, fakeClient);
-    const result = (await fake.tools[0].handler({})) as { structuredContent?: Record<string, unknown> };
-    expect(result.structuredContent).toBeUndefined();
-  });
-
   it("update_cart_item rejects when neither quantity nor variables provided", async () => {
-    const cart = await loadCart(true);
     const fake = createFakeServer();
     cart.registerUpdateCartItemTool(fake.server as never, fakeClient);
     const result = (await fake.tools[0].handler({ cartItemId: "line1" })) as {
@@ -174,15 +125,13 @@ describe("cart tool handlers", () => {
   });
 
   it("remove_cart_item forwards cartItemId", async () => {
-    const cart = await loadCart(true);
     const fake = createFakeServer();
     cart.registerRemoveCartItemTool(fake.server as never, fakeClient);
     await fake.tools[0].handler({ cartItemId: "line1" });
     expect(removeCartItem).toHaveBeenCalledWith("line1");
   });
 
-  it("submit_cart returns order-detail structuredContent when flag on", async () => {
-    const cart = await loadCart(true);
+  it("submit_cart returns order-detail structuredContent", async () => {
     const fake = createFakeServer();
     cart.registerSubmitCartTool(fake.server as never, fakeClient);
     const result = (await fake.tools[0].handler({})) as {

@@ -41,44 +41,27 @@ export async function buildOrderDetailResult(
   const includeApprovals = options?.includeApprovals !== false;
   const detail = await client.getOrderDetail(orderSysId, { includeApprovals });
 
-  const payload: Record<string, unknown> = {
-    success: true,
-    order: detail.order,
-    items: detail.items,
-    approvals: detail.approvals,
-    itemCount: detail.items.length,
-    approvalCount: detail.approvals.length
-  };
+  const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
+  const orderSysIdValue = readField(detail.order.sys_id, "value") ?? orderSysId;
+  const orderNumber = readField(detail.order.number, "display_value") ?? orderSysId;
 
-  const result: OrderDetailToolResult = {
+  // SEP-1865 MCP Apps: the order-detail widget renders the full request from
+  // structuredContent. `content` stays a concise model-facing summary so
+  // Microsoft 365 Copilot mounts the widget instead of a text fallback.
+  return {
     content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(payload, null, 2)
-      }
-    ]
-  };
-
-  if (config.mcpApps.enabled) {
-    const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
-    const orderSysIdValue = readField(detail.order.sys_id, "value") ?? orderSysId;
-    result.structuredContent = {
-      order: detail.order,
-      items: detail.items,
-      approvals: detail.approvals,
-      link: orderSysIdValue ? `${instanceUrl}/sc_request.do?sys_id=${orderSysIdValue}` : instanceUrl
-    };
-
-    const orderNumber = readField(detail.order.number, "display_value") ?? orderSysId;
-    result.content = [
       {
         type: "text" as const,
         text: `Order ${orderNumber}: ${detail.items.length} item(s), ${detail.approvals.length} approval(s).`
       }
-    ];
-  }
-
-  return result;
+    ],
+    structuredContent: {
+      order: detail.order,
+      items: detail.items,
+      approvals: detail.approvals,
+      link: orderSysIdValue ? `${instanceUrl}/sc_request.do?sys_id=${orderSysIdValue}` : instanceUrl
+    }
+  };
 }
 
 export function registerGetOrderDetailTool(server: McpServer, client: ServiceNowClient): void {

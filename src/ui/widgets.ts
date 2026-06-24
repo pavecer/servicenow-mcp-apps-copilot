@@ -6,7 +6,6 @@ import {
   ORDER_DETAIL_HTML,
   ORDER_FORM_HTML
 } from "./widgets/generated";
-import { config } from "../config";
 import Logger from "../utils/logger";
 
 /**
@@ -34,7 +33,7 @@ import Logger from "../utils/logger";
 export interface WidgetDescriptor {
   /**
    * Tool name this widget is associated with. The matching `tools/list` entry
-   * gets `_meta.ui.resourceUri = <uri>` when the feature flag is on.
+   * gets `_meta.ui.resourceUri = <uri>`.
    */
   toolName: string;
   /**
@@ -137,23 +136,17 @@ for (const widget of WIDGETS) {
 }
 
 /**
- * Look up the widget associated with a tool, returning `undefined` if the
- * MCP Apps feature flag is off or no widget exists for that tool.
+ * Look up the widget associated with a tool, returning `undefined` if no
+ * widget exists for that tool.
  */
 export function getWidgetForTool(toolName: string): WidgetDescriptor | undefined {
-  if (!config.mcpApps.enabled) return undefined;
   return WIDGETS_BY_TOOL.get(toolName);
 }
 
 /**
  * Register all SEP-1865 widget resources on the given MCP server.
- *
- * No-op when `config.mcpApps.enabled` is false — this is the single safety
- * gate that keeps the default (non-MCP-Apps) surface byte-identical.
  */
 export function registerWidgetResources(server: McpServer): void {
-  if (!config.mcpApps.enabled) return;
-
   for (const widget of WIDGETS) {
     server.registerResource(
       widget.name,

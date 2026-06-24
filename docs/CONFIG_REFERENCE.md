@@ -82,9 +82,12 @@ See [AUTH_ENTRA_OBO_OKTA.md](AUTH_ENTRA_OBO_OKTA.md) for detailed setup.
 
 ### Microsoft 365 Copilot MCP Apps (SEP-1865)
 
+MCP Apps is always on: the server registers `ui://servicenow-mcp/*.html`
+resources and decorates widget-backed tool responses with `_meta.ui` and
+compact `structuredContent`. There is no enable/disable flag.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_APPS_ENABLED` | `false` | Enable SEP-1865 widget rendering. Registers `ui://servicenow-mcp/*.html` resources and decorates tool responses with `_meta.ui` and `structuredContent`. |
 | `MCP_APPS_PUBLIC_ORIGIN` | _(unset)_ | Public origin where this server is reachable (documentation only, not used at runtime) |
 
 ## Setting Variables
