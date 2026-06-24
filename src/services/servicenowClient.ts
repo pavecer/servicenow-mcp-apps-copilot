@@ -211,6 +211,71 @@ export interface PlaceOrderInput {
   variables: Record<string, string | number | boolean>;
 }
 
+/**
+ * Parse a ServiceNow journal field display value (the `comments` activity on an
+ * incident) into structured entries.
+ *
+ * Reading the incident record's own `comments` journal field (with
+ * `sysparm_display_value`) respects standard record ACLs, so it works for any
+ * identity — a least-privilege scoped integration user OR an end user under OBO.
+ * A direct `sys_journal_field` table query, by contrast, is gated by an OOB read
+ * ACL that requires the `admin` role, so it only works for admin.
+ *
+ * The display value renders as repeating blocks:
+ *   2026-06-24 05:10:35 - MCP Integration (Comments)
+ *   <comment text, possibly multi-line>
+ *
+ *   2026-06-24 06:00:00 - Jane Doe (Comments)
+ *   <next comment>
+ *
+ * Entries are returned oldest-first for a natural conversation order.
+ */
+export function parseCommentJournal(field: unknown): ServiceNowIncidentComment[] {
+  let text = "";
+  if (typeof field === "string") {
+    text = field;
+  } else if (field && typeof field === "object") {
+    const obj = field as Record<string, unknown>;
+    text = typeof obj.display_value === "string"
+      ? obj.display_value
+      : typeof obj.value === "string"
+        ? obj.value
+        : "";
+  }
+  if (!text.trim()) {
+    return [];
+  }
+
+  const headerRe = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) - (.+?) \(([^)]+)\)\s*$/;
+  const entries: ServiceNowIncidentComment[] = [];
+  let current: { createdOn: string; createdBy: string; lines: string[] } | null = null;
+
+  const flush = (): void => {
+    if (!current) {
+      return;
+    }
+    const value = current.lines.join("\n").trim();
+    if (value) {
+      entries.push({ value, createdOn: current.createdOn, createdBy: current.createdBy, field: "comments" });
+    }
+    current = null;
+  };
+
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(headerRe);
+    if (match) {
+      flush();
+      current = { createdOn: match[1], createdBy: match[2], lines: [] };
+    } else if (current) {
+      current.lines.push(line);
+    }
+  }
+  flush();
+
+  entries.sort((a, b) => a.createdOn.localeCompare(b.createdOn));
+  return entries;
+}
+
 export class ServiceNowClient {
   private readonly tokenManager: TokenManager;
   private readonly httpClient: AxiosInstance;
@@ -1467,6 +1532,7 @@ export class ServiceNowClient {
       "opened_at",
       "resolved_at",
       "close_notes",
+      "comments",
       "sys_created_on",
       "sys_updated_on"
     ].join(",");
@@ -1481,7 +1547,7 @@ export class ServiceNowClient {
         throw new Error(`ServiceNow incident ${incidentSysId} not found`);
       }
 
-      const comments = await this.getIncidentComments(client, incidentSysId);
+      const comments = parseCommentJournal(incident.comments);
       const attachments = await this.listIncidentAttachments(incidentSysId, client);
       return { incident, comments, attachments };
     } catch (error) {
@@ -1490,44 +1556,6 @@ export class ServiceNowClient {
         incidentSysId
       }, error);
       throw error;
-    }
-  }
-
-  /**
-   * Read the customer-visible comment journal (element=comments) for an
-   * incident, oldest first so the widget renders a natural conversation. Failure
-   * is non-fatal — the detail still renders without the activity feed.
-   */
-  private async getIncidentComments(
-    client: AxiosInstance,
-    incidentSysId: string
-  ): Promise<ServiceNowIncidentComment[]> {
-    try {
-      const response = await client.get<{ result: Array<Record<string, unknown>> }>(
-        "/api/now/table/sys_journal_field",
-        {
-          params: {
-            sysparm_query: `name=incident^element_id=${incidentSysId}^element=comments^ORDERBYsys_created_on`,
-            sysparm_limit: 100,
-            sysparm_display_value: "true",
-            sysparm_fields: ["value", "sys_created_on", "sys_created_by", "element"].join(",")
-          }
-        }
-      );
-      return (response.data.result ?? [])
-        .map(row => ({
-          value: String(row.value ?? "").trim(),
-          createdOn: String(row.sys_created_on ?? ""),
-          createdBy: String(row.sys_created_by ?? ""),
-          field: "comments" as const
-        }))
-        .filter(entry => entry.value.length > 0);
-    } catch (error) {
-      Logger.warn("Failed to fetch incident comments journal", {
-        operation: "incident.comments_failed",
-        incidentSysId
-      }, error);
-      return [];
     }
   }
 

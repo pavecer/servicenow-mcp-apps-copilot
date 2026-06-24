@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Incident comment activity is now read from the incident record's own
+  `comments` journal field (display value) instead of a direct
+  `sys_journal_field` table query. The latter is gated by an out-of-box read ACL
+  requiring the `admin` role, so the new approach works for a least-privilege
+  scoped integration user (and for end-user OBO). No `sys_journal_field` access
+  is required.
+
 ### Added
 - **Incident management for end users (MCP Apps).** Six new tools —
   `get_incident_form`, `report_incident`, `list_user_incidents`,

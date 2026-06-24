@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ServiceNowClient } from "../src/services/servicenowClient";
+import { parseCommentJournal } from "../src/services/servicenowClient";
 import { registerGetIncidentFormTool } from "../src/tools/getIncidentForm";
 import { registerReportIncidentTool } from "../src/tools/reportIncident";
 import { registerListUserIncidentsTool } from "../src/tools/listUserIncidents";
@@ -54,6 +55,33 @@ describe("incident tool manifest", () => {
     expect(reportMeta?.ui?.resourceUri).toBe("ui://servicenow-mcp/incident-detail.html");
     const attachMeta = byName.add_incident_attachment._meta as { ui?: { resourceUri?: string } };
     expect(attachMeta?.ui?.resourceUri).toBe("ui://servicenow-mcp/incident-detail.html");
+  });
+});
+
+describe("parseCommentJournal", () => {
+  it("parses a multi-entry comments journal display value oldest-first", () => {
+    // ServiceNow renders the record's comments journal newest-first; the parser
+    // normalizes to oldest-first for a natural conversation order.
+    const display =
+      "2026-06-24 06:00:00 - Jane Doe (Comments)\nAny update on this?\n\n" +
+      "2026-06-24 05:10:35 - MCP Integration (Comments)\nTried restarting, no luck.\nStill broken.\n\n";
+    const out = parseCommentJournal({ display_value: display, value: "" });
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ createdBy: "MCP Integration", createdOn: "2026-06-24 05:10:35", field: "comments" });
+    expect(out[0].value).toBe("Tried restarting, no luck.\nStill broken.");
+    expect(out[1]).toMatchObject({ createdBy: "Jane Doe", value: "Any update on this?" });
+  });
+
+  it("returns [] for empty/missing journals", () => {
+    expect(parseCommentJournal("")).toEqual([]);
+    expect(parseCommentJournal({ display_value: "" })).toEqual([]);
+    expect(parseCommentJournal(undefined)).toEqual([]);
+  });
+
+  it("accepts a plain string display value", () => {
+    const out = parseCommentJournal("2026-06-24 05:10:35 - Alex (Comments)\nHello");
+    expect(out).toHaveLength(1);
+    expect(out[0].value).toBe("Hello");
   });
 });
 

@@ -301,7 +301,7 @@ sequenceDiagram
 | `get_incident_form` | incident-form | _(static form — no ServiceNow call)_ |
 | `report_incident` | incident-detail | `POST /table/incident` |
 | `list_user_incidents` | my-incidents | `GET /table/incident` (caller_id scoped) |
-| `get_incident_detail` | incident-detail | `GET /table/incident/{id}` + `sys_journal_field` |
+| `get_incident_detail` | incident-detail | `GET /table/incident/{id}` (comments from the record journal) |
 | `add_incident_comment` | incident-detail | `PATCH /table/incident/{id}` (comments) |
 | `add_incident_attachment` | incident-detail | `POST /api/now/attachment/file` |
 | `validate_servicenow_config` | — | `GET /servicecatalog/items` (probe) |

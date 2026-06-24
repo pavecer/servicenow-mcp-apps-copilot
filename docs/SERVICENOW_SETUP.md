@@ -65,8 +65,9 @@ Preferred enterprise approach:
   - `sc_request` (read + update of requestor-owned records)
   - `sc_req_item` (read + update for request enrichment)
   - `incident` (create + read + update of caller-owned records — the end-user
-    incident flow)
-  - `sys_journal_field` (read — the customer-visible incident comment activity)
+    incident flow; the customer-visible comment activity is read from the
+    incident record's own `comments` journal field, so no `sys_journal_field`
+    access is needed)
   - `sys_attachment` (create + read — incident file attachments)
   - `sys_user` (read only for identity resolution)
 - Restrict visibility to approved catalogs/categories using user criteria.
@@ -147,8 +148,7 @@ The MCP server calls these standard ServiceNow Service Catalog APIs:
 | `/api/now/table/sys_user` | GET | Resolve caller identity (for requested_for / caller_id) |
 | `/api/now/table/sc_request/{sys_id}` | PATCH | Correct requested_for after order creation |
 | `/api/now/table/incident` | GET / POST | List caller incidents; report a new incident |
-| `/api/now/table/incident/{sys_id}` | GET / PATCH | Read incident detail; add a customer-visible comment |
-| `/api/now/table/sys_journal_field` | GET | Read the customer-visible incident comment activity |
+| `/api/now/table/incident/{sys_id}` | GET / PATCH | Read incident detail + comment activity; add a customer-visible comment |
 | `/api/now/attachment` | GET | List a caller's incident attachments |
 | `/api/now/attachment/file` | POST | Upload a file/screenshot to an incident |
 
