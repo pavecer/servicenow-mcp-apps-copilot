@@ -9,22 +9,33 @@ function toAdaptiveText(value?: string): string {
     return "";
   }
 
-  const decoded = value
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'");
-
-  const text = decoded
+  // Strip HTML BEFORE decoding entities so that decoded characters (e.g. an
+  // entity-encoded "<") can never re-introduce a tag. First convert structural
+  // tags into whitespace/markers, then remove every remaining tag in a loop so
+  // malformed/overlapping tags (e.g. "<a<b>") cannot survive a single pass.
+  let stripped = value
     .replace(/<\s*br\s*\/?\s*>/gi, "\n")
     .replace(/<\s*\/p\s*>/gi, "\n\n")
     .replace(/<\s*\/div\s*>/gi, "\n")
     .replace(/<\s*li[^>]*>/gi, "• ")
     .replace(/<\s*\/li\s*>/gi, "\n")
-    .replace(/<\s*\/?\s*(ul|ol)\b[^>]*>/gi, "\n")
-    .replace(/<[^>]+>/g, "");
+    .replace(/<\s*\/?\s*(ul|ol)\b[^>]*>/gi, "\n");
+
+  let previous: string;
+  do {
+    previous = stripped;
+    stripped = stripped.replace(/<[^>]*>/g, "");
+  } while (stripped !== previous);
+
+  // Decode entities only after all markup is gone. Decode "&amp;" LAST so an
+  // input like "&amp;lt;" resolves to the literal "&lt;" rather than "<".
+  const text = stripped
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&amp;/gi, "&");
 
   const normalized = text
     .replace(/\r/g, "")

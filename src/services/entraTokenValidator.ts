@@ -42,6 +42,12 @@ export interface EntraTokenPayload {
 const JWKS_CACHE_TTL_MS = 60 * 60 * 1_000; // 1 hour
 const MAX_CLOCK_SKEW_SECONDS = 300; // 5 minutes
 
+// Microsoft Entra tenant IDs are always GUIDs. Enforcing this format before the
+// value is interpolated into the JWKS discovery URL prevents request forgery /
+// path-injection via a forged `tid` claim (the claim is attacker-controlled
+// until the signature is verified — which itself requires this URL).
+const TENANT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Per-tenant JWKS cache: keyed by tenantId so concurrent requests from
 // different Entra tenants never overwrite each other's signing keys.
 const jwksCacheByTenant = new Map<string, JwksCache>();
@@ -64,6 +70,11 @@ async function fetchJwks(jwksUri: string): Promise<Map<string, EntraJwk>> {
  * multi-tenant scenarios never mix keys from different identity providers.
  */
 async function getSigningKey(kid: string, tenantId: string): Promise<crypto.KeyObject> {
+  // Defense-in-depth: reject any tenant ID that is not a canonical GUID before
+  // it is interpolated into the discovery URL (prevents SSRF / path injection).
+  if (!TENANT_ID_PATTERN.test(tenantId)) {
+    throw new Error(`Invalid tenant ID format: ${tenantId}`);
+  }
   const jwksUri = `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`;
   const now = Date.now();
 
