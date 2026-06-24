@@ -7,6 +7,7 @@ describe("getMinimalToolDefinitions", () => {
 
   it("exposes exactly the expected MCP Apps tools", () => {
     expect(tools.map(t => t.name).sort()).toEqual([
+      "add_incident_attachment",
       "add_incident_comment",
       "add_to_cart",
       "get_catalog_item_form",

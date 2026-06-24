@@ -303,6 +303,7 @@ sequenceDiagram
 | `list_user_incidents` | my-incidents | `GET /table/incident` (caller_id scoped) |
 | `get_incident_detail` | incident-detail | `GET /table/incident/{id}` + `sys_journal_field` |
 | `add_incident_comment` | incident-detail | `PATCH /table/incident/{id}` (comments) |
+| `add_incident_attachment` | incident-detail | `POST /api/now/attachment/file` |
 | `validate_servicenow_config` | — | `GET /servicecatalog/items` (probe) |
 
 > MCP Apps is always on: the cart, order-item, and incident tools (and all
@@ -314,4 +315,5 @@ sequenceDiagram
 > incident-detail confirmation → `list_user_incidents` / `get_incident_detail`
 > track it → `add_incident_comment` adds a customer-visible comment. Incidents
 > are attributed to the real end user via `caller_id` and the list/detail views
-> are scoped to the caller's own incidents.
+> are scoped to the caller's own incidents. The detail widget also lets the user
+> attach a file/screenshot (`add_incident_attachment`, max 5 MB).

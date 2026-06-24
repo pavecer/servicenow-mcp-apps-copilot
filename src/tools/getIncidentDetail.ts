@@ -46,12 +46,13 @@ export async function buildIncidentDetailResult(
     content: [
       {
         type: "text" as const,
-        text: `Incident ${number}${state ? ` (${state})` : ""}: ${detail.comments.length} comment(s).`
+        text: `Incident ${number}${state ? ` (${state})` : ""}: ${detail.comments.length} comment(s), ${detail.attachments.length} attachment(s).`
       }
     ],
     structuredContent: {
       incident: detail.incident,
       comments: detail.comments,
+      attachments: detail.attachments,
       link: `${instanceUrl}/incident.do?sys_id=${sysIdValue}`,
       ...(extra ?? {})
     }

@@ -192,7 +192,7 @@ These are checked by the test suite and will fail if violated:
 
 | Invariant | Test | Reason |
 |-----------|------|--------|
-| Tool count exact (19 MCP tools) | `test/toolManifest.test.ts` | Prevents accidental tool registration |
+| Tool count exact (20 MCP tools) | `test/toolManifest.test.ts` | Prevents accidental tool registration |
 | Widget count exact (8 SEP-1865 widgets) | `test/widgetResources.test.ts` | Ensures all widgets are tracked |
 | MCP Apps surface wiring | `test/mcpAppsSurface.test.ts` | Widget registry, `_meta.ui` binding, and resource registration stay wired |
 | Tool schema matches Zod | `test/toolManifest.test.ts` | Prevents invalid tool definitions |

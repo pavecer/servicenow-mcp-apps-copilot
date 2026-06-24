@@ -14,7 +14,9 @@ import {
   CreateIncidentInput,
   ServiceNowIncidentResult,
   ServiceNowIncidentComment,
-  ServiceNowIncidentDetail
+  ServiceNowIncidentDetail,
+  ServiceNowIncidentAttachment,
+  AddIncidentAttachmentInput
 } from "../types/servicenow";
 import { TokenManager } from "./tokenManager";
 import { getDownstreamTokenForCaller, isOboEnabled } from "./oboTokenService";
@@ -1480,7 +1482,8 @@ export class ServiceNowClient {
       }
 
       const comments = await this.getIncidentComments(client, incidentSysId);
-      return { incident, comments };
+      const attachments = await this.listIncidentAttachments(incidentSysId, client);
+      return { incident, comments, attachments };
     } catch (error) {
       Logger.error("Failed to fetch incident detail", {
         operation: "incident.detail_failed",
@@ -1544,6 +1547,100 @@ export class ServiceNowClient {
     } catch (error) {
       Logger.error("Failed to add incident comment", {
         operation: "incident.add_comment_failed",
+        incidentSysId
+      }, error);
+      throw error;
+    }
+  }
+
+  /**
+   * List the files attached to an incident (sys_attachment rows). Returns
+   * metadata plus a platform link to view/download each file. Failure is
+   * non-fatal — the detail still renders without the attachments section.
+   */
+  async listIncidentAttachments(
+    incidentSysId: string,
+    existingClient?: AxiosInstance
+  ): Promise<ServiceNowIncidentAttachment[]> {
+    const client = existingClient ?? (await this.getClient());
+    const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
+    try {
+      const response = await client.get<{ result: Array<Record<string, unknown>> }>(
+        "/api/now/attachment",
+        {
+          params: {
+            sysparm_query: `table_name=incident^table_sys_id=${incidentSysId}^ORDERBYsys_created_on`,
+            sysparm_limit: 50,
+            sysparm_fields: ["sys_id", "file_name", "content_type", "size_bytes"].join(",")
+          }
+        }
+      );
+      return (response.data.result ?? []).map(row => {
+        const sysId = String(row.sys_id ?? "");
+        return {
+          sysId,
+          fileName: String(row.file_name ?? "attachment"),
+          contentType: String(row.content_type ?? ""),
+          sizeBytes: String(row.size_bytes ?? ""),
+          downloadLink: sysId ? `${instanceUrl}/sys_attachment.do?sys_id=${sysId}` : instanceUrl
+        };
+      });
+    } catch (error) {
+      Logger.warn("Failed to list incident attachments", {
+        operation: "incident.attachments_failed",
+        incidentSysId
+      }, error);
+      return [];
+    }
+  }
+
+  /**
+   * Upload a file to an incident via the ServiceNow Attachment API
+   * (POST /api/now/attachment/file). The raw bytes are sent with the file's
+   * own Content-Type (overriding the client's default application/json), and
+   * the body-length guards are lifted for this single request. Returns the
+   * created attachment's metadata.
+   */
+  async addIncidentAttachment(
+    incidentSysId: string,
+    input: AddIncidentAttachmentInput
+  ): Promise<ServiceNowIncidentAttachment> {
+    const client = await this.getClient();
+    const instanceUrl = config.serviceNow.instanceUrl.replace(/\/$/, "");
+    try {
+      Logger.info("Uploading incident attachment", {
+        operation: "incident.add_attachment",
+        incidentSysId,
+        sizeBytes: input.data.length
+      });
+      const response = await client.post<{ result: Record<string, unknown> }>(
+        "/api/now/attachment/file",
+        input.data,
+        {
+          params: {
+            table_name: "incident",
+            table_sys_id: incidentSysId,
+            file_name: input.fileName
+          },
+          headers: {
+            "Content-Type": input.contentType || "application/octet-stream"
+          },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity
+        }
+      );
+      const row = response.data.result ?? {};
+      const sysId = String(row.sys_id ?? "");
+      return {
+        sysId,
+        fileName: String(row.file_name ?? input.fileName),
+        contentType: String(row.content_type ?? input.contentType),
+        sizeBytes: String(row.size_bytes ?? input.data.length),
+        downloadLink: sysId ? `${instanceUrl}/sys_attachment.do?sys_id=${sysId}` : instanceUrl
+      };
+    } catch (error) {
+      Logger.error("Failed to upload incident attachment", {
+        operation: "incident.add_attachment_failed",
         incidentSysId
       }, error);
       throw error;

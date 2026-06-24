@@ -147,8 +147,9 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
   {
     toolName: "get_incident_detail",
     // report_incident renders this widget as the confirmation, and
-    // add_incident_comment re-renders it in place after a comment is posted.
-    boundToolNames: ["report_incident", "add_incident_comment"],
+    // add_incident_comment / add_incident_attachment re-render it in place after
+    // a comment or file is added.
+    boundToolNames: ["report_incident", "add_incident_comment", "add_incident_attachment"],
     uri: `${WIDGET_URI_NAMESPACE}/incident-detail.html`,
     name: "incident-detail",
     description: "Show a single ServiceNow incident with status, activity, and a comment form.",

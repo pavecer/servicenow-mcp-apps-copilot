@@ -42,7 +42,7 @@ const SAMPLE_CART = {
 };
 
 describe("cart tool manifest", () => {
-  it("manifest includes the cart + order line-item tools (nineteen total)", () => {
+  it("manifest includes the cart + order line-item tools (twenty total)", () => {
     const names = getMinimalToolDefinitions().map(t => t.name).sort();
     expect(names).toContain("add_to_cart");
     expect(names).toContain("view_cart");
@@ -51,7 +51,7 @@ describe("cart tool manifest", () => {
     expect(names).toContain("submit_cart");
     expect(names).toContain("update_order_item");
     expect(names).toContain("remove_order_item");
-    expect(names).toHaveLength(19);
+    expect(names).toHaveLength(20);
   });
 
   it("cart tools are decorated with their widget resourceUri", () => {

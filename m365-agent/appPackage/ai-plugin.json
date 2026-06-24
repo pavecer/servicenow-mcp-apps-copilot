@@ -81,6 +81,10 @@
         {
             "name": "add_incident_comment",
             "description": "Add a customer-visible additional comment to one of the user's ServiceNow incidents."
+        },
+        {
+            "name": "add_incident_attachment",
+            "description": "Attach a file (e.g. a screenshot) to one of the user's ServiceNow incidents. Files are limited to 5 MB."
         }
     ],
     "runtimes": [
@@ -111,7 +115,8 @@
                 "report_incident",
                 "list_user_incidents",
                 "get_incident_detail",
-                "add_incident_comment"
+                "add_incident_comment",
+                "add_incident_attachment"
             ],
             "auth": {
                 "type": "OAuthPluginVault",

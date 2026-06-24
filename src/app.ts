@@ -68,7 +68,11 @@ function summarizeMcpBody(body: unknown): string {
  */
 export function createMcpExpressApp(): express.Express {
   const expressApp = express();
-  expressApp.use(express.json({ limit: "1mb", strict: true }));
+  // 8 MB accommodates an end-user incident attachment (capped at 5 MB raw in
+  // add_incident_attachment) delivered as base64 inside the JSON-RPC tools/call
+  // body (base64 inflates ~33%, plus the envelope). Tool calls are the only
+  // authenticated path a sandboxed widget has, so the file must travel here.
+  expressApp.use(express.json({ limit: "8mb", strict: true }));
 
   expressApp.use((_req: Request, res: Response, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");

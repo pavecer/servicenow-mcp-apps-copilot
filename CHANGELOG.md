@@ -8,15 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Incident management for end users (MCP Apps).** Five new tools —
+- **Incident management for end users (MCP Apps).** Six new tools —
   `get_incident_form`, `report_incident`, `list_user_incidents`,
-  `get_incident_detail`, `add_incident_comment` — and three new `ui://` widgets
-  (incident-form, my-incidents, incident-detail). End users can report a
-  problem, track their own incidents, read the customer-visible comment
-  activity, and add an additional comment. Incidents are attributed to the real
-  caller via `caller_id` (delegated identity, same model as orders) and the
-  list/detail views are caller-scoped. The server now exposes 19 tools and 8
-  widgets. (Attachments are planned as a follow-up.)
+  `get_incident_detail`, `add_incident_comment`, `add_incident_attachment` —
+  and three new `ui://` widgets (incident-form, my-incidents, incident-detail).
+  End users can report a problem, track their own incidents, read the
+  customer-visible comment activity, add a comment, and attach a file/screenshot
+  (max 5 MB). Incidents are attributed to the real caller via `caller_id`
+  (delegated identity, same model as orders) and the list/detail views are
+  caller-scoped. The server now exposes 20 tools and 8 widgets.
 
 ### Removed
 - The `MCP_APPS_ENABLED` feature flag and the legacy Adaptive Card surface. MCP

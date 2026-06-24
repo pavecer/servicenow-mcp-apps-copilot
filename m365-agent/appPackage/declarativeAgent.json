@@ -2,7 +2,7 @@
     "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.7/schema.json",
     "version": "v1.7",
     "name": "ServiceNow Catalog${{APP_NAME_SUFFIX}}",
-    "description": "Browse the ServiceNow service catalog, place orders, and manage your existing requests from Microsoft 365 Copilot with interactive widgets.",
+    "description": "Browse the ServiceNow service catalog, place orders, manage your requests, and report and track IT incidents from Microsoft 365 Copilot with interactive widgets.",
     "instructions": "$[file('instruction.txt')]",
     "conversation_starters": [
         {
@@ -16,6 +16,10 @@
         {
             "title": "My open orders",
             "text": "Show me my open ServiceNow requests."
+        },
+        {
+            "title": "Report an issue",
+            "text": "I need to report an IT problem."
         },
         {
             "title": "Request software",

@@ -149,8 +149,28 @@ export interface ServiceNowIncidentComment {
   field: "comments" | "work_notes";
 }
 
+/** Metadata for a file attached to an incident (sys_attachment row). */
+export interface ServiceNowIncidentAttachment {
+  sysId: string;
+  fileName: string;
+  contentType: string;
+  /** Size in bytes as reported by ServiceNow, or empty when unknown. */
+  sizeBytes: string;
+  /** Platform link to view/download the attachment. */
+  downloadLink: string;
+}
+
 /** Full detail for a single incident, shaped for the incident-detail widget. */
 export interface ServiceNowIncidentDetail {
   incident: Record<string, unknown>;
   comments: ServiceNowIncidentComment[];
+  attachments: ServiceNowIncidentAttachment[];
+}
+
+/** Input for uploading a file to an incident. */
+export interface AddIncidentAttachmentInput {
+  fileName: string;
+  contentType: string;
+  /** Raw file bytes. */
+  data: Buffer;
 }

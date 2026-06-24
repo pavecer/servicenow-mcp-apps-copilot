@@ -24,6 +24,7 @@ import { registerReportIncidentTool } from "./reportIncident";
 import { registerListUserIncidentsTool } from "./listUserIncidents";
 import { registerGetIncidentDetailTool } from "./getIncidentDetail";
 import { registerAddIncidentCommentTool } from "./addIncidentComment";
+import { registerAddIncidentAttachmentTool } from "./addIncidentAttachment";
 import { getWidgetForTool, registerWidgetResources } from "../ui/widgets";
 /**
  * Single source of truth for the names of MCP tools this server exposes.
@@ -77,7 +78,8 @@ const INCIDENT_TOOL_NAMES = [
   "report_incident",
   "list_user_incidents",
   "get_incident_detail",
-  "add_incident_comment"
+  "add_incident_comment",
+  "add_incident_attachment"
 ] as const;
 
 export type RegisteredToolName =
@@ -530,6 +532,32 @@ export function getMinimalToolDefinitions() {
         },
         required: ["incidentSysId", "comment"]
       }
+    },
+    {
+      name: "add_incident_attachment",
+      description: "Attach a file (e.g. a screenshot) to one of the user's ServiceNow incidents. Files are limited to 5 MB.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          incidentSysId: {
+            type: "string",
+            description: "The sys_id of the incident to attach the file to"
+          },
+          fileName: {
+            type: "string",
+            description: "The file name including extension, e.g. 'screenshot.png'"
+          },
+          contentType: {
+            type: "string",
+            description: "The file's MIME type, e.g. 'image/png' or 'application/pdf'"
+          },
+          dataBase64: {
+            type: "string",
+            description: "The file content, base64-encoded (no data: URI prefix)"
+          }
+        },
+        required: ["incidentSysId", "fileName", "contentType", "dataBase64"]
+      }
     }
   );
 
@@ -587,6 +615,7 @@ export function registerTools(
   registerListUserIncidentsTool(server, client);
   registerGetIncidentDetailTool(server, client);
   registerAddIncidentCommentTool(server, client);
+  registerAddIncidentAttachmentTool(server, client);
 
   // SEP-1865 widget resources.
   registerWidgetResources(server);

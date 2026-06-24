@@ -67,6 +67,7 @@ Preferred enterprise approach:
   - `incident` (create + read + update of caller-owned records — the end-user
     incident flow)
   - `sys_journal_field` (read — the customer-visible incident comment activity)
+  - `sys_attachment` (create + read — incident file attachments)
   - `sys_user` (read only for identity resolution)
 - Restrict visibility to approved catalogs/categories using user criteria.
 - If your security policy requires strict per-user access enforcement, set `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` and provide `x-servicenow-access-token` per caller.
@@ -148,6 +149,8 @@ The MCP server calls these standard ServiceNow Service Catalog APIs:
 | `/api/now/table/incident` | GET / POST | List caller incidents; report a new incident |
 | `/api/now/table/incident/{sys_id}` | GET / PATCH | Read incident detail; add a customer-visible comment |
 | `/api/now/table/sys_journal_field` | GET | Read the customer-visible incident comment activity |
+| `/api/now/attachment` | GET | List a caller's incident attachments |
+| `/api/now/attachment/file` | POST | Upload a file/screenshot to an incident |
 
 Ensure no firewall rules, IP allow-lists, or network policies block access from the Azure Function App to these endpoints.
 

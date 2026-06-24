@@ -27,6 +27,13 @@
   .comment { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--field-bg); }
   .comment .who { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
   .comment .body { font-size: 13px; white-space: pre-wrap; }
+  .atts { display: flex; flex-direction: column; gap: 6px; }
+  .att { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .att .name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .att .size { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .att a { color: var(--accent); text-decoration: none; }
+  .file-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  input[type=file] { font: inherit; color: var(--fg); max-width: 100%; }
   textarea {
     width: 100%; box-sizing: border-box; background: var(--field-bg); color: var(--fg);
     border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; font: inherit;
@@ -102,6 +109,15 @@
   var root = document.getElementById("root");
   applyTheme();
   var pendingBanner = null;
+  var MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+  function formatBytes(n) {
+    var b = Number(n);
+    if (!isFinite(b) || b <= 0) return "";
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return Math.round(b / 1024) + " KB";
+    return (b / (1024 * 1024)).toFixed(1) + " MB";
+  }
 
   function render(data) {
     data = data || {};
@@ -169,6 +185,44 @@
       root.appendChild(clist);
     }
 
+    // Attachments
+    var attachments = Array.isArray(data.attachments) ? data.attachments : [];
+    var ah = document.createElement("h2"); ah.textContent = "Attachments"; root.appendChild(ah);
+    if (attachments.length === 0) {
+      var an = document.createElement("p"); an.className = "empty"; an.textContent = "No attachments yet."; root.appendChild(an);
+    } else {
+      var alist = document.createElement("div"); alist.className = "atts";
+      attachments.forEach(function (att) {
+        var rowEl = document.createElement("div"); rowEl.className = "att";
+        var nm = document.createElement("span"); nm.className = "name"; nm.textContent = att.fileName || "attachment";
+        rowEl.appendChild(nm);
+        if (att.sizeBytes) { var sz = document.createElement("span"); sz.className = "size"; sz.textContent = formatBytes(att.sizeBytes); rowEl.appendChild(sz); }
+        if (att.downloadLink) {
+          var dl = document.createElement("a"); dl.textContent = "View"; dl.href = att.downloadLink; dl.target = "_blank"; dl.rel = "noopener noreferrer";
+          dl.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(att.downloadLink); });
+          rowEl.appendChild(dl);
+        }
+        alist.appendChild(rowEl);
+      });
+      root.appendChild(alist);
+    }
+    if (sysId) {
+      var frow = document.createElement("div"); frow.className = "file-row";
+      var fileInput = document.createElement("input"); fileInput.type = "file"; frow.appendChild(fileInput);
+      var attachBtn = document.createElement("button"); attachBtn.type = "button"; attachBtn.textContent = "Attach"; frow.appendChild(attachBtn);
+      var ferr = document.createElement("div"); ferr.className = "error"; ferr.style.display = "none";
+      attachBtn.addEventListener("click", function () {
+        ferr.style.display = "none"; ferr.textContent = "";
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) { ferr.style.display = "block"; ferr.textContent = "Choose a file first."; return; }
+        if (file.size > MAX_FILE_BYTES) { ferr.style.display = "block"; ferr.textContent = "File is too large (max 5 MB)."; return; }
+        attachBtn.disabled = true; attachBtn.textContent = "Uploading\u2026";
+        attachFile(sysId, file, number, attachBtn, ferr);
+      });
+      root.appendChild(frow);
+      root.appendChild(ferr);
+    }
+
     // Add a comment
     if (sysId) {
       var ch2 = document.createElement("h2"); ch2.textContent = "Add a comment"; root.appendChild(ch2);
@@ -216,6 +270,53 @@
       pendingBanner = "Comment added";
       render(data);
     }).catch(function () { fallback(); });
+  }
+
+  // Read the chosen file as base64 and upload it via add_incident_attachment
+  // through the host bridge, then re-render with the refreshed detail. There is
+  // no chat fallback (a file can't travel through a follow-up message).
+  function attachFile(sysId, file, number, btn, errEl) {
+    var reader = new FileReader();
+    reader.onerror = function () {
+      if (errEl) { errEl.style.display = "block"; errEl.textContent = "Could not read the file."; }
+      if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
+    };
+    reader.onload = function () {
+      var dataUrl = String(reader.result || "");
+      var base64 = dataUrl.indexOf(",") >= 0 ? dataUrl.slice(dataUrl.indexOf(",") + 1) : dataUrl;
+      var args = {
+        incidentSysId: sysId,
+        fileName: file.name || "attachment",
+        contentType: file.type || "application/octet-stream",
+        dataBase64: base64
+      };
+      var p;
+      try { p = callTool("add_incident_attachment", args); }
+      catch (e) {
+        if (errEl) { errEl.style.display = "block"; errEl.textContent = "Attaching isn't available here."; }
+        if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
+        return;
+      }
+      if (!p || typeof p.then !== "function") {
+        if (errEl) { errEl.style.display = "block"; errEl.textContent = "Attaching isn't available here."; }
+        if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
+        return;
+      }
+      p.then(function (result) {
+        var data = unwrapResult(result);
+        if (data && data.success === false) {
+          if (errEl) { errEl.style.display = "block"; errEl.textContent = data.error || "Upload failed."; }
+          if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
+          return;
+        }
+        pendingBanner = "File attached";
+        render(data);
+      }).catch(function () {
+        if (errEl) { errEl.style.display = "block"; errEl.textContent = "Upload failed. Please try again."; }
+        if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
+      });
+    };
+    reader.readAsDataURL(file);
   }
 
   showLoading(root, "Loading incident\u2026");

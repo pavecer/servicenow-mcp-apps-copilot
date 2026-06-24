@@ -19,7 +19,7 @@
     },
     "description": {
         "short": "Order ServiceNow catalog items from Microsoft 365 Copilot.",
-        "full": "Browse the ServiceNow service catalog, place orders, and manage existing requests from inside Microsoft 365 Copilot using interactive MCP App widgets. Backed by the open-source mcp-server-servicenow project."
+        "full": "Browse the ServiceNow service catalog, place orders, manage existing requests, and report and track IT incidents from inside Microsoft 365 Copilot using interactive MCP App widgets. Backed by the open-source mcp-server-servicenow project."
     },
     "accentColor": "#FFFFFF",
     "supportsChannelFeatures": "tier1",

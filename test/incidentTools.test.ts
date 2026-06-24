@@ -5,6 +5,7 @@ import { registerReportIncidentTool } from "../src/tools/reportIncident";
 import { registerListUserIncidentsTool } from "../src/tools/listUserIncidents";
 import { registerGetIncidentDetailTool } from "../src/tools/getIncidentDetail";
 import { registerAddIncidentCommentTool } from "../src/tools/addIncidentComment";
+import { registerAddIncidentAttachmentTool } from "../src/tools/addIncidentAttachment";
 import { getMinimalToolDefinitions } from "../src/tools/index";
 
 interface RegisteredTool {
@@ -33,13 +34,16 @@ const DETAIL = {
   },
   comments: [
     { value: "Tried restarting, no luck.", createdOn: "2026-06-24 09:00:00", createdBy: "alex", field: "comments" as const }
+  ],
+  attachments: [
+    { sysId: "att-1", fileName: "screenshot.png", contentType: "image/png", sizeBytes: "2048", downloadLink: "https://example.service-now.com/sys_attachment.do?sys_id=att-1" }
   ]
 };
 
 describe("incident tool manifest", () => {
-  it("manifest includes the five incident tools with the right widget bindings", () => {
+  it("manifest includes the six incident tools with the right widget bindings", () => {
     const byName = Object.fromEntries(getMinimalToolDefinitions().map(t => [t.name, t]));
-    for (const name of ["get_incident_form", "report_incident", "list_user_incidents", "get_incident_detail", "add_incident_comment"]) {
+    for (const name of ["get_incident_form", "report_incident", "list_user_incidents", "get_incident_detail", "add_incident_comment", "add_incident_attachment"]) {
       expect(byName[name]).toBeDefined();
     }
     const meta = byName.get_incident_form._meta as Record<string, unknown> | undefined;
@@ -48,6 +52,8 @@ describe("incident tool manifest", () => {
     expect(listMeta?.ui?.resourceUri).toBe("ui://servicenow-mcp/my-incidents.html");
     const reportMeta = byName.report_incident._meta as { ui?: { resourceUri?: string } };
     expect(reportMeta?.ui?.resourceUri).toBe("ui://servicenow-mcp/incident-detail.html");
+    const attachMeta = byName.add_incident_attachment._meta as { ui?: { resourceUri?: string } };
+    expect(attachMeta?.ui?.resourceUri).toBe("ui://servicenow-mcp/incident-detail.html");
   });
 });
 
@@ -71,6 +77,7 @@ describe("incident tool handlers", () => {
   let listUserIncidents: ReturnType<typeof vi.fn>;
   let getIncidentDetail: ReturnType<typeof vi.fn>;
   let addIncidentComment: ReturnType<typeof vi.fn>;
+  let addIncidentAttachment: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     createIncident = vi.fn().mockResolvedValue({ number: "INC0012345", sys_id: "inc-sys-1" });
@@ -79,11 +86,13 @@ describe("incident tool handlers", () => {
     ]);
     getIncidentDetail = vi.fn().mockResolvedValue(DETAIL);
     addIncidentComment = vi.fn().mockResolvedValue(undefined);
+    addIncidentAttachment = vi.fn().mockResolvedValue({ sysId: "att-2", fileName: "shot.png", contentType: "image/png", sizeBytes: "10", downloadLink: "x" });
     fakeClient = {
       createIncident,
       listUserIncidents,
       getIncidentDetail,
-      addIncidentComment
+      addIncidentComment,
+      addIncidentAttachment
     } as unknown as ServiceNowClient;
   });
 
@@ -125,15 +134,16 @@ describe("incident tool handlers", () => {
     expect(result.structuredContent?.incidents).toEqual([]);
   });
 
-  it("get_incident_detail returns incident + comments + link", async () => {
+  it("get_incident_detail returns incident + comments + attachments + link", async () => {
     const fake = createFakeServer();
     registerGetIncidentDetailTool(fake.server as never, fakeClient);
     const result = (await fake.tools[0].handler({ incidentSysId: "inc-sys-1" })) as {
-      structuredContent?: { incident?: unknown; comments?: unknown[]; link?: string };
+      structuredContent?: { incident?: unknown; comments?: unknown[]; attachments?: unknown[]; link?: string };
     };
     expect(getIncidentDetail).toHaveBeenCalledWith("inc-sys-1");
     expect(result.structuredContent?.incident).toBeDefined();
     expect(result.structuredContent?.comments).toHaveLength(1);
+    expect(result.structuredContent?.attachments).toHaveLength(1);
     expect(result.structuredContent?.link).toContain("/incident.do?sys_id=inc-sys-1");
   });
 
@@ -146,5 +156,42 @@ describe("incident tool handlers", () => {
     expect(addIncidentComment).toHaveBeenCalledWith("inc-sys-1", "Any update?");
     expect(getIncidentDetail).toHaveBeenCalledWith("inc-sys-1");
     expect(result.structuredContent?.comments).toHaveLength(1);
+  });
+
+  it("add_incident_attachment decodes base64, uploads, then re-renders detail", async () => {
+    const fake = createFakeServer();
+    registerAddIncidentAttachmentTool(fake.server as never, fakeClient);
+    const dataBase64 = Buffer.from("hello").toString("base64");
+    const result = (await fake.tools[0].handler({
+      incidentSysId: "inc-sys-1",
+      fileName: "shot.png",
+      contentType: "image/png",
+      dataBase64
+    })) as { structuredContent?: { attachments?: unknown[] } };
+    expect(addIncidentAttachment).toHaveBeenCalledTimes(1);
+    const call = addIncidentAttachment.mock.calls[0];
+    expect(call[0]).toBe("inc-sys-1");
+    expect(call[1].fileName).toBe("shot.png");
+    expect(Buffer.isBuffer(call[1].data)).toBe(true);
+    expect(call[1].data.toString()).toBe("hello");
+    expect(getIncidentDetail).toHaveBeenCalledWith("inc-sys-1");
+    expect(result.structuredContent?.attachments).toHaveLength(1);
+  });
+
+  it("add_incident_attachment rejects an oversized file", async () => {
+    const fake = createFakeServer();
+    registerAddIncidentAttachmentTool(fake.server as never, fakeClient);
+    // 6 MB of base64 -> over the 5 MB cap.
+    const big = Buffer.alloc(6 * 1024 * 1024, 1).toString("base64");
+    const result = (await fake.tools[0].handler({
+      incidentSysId: "inc-sys-1",
+      fileName: "big.bin",
+      contentType: "application/octet-stream",
+      dataBase64: big
+    })) as { content: Array<{ text: string }> };
+    expect(addIncidentAttachment).not.toHaveBeenCalled();
+    const payload = JSON.parse(result.content[0].text) as Record<string, unknown>;
+    expect(payload.success).toBe(false);
+    expect(String(payload.error)).toMatch(/too large/i);
   });
 });

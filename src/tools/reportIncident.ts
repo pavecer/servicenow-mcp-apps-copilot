@@ -69,7 +69,8 @@ export function registerReportIncidentTool(server: McpServer, client: ServiceNow
               submitted: true,
               number: result.number,
               incident: { number: result.number, sys_id: result.sys_id, state: "New", short_description: shortDescription },
-              comments: []
+              comments: [],
+              attachments: []
             }
           };
         }

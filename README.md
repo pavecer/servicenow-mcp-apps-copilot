@@ -163,14 +163,14 @@ dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - ServiceNow cart flow (`add_to_cart` → `submit_cart`).
 - Per-item order edits (`update_order_item` / `remove_order_item`).
 - Incident management for end users: report a problem, track your incidents,
-  read the comment activity, and add a comment (`report_incident`,
-  `list_user_incidents`, `get_incident_detail`, `add_incident_comment`).
+  read the comment activity, add a comment, and attach a file/screenshot
+  (`report_incident`, `list_user_incidents`, `get_incident_detail`,
+  `add_incident_comment`, `add_incident_attachment`).
 - Eight MCP Apps (SEP-1865) widgets for Microsoft 365 Copilot / Cowork.
 - Delegated identity attribution (`requested_for` / `opened_by` / `caller_id`).
 - Entra On-Behalf-Of (OBO) token exchange for per-user ServiceNow ACLs (opt-in).
 
 **Next**
-- Incident attachments (upload a screenshot/file with a report).
 - Promote OBO from opt-in to a documented, first-class deployment profile.
 - Approval actions (approve / reject) surfaced in the order-detail widget.
 - Attachment upload on catalog requests.
