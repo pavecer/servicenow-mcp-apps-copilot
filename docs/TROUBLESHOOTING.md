@@ -124,6 +124,51 @@ Then restart the server. **Never use this in production.**
 
 ---
 
+### ROPC fails with `access_denied` / `server_error` (corrupted OAuth endpoint)
+
+**Symptom:** The server can't get a ServiceNow token. `POST /oauth_token.do` with
+`grant_type=password` returns `{"error":"server_error","error_description":"access_denied"}`
+for **any** user (even admin) and **any** secret. Every catalog/incident tool then
+silently returns nothing — and because the call never reaches ServiceNow, the agent
+may *appear* to succeed ("I've created your incident") while nothing is created.
+
+**Root cause:** A ServiceNow developer-instance (PDI) reset can corrupt the OAuth
+application's scope/profile association. The token response is opaque; the real
+error only appears in the ServiceNow **system log** (`syslog`):
+> `Exception on token flow - invalid_scope: The provided OAuth token is not valid`
+
+**Confirm it:**
+1. After a failed token request, read the syslog as admin:
+   ```bash
+   curl -u admin:<pw> "https://<instance>.service-now.com/api/now/table/syslog?sysparm_query=ORDERBYDESCsys_created_on&sysparm_limit=20&sysparm_fields=sys_created_on,level,source,message"
+   ```
+   Look for `invalid_scope` on the token flow.
+2. Create a **fresh** OAuth endpoint with default settings and test ROPC. If the
+   fresh endpoint works but the existing one fails, the existing entity is corrupt.
+
+**Solution:**
+1. In ServiceNow create a new **OAuth API endpoint for external clients** (default
+   settings, scope unrestricted) and set a known `client_secret`.
+2. Repoint the server: update the `SERVICENOW_CLIENT_ID` app setting and the
+   `servicenow-client-secret` Key Vault secret to the new values.
+3. Restart the Function App so it picks up the new config.
+
+---
+
+### Integration user ROPC denied while admin works (`password_needs_reset`)
+
+**Symptom:** ROPC succeeds for `admin` but fails for the integration user.
+
+**Cause:** The integration user has **Password needs reset** = `true`, which blocks
+the OAuth password grant for that user. `web_service_access_only = true` also blocks
+ROPC.
+
+**Solution:** Open the integration user in ServiceNow and set
+`password_needs_reset = false` and `web_service_access_only = false`. The stored
+password itself is usually fine — these flags are the blockers.
+
+---
+
 ### Orders created but `requested_for` is wrong
 
 **Symptom:** Orders are placed, but the user identity is stamped as the integration user instead of the real caller.
@@ -225,6 +270,72 @@ Then restart the server. **Never use this in production.**
    ```
 
 4. In Microsoft 365 Copilot, **refresh the agent** — the UI caches widget definitions
+
+---
+
+## Microsoft 365 Copilot Agent Issues
+
+### Agent asks for confirmation on every tool call
+
+**Symptom:** Copilot shows an "Allow this action?" card before every tool runs.
+
+**Cause:** Copilot requires confirmation for any MCP tool whose `tools/list` entry
+is **not** annotated `readOnlyHint: true` (tools with no annotation are treated as
+destructive). These annotations are read from the **plugin manifest snapshot
+captured when the agent was published**, not from the live server.
+
+**Solution:**
+1. Ensure every tool sets `annotations: { readOnlyHint: true }` in
+   [`src/tools/index.ts`](../src/tools/index.ts) (the live `tools/list`) **and** in
+   [`m365-agent/appPackage/mcp-tools-1.json`](../m365-agent/appPackage/mcp-tools-1.json)
+   (the published snapshot).
+2. Bump the agent `version` in `m365-agent/appPackage/manifest.json` and
+   re-provision (`atk provision --env <env>`).
+3. Remove the old agent in Copilot, re-add the freshly published one, and start a
+   **new chat** (the snapshot is cached per agent version / session).
+
+---
+
+### Tool runs but the widget shows `WIDGET_ERROR` / "Tool response was null"
+
+**Symptom:** A tool is invoked but renders a widget error whose metadata points at
+`https://YOUR-FUNCTION-APP.azurewebsites.net/mcp`.
+
+**Cause:** The published agent's MCP runtime URL is still the placeholder, so tool
+calls go to a dead URL.
+
+**Solution:** Set the real server URL/host in `m365-agent/env/.env.<env>`:
+```
+MCP_SERVER_URL=https://<your-func-app>.azurewebsites.net/mcp
+MCP_SERVER_HOST=<your-func-app>.azurewebsites.net
+```
+`ai-plugin.json` (`${{MCP_SERVER_URL}}`) and `manifest.json` validDomains
+(`${{MCP_SERVER_HOST}}`) substitute these at package time. Re-provision afterwards.
+
+---
+
+### Agent shows a sign-in card (`TriggerPluginAuth`) and tools fail
+
+**Symptom:** The agent shows an authentication card before any tool runs.
+
+**Cause:** The MCP server is Entra-gated; the plugin must obtain a per-user bearer
+token via its OAuth registration before **any** tool (even read-only) runs.
+
+**Solution:** Complete the sign-in once. Ensure the server's `ENTRA_AUDIENCE` /
+`ENTRA_ALLOWED_AUDIENCES` match the plugin OAuth client's scope/audience so the
+issued token is accepted.
+
+---
+
+### New or renamed tools don't appear in the agent
+
+**Symptom:** You added/renamed a tool but Copilot still shows the old set.
+
+**Cause:** Copilot caches the agent's plugin manifest by **version**. Without a
+version bump it keeps serving the cached snapshot.
+
+**Solution:** Bump `version` in `manifest.json`, re-provision, and use a fresh chat
+(remove/re-add the agent if needed).
 
 ---
 

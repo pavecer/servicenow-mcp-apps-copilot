@@ -79,6 +79,46 @@ This template shows how to wrap your existing MCP Server into a Microsoft 365 
 
 - **Error logging**: basic request/response logs appear in the ATK console; errors bubble up in your Copilot chat. 
 
+## This repo's configuration
+
+### Environment variables (`env/.env.<env>`)
+
+The committed `env/.env.<env>` file holds non-secret values; secrets live in
+`env/.env.<env>.user`. The package manifests substitute `${{...}}` placeholders
+from these at provision time, so set them before running `atk provision`:
+
+| Variable | Used by | Example |
+|---|---|---|
+| `MCP_SERVER_URL` | `ai-plugin.json` runtime URL | `https://<func-app>.azurewebsites.net/mcp` |
+| `MCP_SERVER_HOST` | `manifest.json` `validDomains` | `<func-app>.azurewebsites.net` |
+| `TEAMS_APP_ID` | app identity | (set by `teamsApp/create`) |
+| `MCP_DA_AUTH_ID_*` | `ai-plugin.json` OAuth `reference_id` | (set by `oauth/register`) |
+
+> If `MCP_SERVER_URL` / `MCP_SERVER_HOST` still resolve to the
+> `YOUR-FUNCTION-APP.azurewebsites.net` placeholder, every tool call hits a dead URL
+> and widgets render `WIDGET_ERROR` / "Tool response was null". Set them to your real
+> Function App, then re-provision.
+
+### Publishing changes (bump the version!)
+
+Microsoft 365 Copilot caches the agent's plugin manifest **by version**, and (for
+custom agents) reads tool annotations from the **snapshot captured at publish
+time** — not from the live MCP server. So whenever you change tools, schemas, or
+annotations:
+
+1. Bump `version` in `appPackage/manifest.json` (e.g. `1.1.2` → `1.1.3`).
+2. Re-provision: `atk provision --env <env>`.
+3. In Copilot, remove the old agent, re-add the freshly published one, and start a
+   **new chat** (the snapshot is cached per version / session).
+
+### No per-call confirmation
+
+Copilot prompts "Allow this action?" for any tool whose `tools/list` entry is **not**
+annotated `readOnlyHint: true`. To run tools without confirmation, every tool sets
+`annotations: { readOnlyHint: true }` in both
+[`appPackage/mcp-tools-1.json`](appPackage/mcp-tools-1.json) (the published snapshot)
+and `src/tools/index.ts` (the live server manifest). Keep them in sync.
+
 ## Evaluating Agents
 
 Install the Microsoft 365 Copilot Agent Evaluations CLI (`@microsoft/m365-copilot-eval`) NPM package to test, measure, and improve the quality of your agent with structured evaluations and rich result reports with AI-based scoring.

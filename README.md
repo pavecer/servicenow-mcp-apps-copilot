@@ -7,17 +7,17 @@
 │ Microsoft 365       │        │ ServiceNow MCP       │        │ ServiceNow   │
 │ Copilot / Cowork    │────────│ Server (Azure Fn)    │────────│ Catalog      │
 │                     │        │                      │        │              │
-│ "Order a laptop"    │ OAuth  │ + 14 MCP Tools       │ OAuth  │ + Cart       │
-│ + 5 Widgets         │        │ + 5 SEP-1865 Widgets │        │ + Orders     │
+│ "Order a laptop"    │ OAuth  │ + 20 MCP Tools       │ OAuth  │ + Cart       │
+│ + 8 Widgets         │        │ + 8 SEP-1865 Widgets │        │ + Orders     │
 └─────────────────────┘        └──────────────────────┘        └──────────────┘
 ```
 
 **What you get:**
-- 14 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, validate config
-- 5 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail
-- Per-user authentication: orders stamped with the real user (not a service account)
+- 20 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, report & track incidents, add comments/attachments, validate config
+- 8 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail, incident form, my incidents, incident detail
+- Per-user authentication: orders and incidents stamped with the real user (not a service account)
 - Stateless, scalable: Flex Consumption Azure Functions + Node.js 20
-- Production-ready: 215 unit tests, secret management, audit logging, security guidelines
+- Production-ready: 243 unit tests, secret management, audit logging, security guidelines
 
 **Quick facts:**
 | | |

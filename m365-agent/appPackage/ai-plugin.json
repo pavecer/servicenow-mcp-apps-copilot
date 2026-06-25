@@ -91,7 +91,7 @@
         {
             "type": "RemoteMCPServer",
             "spec": {
-                "url": "https://YOUR-FUNCTION-APP.azurewebsites.net/mcp",
+                "url": "${{MCP_SERVER_URL}}",
                 "mcp_tool_description": {
                     "file": "mcp-tools-1.json"
                 }

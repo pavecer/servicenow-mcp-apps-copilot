@@ -128,6 +128,9 @@
                     "itemSysId",
                     "variables"
                 ]
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -249,6 +252,9 @@
                     "orderSysId",
                     "updates"
                 ]
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -330,6 +336,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/cart.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -358,7 +367,7 @@
         },
         {
             "name": "update_cart_item",
-            "description": "Update a line item in the ServiceNow cart \u2014 change its quantity and/or variable values.",
+            "description": "Update a line item in the ServiceNow cart — change its quantity and/or variable values.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -399,6 +408,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/cart.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -428,6 +440,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/cart.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -454,11 +469,14 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
             "name": "update_order_item",
-            "description": "Update a single requested item (line item) on an existing order \u2014 change its quantity or add a comment/description \u2014 without touching the rest of the order. Renders the refreshed order-detail widget.",
+            "description": "Update a single requested item (line item) on an existing order — change its quantity or add a comment/description — without touching the rest of the order. Renders the refreshed order-detail widget.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -510,6 +528,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -543,6 +564,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -564,6 +588,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/incident-form.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -609,6 +636,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -636,6 +666,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/my-incidents.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -665,6 +698,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -699,6 +735,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         },
         {
@@ -743,6 +782,9 @@
                 "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
                 "openai/widgetAccessible": true,
                 "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
             }
         }
     ]

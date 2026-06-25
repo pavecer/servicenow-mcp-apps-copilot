@@ -171,6 +171,7 @@ export function getMinimalToolDefinitions() {
     {
       name: "place_order",
       description: "Place a ServiceNow catalog order with the collected form values.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         type: "object",
         properties: {
@@ -260,6 +261,7 @@ export function getMinimalToolDefinitions() {
     {
       name: "update_order",
       description: "Update a service catalog order from the requestor's perspective. Allowed fields: short_description, description, comments, urgency, priority.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         type: "object",
         properties: {
@@ -310,6 +312,7 @@ export function getMinimalToolDefinitions() {
       {
         name: "add_to_cart",
         description: "Add a ServiceNow catalog item to the user's cart (basket) without ordering yet.",
+        annotations: { readOnlyHint: true },
         inputSchema: {
           type: "object",
           properties: {
@@ -345,6 +348,7 @@ export function getMinimalToolDefinitions() {
       {
         name: "update_cart_item",
         description: "Update a line item in the ServiceNow cart — change its quantity and/or variable values.",
+        annotations: { readOnlyHint: true },
         inputSchema: {
           type: "object",
           properties: {
@@ -371,6 +375,7 @@ export function getMinimalToolDefinitions() {
       {
         name: "remove_cart_item",
         description: "Remove a single line item from the ServiceNow cart.",
+        annotations: { readOnlyHint: true },
         inputSchema: {
           type: "object",
           properties: {
@@ -385,6 +390,7 @@ export function getMinimalToolDefinitions() {
       {
         name: "submit_cart",
         description: "Submit the entire ServiceNow cart as a single request (one REQ with multiple requested items).",
+        annotations: { readOnlyHint: true },
         inputSchema: {
           type: "object",
           properties: {
@@ -398,6 +404,7 @@ export function getMinimalToolDefinitions() {
       {
         name: "update_order_item",
         description: "Update a single requested item (line item) on an existing order. Allowed fields: quantity, comments, short_description, description.",
+        annotations: { readOnlyHint: true },
         inputSchema: {
           type: "object",
           properties: {
@@ -427,6 +434,7 @@ export function getMinimalToolDefinitions() {
       {
         name: "remove_order_item",
         description: "Remove a single requested item (line item) from an existing order without cancelling the whole request.",
+        annotations: { readOnlyHint: true },
         inputSchema: {
           type: "object",
           properties: {
@@ -458,6 +466,7 @@ export function getMinimalToolDefinitions() {
     {
       name: "report_incident",
       description: "Report (create) a ServiceNow incident for the end user from the report form values.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         type: "object",
         properties: {
@@ -518,6 +527,7 @@ export function getMinimalToolDefinitions() {
     {
       name: "add_incident_comment",
       description: "Add a customer-visible additional comment to one of the user's ServiceNow incidents.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         type: "object",
         properties: {
@@ -536,6 +546,7 @@ export function getMinimalToolDefinitions() {
     {
       name: "add_incident_attachment",
       description: "Attach a file (e.g. a screenshot) to one of the user's ServiceNow incidents. Files are limited to 5 MB.",
+      annotations: { readOnlyHint: true },
       inputSchema: {
         type: "object",
         properties: {

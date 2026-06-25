@@ -46,6 +46,15 @@ The MCP server uses a shared service account (integration user) to authenticate 
 3. Uncheck **Password needs reset** if shown.
 4. Save the user record.
 
+> **The server uses the OAuth password grant (ROPC).** Two user flags will block it
+> even when the password is correct:
+> - **Password needs reset** must be `false` (unchecked).
+> - **Web service access only** must be `false` (when `true` it blocks ROPC).
+>
+> If `/oauth_token.do` returns `access_denied` / `server_error`, check these flags
+> and the ServiceNow system log (`syslog`) for the real error (e.g. `invalid_scope`).
+> See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#servicenow-connectivity-issues).
+
 ---
 
 ## Step 3 — Assign Required Roles

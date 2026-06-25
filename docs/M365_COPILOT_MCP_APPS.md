@@ -121,6 +121,27 @@ The M365 Copilot host enforces:
   **not** need to be widened. Use <https://aka.ms/mcpwidgeturlgenerator> if
   you ever add direct outbound calls.
 
+## Tool-call confirmation (`readOnlyHint`)
+
+Microsoft 365 Copilot shows an "Allow this action?" confirmation card before
+running any MCP tool whose `tools/list` entry is **not** annotated
+`readOnlyHint: true` (tools with no annotation are treated as destructive). To
+keep the catalog/incident flows frictionless, **every** tool in this repo sets
+`annotations: { readOnlyHint: true }`.
+
+Two places must stay in sync:
+
+- `src/tools/index.ts` — `getMinimalToolDefinitions()`, the live `tools/list`
+  the server returns.
+- `m365-agent/appPackage/mcp-tools-1.json` — the static snapshot captured in the
+  published agent package.
+
+> For custom (non-Microsoft-published) declarative agents, Copilot reads these
+> annotations from the **published snapshot**, not the live server. Deploying the
+> server alone does not change an already-published agent's confirmation
+> behavior — bump the manifest `version`, re-provision, and reload the agent in a
+> fresh chat. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#microsoft-365-copilot-agent-issues).
+
 ## Per-user identity ("Opened by") — OBO status
 
 Today the server authenticates to ServiceNow with the `admin` integration

@@ -180,7 +180,7 @@ git diff HEAD  # Review what you're committing
 1. **Security**: No secrets, tokens, passwords, or PII in tracked files or logs ✅
 2. **Configuration**: New env vars are in `local.settings.sample.json` and documented ✅
 3. **Permissions**: New ServiceNow/Entra permissions are justified and documented ✅
-4. **Tests**: All 215 tests pass; no test count changed unexpectedly ✅
+4. **Tests**: All 243 tests pass; no test count changed unexpectedly ✅
 5. **Docs**: README/docs updated if behavior changed ✅
 6. **Backward Compatibility**: Old MCP clients still work (no breaking tool/schema changes) ✅
 
