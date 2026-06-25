@@ -48,6 +48,10 @@ fallback entirely, so a missing caller identity fails closed.
 | Order line items | `GET /api/now/table/sc_req_item` | `sc_req_item` |
 | Approvals | `GET /api/now/table/sysapproval_approver` | `sysapproval_approver` |
 | Update order / item | `PATCH /api/now/table/sc_request/{id}` · `PATCH|DELETE /api/now/table/sc_req_item/{id}` | `sc_request` / `sc_req_item` |
+| Report incident | `POST /api/now/table/incident` | `incident` |
+| List / read incidents | `GET /api/now/table/incident` (caller_id scoped) | `incident` |
+| Add incident comment | `PATCH /api/now/table/incident/{id}` (`comments`) | `incident` |
+| Incident attachments | `GET /api/now/attachment` · `POST /api/now/attachment/file` | `sys_attachment` |
 | Identity lookup | `GET /api/now/table/sys_user` | `sys_user` |
 
 > Reference fields on read paths (`get_order_detail`, etc.) are fetched with
@@ -278,6 +282,92 @@ sequenceDiagram
 - `forceConfiguredCredentials` tests the shared integration grant explicitly;
   `probeOrderNow` (with `orderProbeItemSysId` / `orderProbeVariables`) optionally
   checks order-endpoint access without placing a real order.
+
+---
+
+## Scenario 9 — Report an incident
+
+**Tools:** `get_incident_form` → incident-form · `report_incident` → incident-detail
+
+```mermaid
+sequenceDiagram
+    participant U as User (Copilot)
+    participant S as MCP server
+    participant SN as ServiceNow
+    U->>S: "I need to report an IT problem"
+    S-->>U: incident-form widget (static — no ServiceNow call)
+    U->>S: report_incident(shortDescription, description, urgency, impact, category)
+    S->>SN: POST /api/now/table/incident (caller_id = resolved end user)
+    SN-->>S: new incident (number, sys_id, state)
+    S-->>U: incident-detail widget (confirmation)
+```
+
+- `get_incident_form` renders a **static** report form (no ServiceNow round-trip);
+  the model may prefill fields from conversation context.
+- `report_incident` creates the record and stamps **`caller_id`** with the real end
+  user (best-effort `opened_by` when ownership attribution is on). Only
+  `shortDescription` is required; `description` / `category` / `urgency` / `impact`
+  are optional.
+- The result renders the **incident-detail** widget so the user immediately sees the
+  created incident with its number and status.
+
+---
+
+## Scenario 10 — Track your incidents
+
+**Tools:** `list_user_incidents` → my-incidents · `get_incident_detail` → incident-detail
+
+```mermaid
+sequenceDiagram
+    participant U as User (Copilot)
+    participant S as MCP server
+    participant SN as ServiceNow
+    U->>S: "show my open incidents"
+    S->>SN: GET /api/now/table/incident (caller_id = me, state != resolved/closed)
+    SN-->>S: caller's incidents
+    S-->>U: my-incidents widget (list)
+    U->>S: get_incident_detail(incidentSysId)
+    S->>SN: GET /api/now/table/incident/{id} (display_value=all)
+    S->>SN: GET /api/now/attachment?table_name=incident&table_sys_id={id}
+    SN-->>S: incident + customer comments + attachments
+    S-->>U: incident-detail widget
+```
+
+- `list_user_incidents` is **scoped to the caller's own incidents** (`caller_id`) and
+  excludes resolved/closed records by default. Renders the **my-incidents** widget,
+  which has an inline detail view (2-state, like my-orders).
+- `get_incident_detail` reads the record with `sysparm_display_value=all`. The
+  **customer-visible comments** are parsed from the incident record's own `comments`
+  journal field (no `sys_journal_field` query — so non-admin callers can read them),
+  and attachments are listed from `sys_attachment`.
+
+---
+
+## Scenario 11 — Comment on & attach to an incident
+
+**Tools:** `add_incident_comment` · `add_incident_attachment` → incident-detail
+
+```mermaid
+sequenceDiagram
+    participant U as User (Copilot)
+    participant S as MCP server
+    participant SN as ServiceNow
+    U->>S: add_incident_comment(incidentSysId, comment)
+    S->>SN: PATCH /api/now/table/incident/{id} (comments)
+    U->>S: add_incident_attachment(incidentSysId, fileName, contentType, dataBase64)
+    S->>SN: POST /api/now/attachment/file (raw bytes, max 5 MB)
+    SN-->>S: updated incident + attachment
+    S-->>U: incident-detail widget (re-rendered)
+```
+
+- `add_incident_comment` writes a **customer-visible** additional comment (the
+  `comments` field, not `work_notes`).
+- `add_incident_attachment` accepts the file as **base64 in the tool call** (the only
+  authenticated channel a sandboxed widget has), decodes it to raw bytes, enforces a
+  **5 MB** cap, and POSTs to `/api/now/attachment/file`. The incident-detail and
+  my-incidents widgets expose a file picker + attachment list for this.
+- Both re-fetch and re-render the **incident-detail** widget so the comment/attachment
+  appears immediately.
 
 ---
 

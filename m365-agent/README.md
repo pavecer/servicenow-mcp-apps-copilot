@@ -161,12 +161,18 @@ these or set the matching env values in `env/.env.dev`:
 
 | Placeholder / env var | Where | Set to |
 | --- | --- | --- |
-| `YOUR-FUNCTION-APP.azurewebsites.net` | `appPackage/manifest.json` (`validDomains`), `appPackage/ai-plugin.json` (`runtimes[].spec.url`), `.vscode/mcp.json` | Your deployed Function App host |
-| `MCP_SERVER_URL` | `m365agents.yml` (`baseUrl`) | `https://<your-func-app>.azurewebsites.net/mcp` |
+| `MCP_SERVER_URL` | `env/.env.dev` → substituted into `appPackage/ai-plugin.json` (`runtimes[].spec.url`) and `m365agents.yml` (`baseUrl`) | `https://<your-func-app>.azurewebsites.net/mcp` |
+| `MCP_SERVER_HOST` | `env/.env.dev` → substituted into `appPackage/manifest.json` (`validDomains`) | `<your-func-app>.azurewebsites.net` |
+| `YOUR-FUNCTION-APP.azurewebsites.net` | `.vscode/mcp.json` only (local ATK "Fetch action from MCP") | Your deployed Function App host |
 | `ENTRA_TENANT_ID` | `m365agents.yml` (authorize/token/refresh URLs) | Your Entra directory (tenant) ID |
 | `MCP_DA_OAUTH_CLIENT_ID` | `m365agents.yml` | Entra app registration client ID |
 | `SECRET_MCP_DA_OAUTH_CLIENT_SECRET` | `m365agents.yml` | Entra app client secret (stored in `env/.env.dev.user`) |
 | `MCP_DA_OAUTH_SCOPE` | `m365agents.yml` | `api://<ENTRA_CLIENT_ID>/access_as_user openid profile offline_access` |
+
+> `appPackage/manifest.json` and `appPackage/ai-plugin.json` no longer hard-code the
+> host — they substitute `${{MCP_SERVER_HOST}}` / `${{MCP_SERVER_URL}}` from
+> `env/.env.dev` at provision time. Only `.vscode/mcp.json` (a local dev convenience
+> for ATK's tool fetch) still carries the literal placeholder.
 
 > `env/.env.dev` and `env/.env.dev.user` are gitignored. The two
 > `*.widget-renderer.usercontent.microsoft.com` entries in `validDomains` are the
