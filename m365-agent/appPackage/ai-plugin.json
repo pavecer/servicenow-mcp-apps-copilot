@@ -1,8 +1,8 @@
 {
     "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
     "schema_version": "v2.4",
-    "name_for_human": "ServiceNow Catalog",
-    "description_for_human": "Order ServiceNow catalog items and manage requests from Microsoft 365 Copilot.",
+    "name_for_human": "ServiceNow Assistant",
+    "description_for_human": "Browse the ServiceNow catalog, manage requests, and report & track IT incidents from Microsoft 365 Copilot.",
     "contact_email": "publisher-email@example.com",
     "namespace": "servicenowcatalog",
     "functions": [
