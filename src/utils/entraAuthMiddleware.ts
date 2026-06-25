@@ -77,7 +77,7 @@ export function entraAuthMiddleware(req: Request, res: Response, next: NextFunct
       res.locals.callerEntraObjectId = payload.oid;
       res.locals.callerUpn = payload.preferred_username || payload.upn;
       // Surface the raw validated bearer so downstream code can perform an
-      // OBO exchange (Pattern A in docs/AUTH_ENTRA_OBO_OKTA.md). The token
+      // OBO exchange (Pattern A in docs/AUTH_ENTRA_OBO.md). The token
       // never leaves the request scope and is never logged.
       res.locals.callerAccessToken = token;
       next();

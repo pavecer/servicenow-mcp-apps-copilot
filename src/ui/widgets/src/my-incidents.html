@@ -109,10 +109,28 @@
     }
     return result || {};
   }
+  // Classify a tool-call result independent of host quirks (see incident-detail).
+  function classify(result) {
+    var r = (result && typeof result === "object") ? result : {};
+    var sc = r.structuredContent || (r.result && r.result.structuredContent) || null;
+    if (sc && sc.success === false) return { ok: false, error: sc.error || "That didn't work." };
+    if (sc && sc.incident) return { ok: true, data: sc };
+    var content = r.content || (r.result && r.result.content);
+    if (Array.isArray(content) && content[0] && typeof content[0].text === "string") {
+      try {
+        var parsed = JSON.parse(content[0].text);
+        if (parsed && parsed.success === false) return { ok: false, error: parsed.error || "That didn't work." };
+        if (parsed && parsed.incident) return { ok: true, data: parsed };
+      } catch (_) {}
+    }
+    if (r.incident) return { ok: true, data: r };
+    return { ok: false, sparse: true };
+  }
 
   var root = document.getElementById("root");
   applyTheme();
   var lastListData = null;
+  var lastGoodDetail = null;
   var pendingBanner = null;
   var MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -196,8 +214,14 @@
     }).catch(function () { fallback(); });
   }
 
-  function renderDetail(data) {
-    data = data || {};
+  function renderDetail(incoming) {
+    var data = incoming || {};
+    // Don't blank a good detail if the host returns an empty tool result.
+    if (!data.incident && lastGoodDetail) {
+      data = Object.assign({}, lastGoodDetail);
+    } else if (data.incident) {
+      lastGoodDetail = Object.assign({}, data);
+    }
     var inc = data.incident || {};
     var comments = Array.isArray(data.comments) ? data.comments : [];
     var link = data.link || "";
@@ -275,6 +299,17 @@
           dl.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(att.downloadLink); });
           rowEl.appendChild(dl);
         }
+        if (att.sysId && sysId) {
+          var rm = document.createElement("button");
+          rm.type = "button"; rm.textContent = "Remove"; rm.style.padding = "2px 10px"; rm.style.fontSize = "12px";
+          (function (attSysId, fileName, btn) {
+            btn.addEventListener("click", function () {
+              btn.disabled = true; btn.textContent = "Removing\u2026";
+              removeAttachment(sysId, attSysId, fileName, number);
+            });
+          })(att.sysId, att.fileName, rm);
+          rowEl.appendChild(rm);
+        }
         alist.appendChild(rowEl);
       });
       root.appendChild(alist);
@@ -320,23 +355,49 @@
   }
 
   function addComment(sysId, text, number, btn) {
-    var settled = false;
-    function fallback() {
-      if (settled) return; settled = true;
+    function viaChat() {
       sendFollowUp("Add this comment to incident " + (number || sysId) + ": \"" + text + "\".");
-      if (btn) btn.textContent = "Adding in chat\u2026";
+      pendingBanner = "Comment sent to the agent";
+      var base = lastGoodDetail ? Object.assign({}, lastGoodDetail) : {};
+      var comments = Array.isArray(base.comments) ? base.comments.slice() : [];
+      if (!comments.some(function (c) { return (c.value || "") === text; })) {
+        comments.push({ value: text, createdBy: "You", createdOn: "" });
+      }
+      base.comments = comments;
+      renderDetail(base);
     }
+    if (!sysId) { viaChat(); return; }
     var p;
     try { p = callTool("add_incident_comment", { incidentSysId: sysId, comment: text }); }
-    catch (e) { fallback(); return; }
-    if (!p || typeof p.then !== "function") { fallback(); return; }
+    catch (e) { viaChat(); return; }
+    if (!p || typeof p.then !== "function") { viaChat(); return; }
     p.then(function (result) {
-      if (settled) return; settled = true;
-      var data = unwrapResult(result);
-      if (data && data.success === false) { fallback(); return; }
-      pendingBanner = "Comment added";
-      renderDetail(data);
-    }).catch(function () { fallback(); });
+      var c = classify(result);
+      if (c.ok) { pendingBanner = "Comment added"; renderDetail(c.data); return; }
+      if (c.error) { if (btn) { btn.disabled = false; btn.textContent = "Add comment"; } viaChat(); return; }
+      viaChat();
+    }).catch(function () { viaChat(); });
+  }
+
+  function removeAttachment(sysId, attSysId, fileName, number) {
+    function viaChat() {
+      sendFollowUp("Remove the attachment \"" + (fileName || attSysId) + "\" from incident " + (number || sysId) + ".");
+      pendingBanner = "Removal sent to the agent";
+      var base = lastGoodDetail ? Object.assign({}, lastGoodDetail) : {};
+      base.attachments = (Array.isArray(base.attachments) ? base.attachments : []).filter(function (a) { return a.sysId !== attSysId; });
+      renderDetail(base);
+    }
+    if (!sysId) { viaChat(); return; }
+    var p;
+    try { p = callTool("remove_incident_attachment", { incidentSysId: sysId, attachmentSysId: attSysId }); }
+    catch (e) { viaChat(); return; }
+    if (!p || typeof p.then !== "function") { viaChat(); return; }
+    p.then(function (result) {
+      var c = classify(result);
+      if (c.ok) { pendingBanner = "Attachment removed"; renderDetail(c.data); return; }
+      if (c.error) { pendingBanner = null; renderDetail(lastGoodDetail || {}); return; }
+      viaChat();
+    }).catch(function () { viaChat(); });
   }
 
   function attachFile(sysId, file, number, btn, errEl) {
@@ -367,14 +428,11 @@
         return;
       }
       p.then(function (result) {
-        var data = unwrapResult(result);
-        if (data && data.success === false) {
-          if (errEl) { errEl.style.display = "block"; errEl.textContent = data.error || "Upload failed."; }
-          if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
-          return;
-        }
-        pendingBanner = "File attached";
-        renderDetail(data);
+        var c = classify(result);
+        if (c.ok) { pendingBanner = "File attached"; renderDetail(c.data); return; }
+        var msg = c.error || "This view couldn't attach the file. Open the incident in ServiceNow to add it.";
+        if (errEl) { errEl.style.display = "block"; errEl.textContent = msg; }
+        if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
       }).catch(function () {
         if (errEl) { errEl.style.display = "block"; errEl.textContent = "Upload failed. Please try again."; }
         if (btn) { btn.disabled = false; btn.textContent = "Attach"; }

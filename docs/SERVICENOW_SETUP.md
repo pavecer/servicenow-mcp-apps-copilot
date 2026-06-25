@@ -77,7 +77,7 @@ Preferred enterprise approach:
     incident flow; the customer-visible comment activity is read from the
     incident record's own `comments` journal field, so no `sys_journal_field`
     access is needed)
-  - `sys_attachment` (create + read — incident file attachments)
+  - `sys_attachment` (create + read + delete — incident file attachments)
   - `sys_user` (read only for identity resolution)
 - Restrict visibility to approved catalogs/categories using user criteria.
 - If your security policy requires strict per-user access enforcement, set `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` and provide `x-servicenow-access-token` per caller.

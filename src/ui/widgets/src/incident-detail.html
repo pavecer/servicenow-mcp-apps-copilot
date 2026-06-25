@@ -105,10 +105,32 @@
     }
     return result || {};
   }
+  // Classify a tool-call result independent of host quirks:
+  //   { ok:true, data }          server returned a real incident detail -> render it
+  //   { ok:false, error }        the tool reported a failure -> surface it
+  //   { ok:false, sparse:true }  host resolved with no usable result (M365 Copilot
+  //                              can no-op widget tool calls) -> caller drives via chat
+  function classify(result) {
+    var r = (result && typeof result === "object") ? result : {};
+    var sc = r.structuredContent || (r.result && r.result.structuredContent) || null;
+    if (sc && sc.success === false) return { ok: false, error: sc.error || "That didn't work." };
+    if (sc && sc.incident) return { ok: true, data: sc };
+    var content = r.content || (r.result && r.result.content);
+    if (Array.isArray(content) && content[0] && typeof content[0].text === "string") {
+      try {
+        var parsed = JSON.parse(content[0].text);
+        if (parsed && parsed.success === false) return { ok: false, error: parsed.error || "That didn't work." };
+        if (parsed && parsed.incident) return { ok: true, data: parsed };
+      } catch (_) {}
+    }
+    if (r.incident) return { ok: true, data: r };
+    return { ok: false, sparse: true };
+  }
 
   var root = document.getElementById("root");
   applyTheme();
   var pendingBanner = null;
+  var lastGood = null;
   var MAX_FILE_BYTES = 5 * 1024 * 1024;
 
   function formatBytes(n) {
@@ -119,8 +141,16 @@
     return (b / (1024 * 1024)).toFixed(1) + " MB";
   }
 
-  function render(data) {
-    data = data || {};
+  function render(incoming) {
+    var data = incoming || {};
+    // Never blank out a good detail. M365 Copilot can return an empty tool
+    // result on a widget-initiated call; if this payload has no incident, fall
+    // back to the last detail that did so the title/comments/attachments stay.
+    if (!data.incident && lastGood) {
+      data = Object.assign({}, lastGood);
+    } else if (data.incident) {
+      lastGood = Object.assign({}, data, { submitted: false });
+    }
     var inc = data.incident || {};
     var comments = Array.isArray(data.comments) ? data.comments : [];
     var link = data.link || "";
@@ -202,6 +232,17 @@
           dl.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(att.downloadLink); });
           rowEl.appendChild(dl);
         }
+        if (att.sysId && sysId) {
+          var rm = document.createElement("button");
+          rm.type = "button"; rm.textContent = "Remove"; rm.style.padding = "2px 10px"; rm.style.fontSize = "12px";
+          (function (attSysId, fileName, btn) {
+            btn.addEventListener("click", function () {
+              btn.disabled = true; btn.textContent = "Removing\u2026";
+              removeAttachment(sysId, attSysId, fileName, number);
+            });
+          })(att.sysId, att.fileName, rm);
+          rowEl.appendChild(rm);
+        }
         alist.appendChild(rowEl);
       });
       root.appendChild(alist);
@@ -250,26 +291,60 @@
     }
   }
 
-  // PRIMARY: add_incident_comment via host bridge, then re-render THIS widget
-  // with the refreshed detail. FALLBACK: drive through chat.
+  // PRIMARY: add_incident_comment via the host bridge. If the host no-ops the
+  // call (M365 Copilot can resolve a widget-initiated tool call with an empty
+  // result) or the bridge is unavailable, fall back to driving it through chat
+  // so the comment actually lands. Optimistically shows the comment right away.
   function addComment(sysId, text, number, btn, errEl) {
-    var settled = false;
-    function fallback() {
-      if (settled) return; settled = true;
+    function viaChat() {
       sendFollowUp("Add this comment to incident " + (number || sysId) + ": \"" + text + "\".");
-      if (btn) btn.textContent = "Adding in chat\u2026";
+      pendingBanner = "Comment sent to the agent";
+      var base = lastGood ? Object.assign({}, lastGood) : {};
+      var comments = Array.isArray(base.comments) ? base.comments.slice() : [];
+      if (!comments.some(function (c) { return (c.value || "") === text; })) {
+        comments.push({ value: text, createdBy: "You", createdOn: "" });
+      }
+      base.comments = comments;
+      render(base);
     }
+    if (!sysId) { viaChat(); return; }
     var p;
     try { p = callTool("add_incident_comment", { incidentSysId: sysId, comment: text }); }
-    catch (e) { fallback(); return; }
-    if (!p || typeof p.then !== "function") { fallback(); return; }
+    catch (e) { viaChat(); return; }
+    if (!p || typeof p.then !== "function") { viaChat(); return; }
     p.then(function (result) {
-      if (settled) return; settled = true;
-      var data = unwrapResult(result);
-      if (data && data.success === false) { fallback(); return; }
-      pendingBanner = "Comment added";
-      render(data);
-    }).catch(function () { fallback(); });
+      var c = classify(result);
+      if (c.ok) { pendingBanner = "Comment added"; render(c.data); return; }
+      if (c.error) {
+        if (errEl) { errEl.style.display = "block"; errEl.textContent = c.error; }
+        if (btn) { btn.disabled = false; btn.textContent = "Add comment"; }
+        return;
+      }
+      viaChat();
+    }).catch(function () { viaChat(); });
+  }
+
+  // Remove an attachment via the host bridge, falling back to chat if the host
+  // no-ops the call. Optimistically drops the row so the UI updates instantly.
+  function removeAttachment(sysId, attSysId, fileName, number) {
+    function viaChat() {
+      sendFollowUp("Remove the attachment \"" + (fileName || attSysId) + "\" from incident " + (number || sysId) + ".");
+      pendingBanner = "Removal sent to the agent";
+      var base = lastGood ? Object.assign({}, lastGood) : {};
+      base.attachments = (Array.isArray(base.attachments) ? base.attachments : []).filter(function (a) { return a.sysId !== attSysId; });
+      render(base);
+    }
+    if (!sysId) { viaChat(); return; }
+    var p;
+    try { p = callTool("remove_incident_attachment", { incidentSysId: sysId, attachmentSysId: attSysId }); }
+    catch (e) { viaChat(); return; }
+    if (!p || typeof p.then !== "function") { viaChat(); return; }
+    p.then(function (result) {
+      var c = classify(result);
+      if (c.ok) { pendingBanner = "Attachment removed"; render(c.data); return; }
+      if (c.error) { pendingBanner = null; render(lastGood || {}); return; }
+      viaChat();
+    }).catch(function () { viaChat(); });
   }
 
   // Read the chosen file as base64 and upload it via add_incident_attachment
@@ -303,14 +378,11 @@
         return;
       }
       p.then(function (result) {
-        var data = unwrapResult(result);
-        if (data && data.success === false) {
-          if (errEl) { errEl.style.display = "block"; errEl.textContent = data.error || "Upload failed."; }
-          if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
-          return;
-        }
-        pendingBanner = "File attached";
-        render(data);
+        var c = classify(result);
+        if (c.ok) { pendingBanner = "File attached"; render(c.data); return; }
+        var msg = c.error || "This view couldn't attach the file. Open the incident in ServiceNow to add it.";
+        if (errEl) { errEl.style.display = "block"; errEl.textContent = msg; }
+        if (btn) { btn.disabled = false; btn.textContent = "Attach"; }
       }).catch(function () {
         if (errEl) { errEl.style.display = "block"; errEl.textContent = "Upload failed. Please try again."; }
         if (btn) { btn.disabled = false; btn.textContent = "Attach"; }

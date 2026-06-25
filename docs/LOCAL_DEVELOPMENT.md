@@ -41,7 +41,7 @@ This regenerates MCP Apps widgets and runs TypeScript compilation. **Always run 
 npm test
 ```
 
-Runs the full Vitest suite (243 tests, ~3–5 seconds). All tests must pass before committing.
+Runs the full Vitest suite (247 tests, ~3–5 seconds). All tests must pass before committing.
 
 To run a single test file:
 

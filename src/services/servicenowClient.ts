@@ -1675,6 +1675,43 @@ export class ServiceNowClient {
     }
   }
 
+  /**
+   * Remove a file from an incident via the ServiceNow Attachment API
+   * (DELETE /api/now/attachment/{sys_id}). The attachment is verified to
+   * actually belong to the given incident first, so a caller can't delete
+   * arbitrary `sys_attachment` rows by guessing sys_ids.
+   */
+  async removeIncidentAttachment(incidentSysId: string, attachmentSysId: string): Promise<void> {
+    const client = await this.getClient();
+    try {
+      const meta = await client.get<{ result: Record<string, unknown> | null }>(
+        `/api/now/attachment/${encodeURIComponent(attachmentSysId)}`,
+        { params: { sysparm_fields: "sys_id,table_name,table_sys_id" } }
+      );
+      const row = meta.data.result;
+      if (
+        !row ||
+        String(row.table_name ?? "") !== "incident" ||
+        String(row.table_sys_id ?? "") !== incidentSysId
+      ) {
+        throw new Error("Attachment not found on this incident.");
+      }
+      Logger.info("Removing incident attachment", {
+        operation: "incident.remove_attachment",
+        incidentSysId,
+        attachmentSysId
+      });
+      await client.delete(`/api/now/attachment/${encodeURIComponent(attachmentSysId)}`);
+    } catch (error) {
+      Logger.error("Failed to remove incident attachment", {
+        operation: "incident.remove_attachment_failed",
+        incidentSysId,
+        attachmentSysId
+      }, error);
+      throw error;
+    }
+  }
+
   // ── Cart / basket ─────────────────────────────────────────────────────────
   // ServiceNow maintains a server-side cart keyed to the authenticated user
   // (sys_cart). Because each MCP request forwards the caller's identity

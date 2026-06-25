@@ -7,13 +7,13 @@
 │ Microsoft 365       │        │ ServiceNow MCP       │        │ ServiceNow   │
 │ Copilot / Cowork    │────────│ Server (Azure Fn)    │────────│ Catalog      │
 │                     │        │                      │        │              │
-│ "Order a laptop"    │ OAuth  │ + 20 MCP Tools       │ OAuth  │ + Cart       │
+│ "Order a laptop"    │ OAuth  │ + 21 MCP Tools       │ OAuth  │ + Cart       │
 │ + 8 Widgets         │        │ + 8 SEP-1865 Widgets │        │ + Orders     │
 └─────────────────────┘        └──────────────────────┘        └──────────────┘
 ```
 
 **What you get:**
-- 20 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, report & track incidents, add comments/attachments, validate config
+- 21 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, report & track incidents, add comments/attachments, validate config
 - 8 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail, incident form, my incidents, incident detail
 - Per-user authentication: orders and incidents stamped with the real user (not a service account)
 - Stateless, scalable: Flex Consumption Azure Functions + Node.js 20
@@ -116,7 +116,7 @@ npm run deploy:azure
 - **Secure defaults**: All secrets in Key Vault, no plaintext credentials, Entra-gated endpoints
 - **Stateless**: No session storage; every request validates OAuth token
 
-**Learn more:** [Architecture & Auth Flows](docs/), [Config Reference](docs/), [Per-User ACL / OBO](docs/AUTH_ENTRA_OBO_OKTA.md)
+**Learn more:** [Architecture & Auth Flows](docs/), [Config Reference](docs/), [Per-User ACL / OBO](docs/AUTH_ENTRA_OBO.md)
 
 ---
 
@@ -145,9 +145,9 @@ npm run smoke:test   # validates connectivity + sample flows
 | Topic | Link |
 |-------|------|
 | **Getting Started** | [ServiceNow Setup](docs/SERVICENOW_SETUP.md) • [Deployment](docs/) |
-| **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO_OKTA.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
+| **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
 | **Operations** | [Environment Variables](docs/CONFIG_REFERENCE.md) • [Troubleshooting](docs/TROUBLESHOOTING.md) • [Cost Model](docs/COST_ESTIMATION.md) |
-| **Advanced** | [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO_OKTA.md) • [Agent 365 Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
+| **Advanced** | [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO.md) • [Agent 365 Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
 | **Development** | [Contributing](CONTRIBUTING.md) • [Engineering Guardrails](docs/ENGINEERING_GUARDRAILS.md) • [Build/Test Commands](AGENTS.md) |
 | **Security** | [Security Guidelines](SECURITY.md) • [Code of Conduct](CODE_OF_CONDUCT.md) |
 
@@ -163,15 +163,17 @@ dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - ServiceNow cart flow (`add_to_cart` → `submit_cart`).
 - Per-item order edits (`update_order_item` / `remove_order_item`).
 - Incident management for end users: report a problem, track your incidents,
-  read the comment activity, add a comment, and attach a file/screenshot
+  read the comment activity, add a comment, and attach or remove a file/screenshot
   (`report_incident`, `list_user_incidents`, `get_incident_detail`,
-  `add_incident_comment`, `add_incident_attachment`).
+  `add_incident_comment`, `add_incident_attachment`, `remove_incident_attachment`).
 - Eight MCP Apps (SEP-1865) widgets for Microsoft 365 Copilot / Cowork.
 - Delegated identity attribution (`requested_for` / `opened_by` / `caller_id`).
-- Entra On-Behalf-Of (OBO) token exchange for per-user ServiceNow ACLs (opt-in).
+- Entra On-Behalf-Of (OBO) token exchange so ServiceNow writes run **as the real
+  end user** (per-user ACLs; comments/attachments authored by the user, not the
+  integration account). Config-only via `ENTRA_OBO_ENABLED` +
+  `ENTRA_OBO_DOWNSTREAM_SCOPE` — see [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md).
 
 **Next**
-- Promote OBO from opt-in to a documented, first-class deployment profile.
 - Approval actions (approve / reject) surfaced in the order-detail widget.
 - Attachment upload on catalog requests.
 - Richer catalog faceting (category browse, variable validation hints).
@@ -179,7 +181,7 @@ dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Later / exploring**
 - Additional MCP hosts beyond Microsoft 365 Copilot (IDE clients, CLI agents).
-- Optional Okta / non-Entra identity brokering (see [docs/AUTH_ENTRA_OBO_OKTA.md](docs/AUTH_ENTRA_OBO_OKTA.md)).
+- Optional Okta / non-Entra identity brokering (see [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md)).
 - Multi-instance / multi-tenant ServiceNow routing.
 
 Have an idea? Open an issue using the

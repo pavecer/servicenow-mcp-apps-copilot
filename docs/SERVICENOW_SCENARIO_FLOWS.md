@@ -6,7 +6,7 @@ touches, and which MCP Apps widget it renders. It is the runtime companion to:
 
 - [README.md](../README.md) — tool inventory and deployment map
 - [docs/M365_COPILOT_MCP_APPS.md](M365_COPILOT_MCP_APPS.md) — SEP-1865 widget rendering
-- [docs/AUTH_ENTRA_OBO_OKTA.md](AUTH_ENTRA_OBO_OKTA.md) — per-user identity (OBO / caller token)
+- [docs/AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md) — per-user identity (OBO / caller token)
 - [docs/SERVICENOW_SETUP.md](SERVICENOW_SETUP.md) — OAuth app, integration user, roles
 
 > Everything below is **stateless**: each tool call is one HTTP `POST /mcp`. The
@@ -18,7 +18,7 @@ touches, and which MCP Apps widget it renders. It is the runtime companion to:
 ## Identity on every call
 
 Before any flow runs, the server resolves the ServiceNow identity for the call in
-this priority order (see [AUTH_ENTRA_OBO_OKTA.md](AUTH_ENTRA_OBO_OKTA.md) for detail):
+this priority order (see [AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md) for detail):
 
 1. **Caller ServiceNow token** — `x-servicenow-access-token` header, used as-is.
 2. **Entra OBO exchange** — when `ENTRA_OBO_ENABLED=true`, the inbound user Entra
@@ -51,7 +51,7 @@ fallback entirely, so a missing caller identity fails closed.
 | Report incident | `POST /api/now/table/incident` | `incident` |
 | List / read incidents | `GET /api/now/table/incident` (caller_id scoped) | `incident` |
 | Add incident comment | `PATCH /api/now/table/incident/{id}` (`comments`) | `incident` |
-| Incident attachments | `GET /api/now/attachment` · `POST /api/now/attachment/file` | `sys_attachment` |
+| Incident attachments | `GET /api/now/attachment` · `POST /api/now/attachment/file` · `DELETE /api/now/attachment/{id}` | `sys_attachment` |
 | Identity lookup | `GET /api/now/table/sys_user` | `sys_user` |
 
 > Reference fields on read paths (`get_order_detail`, etc.) are fetched with
@@ -345,7 +345,7 @@ sequenceDiagram
 
 ## Scenario 11 — Comment on & attach to an incident
 
-**Tools:** `add_incident_comment` · `add_incident_attachment` → incident-detail
+**Tools:** `add_incident_comment` · `add_incident_attachment` · `remove_incident_attachment` → incident-detail
 
 ```mermaid
 sequenceDiagram
@@ -357,6 +357,9 @@ sequenceDiagram
     U->>S: add_incident_attachment(incidentSysId, fileName, contentType, dataBase64)
     S->>SN: POST /api/now/attachment/file (raw bytes, max 5 MB)
     SN-->>S: updated incident + attachment
+    U->>S: remove_incident_attachment(incidentSysId, attachmentSysId)
+    S->>SN: DELETE /api/now/attachment/{attachmentSysId}
+    SN-->>S: updated incident
     S-->>U: incident-detail widget (re-rendered)
 ```
 
@@ -366,8 +369,17 @@ sequenceDiagram
   authenticated channel a sandboxed widget has), decodes it to raw bytes, enforces a
   **5 MB** cap, and POSTs to `/api/now/attachment/file`. The incident-detail and
   my-incidents widgets expose a file picker + attachment list for this.
-- Both re-fetch and re-render the **incident-detail** widget so the comment/attachment
-  appears immediately.
+- `remove_incident_attachment` deletes an attachment by its `sys_id` after verifying it
+  belongs to the target incident (`table_name === "incident"` and matching
+  `table_sys_id`), guarding against deleting attachments on unrelated records. The
+  attachment list exposes a **Remove** button per file.
+- All three re-fetch and re-render the **incident-detail** widget so the comment/attachment
+  changes appear immediately.
+- **Authorship:** when Entra OBO is enabled (`ENTRA_OBO_ENABLED=true`, see
+  [AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md)), these writes run **as the real
+  end user**, so the comment author and attachment uploader (`sys_created_by`) are
+  the user — not the integration account. Without OBO they are authored by the
+  integration user (the incident's `caller_id`/`opened_by` are still the real user).
 
 ---
 
@@ -394,6 +406,7 @@ sequenceDiagram
 | `get_incident_detail` | incident-detail | `GET /table/incident/{id}` (comments from the record journal) |
 | `add_incident_comment` | incident-detail | `PATCH /table/incident/{id}` (comments) |
 | `add_incident_attachment` | incident-detail | `POST /api/now/attachment/file` |
+| `remove_incident_attachment` | incident-detail | `DELETE /api/now/attachment/{id}` |
 | `validate_servicenow_config` | — | `GET /servicecatalog/items` (probe) |
 
 > MCP Apps is always on: the cart, order-item, and incident tools (and all
@@ -406,4 +419,5 @@ sequenceDiagram
 > track it → `add_incident_comment` adds a customer-visible comment. Incidents
 > are attributed to the real end user via `caller_id` and the list/detail views
 > are scoped to the caller's own incidents. The detail widget also lets the user
-> attach a file/screenshot (`add_incident_attachment`, max 5 MB).
+> attach a file/screenshot (`add_incident_attachment`, max 5 MB) or remove one
+> (`remove_incident_attachment`).

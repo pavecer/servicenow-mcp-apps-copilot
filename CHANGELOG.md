@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is required.
 
 ### Added
+- **Per-user authorship via Entra OBO (Pattern A) — enabled.** ServiceNow writes
+  now run **as the real end user** when `ENTRA_OBO_ENABLED=true`, so incident
+  comments and attachments are authored by the user (`sys_created_by`) instead of
+  the integration account. The OBO exchange ([src/services/oboTokenService.ts](src/services/oboTokenService.ts))
+  was already implemented; enabling it is configuration only
+  (`ENTRA_OBO_DOWNSTREAM_SCOPE` + an Entra app permission + a ServiceNow inbound
+  OIDC trust). The dev deployment reuses an existing trusted audience rather than
+  adding new ServiceNow records. See [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md).
+- **Remove incident attachments (MCP Apps).** New `remove_incident_attachment`
+  tool plus a **Remove** button on each attachment in the incident-detail and
+  my-incidents widgets. The server verifies the attachment belongs to the target
+  incident before deleting it. The server now exposes 21 tools and 8 widgets.
+- **Resilient incident widgets.** The incident-detail and my-incidents widgets no
+  longer blank out the detail when a host returns an empty widget-initiated tool
+  result (observed in M365 Copilot); they retain the last good detail, classify
+  results robustly, and fall back to a chat-driven follow-up so comments and
+  attachment changes always land.
 - **Incident management for end users (MCP Apps).** Six new tools —
   `get_incident_form`, `report_incident`, `list_user_incidents`,
   `get_incident_detail`, `add_incident_comment`, `add_incident_attachment` —

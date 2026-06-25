@@ -61,7 +61,8 @@ describe("MCP Apps surface", () => {
       ["get_incident_detail", /incident-detail\.html$/],
       ["report_incident", /incident-detail\.html$/],
       ["add_incident_comment", /incident-detail\.html$/],
-      ["add_incident_attachment", /incident-detail\.html$/]
+      ["add_incident_attachment", /incident-detail\.html$/],
+      ["remove_incident_attachment", /incident-detail\.html$/]
     ]);
     for (const def of defs) {
       const meta = (def as { _meta?: { ui?: { resourceUri?: string; visibility?: string[] } } })._meta;

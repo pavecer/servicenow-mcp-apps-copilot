@@ -1,6 +1,12 @@
-# Per-user authentication patterns for the ServiceNow MCP server
+# Per-user authentication (Entra On-Behalf-Of) for the ServiceNow MCP server
 
-This document describes two end-to-end authentication architectures for giving each user their own ServiceNow identity through this MCP server, and how each one enables silent SSO instead of a per-user OAuth connection prompt.
+This document describes how each user gets their own ServiceNow identity through
+this MCP server via Entra **On-Behalf-Of (OBO)**, enabling silent SSO instead of a
+per-user OAuth connection prompt.
+
+**Pattern A (Entra direct) is the implemented and deployed path.** Pattern B
+(Okta in front of ServiceNow) is included as a design reference only — it has
+**not been built or tested** in this repo; treat it as theoretical guidance.
 
 It complements:
 
@@ -11,9 +17,16 @@ It complements:
 >
 > | Pattern | ServiceNow IdP | Per-user prompt | Per-user SN identity | Changes to repo | Changes to ServiceNow |
 > |---|---|---|---|---|---|
-> | **Current** (this repo today) | ServiceNow OAuth (password grant, integration user) | Yes (one-time / channel) | Attribution via `requested_for` only | None — already wired | None |
-> | **Pattern A — Entra OBO direct** | Entra ID (added as OIDC IdP in ServiceNow) | **None** (silent SSO) | Yes — per user, native | Add OBO token exchange in `tokenManager.ts`; flip connector | Add Entra as OIDC provider |
-> | **Pattern B — Entra OBO via Okta** | Okta (existing) | **None** (silent SSO) | Yes — per user, native | Add JWT-Bearer exchange call to Okta; flip connector | None (Okta config only) |
+> | **Current fallback** | ServiceNow OAuth (password grant, integration user) | Yes (one-time / channel) | Attribution via `requested_for` only | None — already wired | None |
+> | **Pattern A — Entra OBO direct** ✅ **deployed** | Entra ID (added as OIDC IdP in ServiceNow) | **None** (silent SSO) | Yes — per user, native | Already implemented (`oboTokenService.ts`) — set env + flip connector | Add Entra as OIDC provider |
+> | **Pattern B — Entra OBO via Okta** | Okta (existing) | **None** (silent SSO) | Yes — per user, native | Reuses the same `oboTokenService.ts` exchange (Okta as the IdP) | None (Okta config only) |
+>
+> **As deployed (this repo's dev):** Pattern A is **live** on `func-yj453fjwuhph4`.
+> The inbound server app (`f99cb568…`, `api://f99cb568…`) OBO-exchanges to the
+> already-trusted downstream audience `api://8d73a1f1…/ServiceNow.Use`, which
+> ServiceNow's `Entra MCP OBO` OIDC registry validates and maps
+> `preferred_username`→`sys_user.email`. Set via `ENTRA_OBO_ENABLED=true` +
+> `ENTRA_OBO_DOWNSTREAM_SCOPE`.
 
 ---
 
@@ -37,10 +50,11 @@ The MCP server is **already a fully compliant Entra-protected OAuth resource**. 
 | Multi-tenant token acceptance (`ENTRA_TRUSTED_TENANT_IDS`, `ENTRA_ALLOW_ANY_TENANT`) | [src/config.ts](../src/config.ts) | ✅ |
 | Custom App ID URIs (`ENTRA_ALLOWED_AUDIENCES`) | [src/config.ts](../src/config.ts) | ✅ |
 | `requested_for` attribution from Entra `upn` / `oid` | [src/services/servicenowClient.ts](../src/services/servicenowClient.ts) | ✅ |
-| Optional "no fallback to integration user" enforcement (`SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN`) | [src/config.ts](../src/config.ts), [infra/main.bicep](../infra/main.bicep) | ✅ wired, awaiting downstream OBO implementation |
-| Per-user ServiceNow token via `x-servicenow-access-token` header | [src/config.ts](../src/config.ts) | ✅ contract reserved; **implementation hook missing in [tokenManager.ts](../src/services/tokenManager.ts)** |
+| Optional "no fallback to integration user" enforcement (`SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN`) | [src/config.ts](../src/config.ts), [infra/main.bicep](../infra/main.bicep) | ✅ wired (kept `false` in dev so unmapped users still work) |
+| Per-user ServiceNow token via `x-servicenow-access-token` header | [src/config.ts](../src/config.ts), [src/services/servicenowClient.ts](../src/services/servicenowClient.ts) | ✅ honored first in the request interceptor |
+| **Entra OBO downstream exchange** (Pattern A) | [src/services/oboTokenService.ts](../src/services/oboTokenService.ts) | ✅ **implemented + deployed** (MSAL `acquireTokenOnBehalfOf`, per-user cache, single-flight) |
 
-The only code that needs to change to enable either Pattern A or Pattern B is in [src/services/tokenManager.ts](../src/services/tokenManager.ts): replace (or augment) the ServiceNow password-grant call with an OBO-driven exchange. Everything else — middleware, config, identity extraction, `requested_for`, Bicep parameters — stays as is.
+The OBO downstream exchange is **already implemented** in [src/services/oboTokenService.ts](../src/services/oboTokenService.ts) and invoked from the ServiceNow client's request interceptor ([src/services/servicenowClient.ts](../src/services/servicenowClient.ts)). Enabling either pattern is now **configuration only** — set `ENTRA_OBO_ENABLED=true` and `ENTRA_OBO_DOWNSTREAM_SCOPE`, plus the Entra app permission + the ServiceNow OIDC trust. Everything else — middleware, config, identity extraction, `requested_for`, Bicep parameters — stays as is.
 
 ---
 
@@ -158,29 +172,40 @@ Register a second Entra App ID URI **on the Server App** that represents the Ser
 
 ### Code change in this repo
 
-In [src/services/tokenManager.ts](../src/services/tokenManager.ts), add a second method that runs only when a caller token is available:
+**Already implemented** — no code change required. The downstream exchange lives in
+[src/services/oboTokenService.ts](../src/services/oboTokenService.ts)
+(`getDownstreamTokenForCaller`, MSAL `acquireTokenOnBehalfOf` with a per-user
+token cache + single-flight guard). The ServiceNow client's request interceptor
+([src/services/servicenowClient.ts](../src/services/servicenowClient.ts)) resolves
+the per-request bearer in this order:
+
+1. `x-servicenow-access-token` header (explicit caller-provided SN token), then
+2. **OBO exchange** of the inbound Entra user token when `ENTRA_OBO_ENABLED=true`
+   and `ENTRA_OBO_DOWNSTREAM_SCOPE` is set, then
+3. the integration-user password grant (fallback).
 
 ```typescript
-import { ConfidentialClientApplication } from "@azure/msal-node";
-
-async getAccessTokenForCaller(callerAccessToken: string): Promise<string> {
-  const msal = new ConfidentialClientApplication({
-    auth: {
-      clientId: config.entraAuth.clientId!,
-      authority: `https://login.microsoftonline.com/${config.entraAuth.tenantId}`,
-      clientSecret: config.entraAuth.clientSecret!, // or federated credential
-    },
-  });
-  const result = await msal.acquireTokenOnBehalfOf({
-    oboAssertion: callerAccessToken,
-    scopes: [`api://${config.entraAuth.clientId}/ServiceNow.Use`],
-  });
-  if (!result?.accessToken) throw new Error("OBO exchange failed");
-  return result.accessToken;
-}
+// src/services/oboTokenService.ts (excerpt)
+const result = await msal.acquireTokenOnBehalfOf({
+  oboAssertion: req.callerAccessToken,            // inbound user token (aud = server app)
+  scopes: [config.entraAuth.oboDownstreamScope],  // e.g. api://<api-app>/ServiceNow.Use
+});
 ```
 
-Wire `ServiceNowClient` to prefer this path when `res.locals.callerAccessToken` is set and `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true`, falling back to the existing integration-user grant otherwise. No changes to the REST calls themselves — they already pass `Authorization: Bearer <token>`.
+> ⚠️ **No fallback after a successful exchange.** If the OBO exchange *succeeds*
+> but ServiceNow then rejects the token (HTTP 401 — e.g. the user's
+> `preferred_username` doesn't match any `sys_user.email`), the tool call fails;
+> the integration-user fallback only triggers when the *exchange itself* fails.
+> So (a) every agent user's Entra UPN must map to a `sys_user`, and (b) never
+> enable OBO before ServiceNow trusts the downstream audience.
+
+**Tip — reuse an existing trusted audience.** You don't have to make ServiceNow
+trust the server app directly. If ServiceNow already trusts another Entra app
+(an "API"/resource app) for inbound OIDC, point `ENTRA_OBO_DOWNSTREAM_SCOPE` at
+*that* app's scope and grant the server app delegated access to it. That's how
+this repo's dev is wired: server app `f99cb568…` exchanges to
+`api://8d73a1f1…/ServiceNow.Use`, reusing the pre-existing `Entra MCP OBO`
+registry — zero new ServiceNow records.
 
 ### Trade-offs
 
@@ -193,6 +218,12 @@ Wire `ServiceNowClient` to prefer this path when `res.locals.callerAccessToken` 
 ---
 
 ## Pattern B — Entra OBO with Okta in front of ServiceNow
+
+> ⚠️ **Untested / theoretical.** This pattern has not been implemented or
+> validated in this repo. The deployed solution uses **Pattern A** (Entra direct).
+> The notes below are a starting point should you ever need Okta as the
+> ServiceNow-facing IdP — verify every step against your Okta org before relying
+> on it.
 
 **When to choose this**: your enterprise standard is **Okta** as the IdP for SaaS apps including ServiceNow, and you cannot (or don't want to) introduce a second IdP into the ServiceNow trust configuration. This is common in large enterprises where Okta is the corporate identity hub and Microsoft 365 / Entra is downstream.
 
@@ -246,7 +277,7 @@ ServiceNow is **unchanged**. Okta becomes a *token broker* between Entra (who au
 
 ### Code change in this repo
 
-In [src/services/tokenManager.ts](../src/services/tokenManager.ts), add an Okta token exchange method:
+In [src/services/oboTokenService.ts](../src/services/oboTokenService.ts), the Okta exchange would replace the Entra `acquireTokenOnBehalfOf` call with an Okta token-exchange request:
 
 ```typescript
 async getAccessTokenForCallerViaOkta(callerAccessToken: string): Promise<string> {

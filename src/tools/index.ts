@@ -25,6 +25,7 @@ import { registerListUserIncidentsTool } from "./listUserIncidents";
 import { registerGetIncidentDetailTool } from "./getIncidentDetail";
 import { registerAddIncidentCommentTool } from "./addIncidentComment";
 import { registerAddIncidentAttachmentTool } from "./addIncidentAttachment";
+import { registerRemoveIncidentAttachmentTool } from "./removeIncidentAttachment";
 import { getWidgetForTool, registerWidgetResources } from "../ui/widgets";
 /**
  * Single source of truth for the names of MCP tools this server exposes.
@@ -79,7 +80,8 @@ const INCIDENT_TOOL_NAMES = [
   "list_user_incidents",
   "get_incident_detail",
   "add_incident_comment",
-  "add_incident_attachment"
+  "add_incident_attachment",
+  "remove_incident_attachment"
 ] as const;
 
 export type RegisteredToolName =
@@ -569,6 +571,25 @@ export function getMinimalToolDefinitions() {
         },
         required: ["incidentSysId", "fileName", "contentType", "dataBase64"]
       }
+    },
+    {
+      name: "remove_incident_attachment",
+      description: "Remove a file previously attached to one of the user's ServiceNow incidents.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {
+          incidentSysId: {
+            type: "string",
+            description: "The sys_id of the incident the attachment belongs to"
+          },
+          attachmentSysId: {
+            type: "string",
+            description: "The sys_id of the attachment to remove"
+          }
+        },
+        required: ["incidentSysId", "attachmentSysId"]
+      }
     }
   );
 
@@ -627,6 +648,7 @@ export function registerTools(
   registerGetIncidentDetailTool(server, client);
   registerAddIncidentCommentTool(server, client);
   registerAddIncidentAttachmentTool(server, client);
+  registerRemoveIncidentAttachmentTool(server, client);
 
   // SEP-1865 widget resources.
   registerWidgetResources(server);

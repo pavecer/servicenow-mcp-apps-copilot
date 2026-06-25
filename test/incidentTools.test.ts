@@ -7,6 +7,7 @@ import { registerListUserIncidentsTool } from "../src/tools/listUserIncidents";
 import { registerGetIncidentDetailTool } from "../src/tools/getIncidentDetail";
 import { registerAddIncidentCommentTool } from "../src/tools/addIncidentComment";
 import { registerAddIncidentAttachmentTool } from "../src/tools/addIncidentAttachment";
+import { registerRemoveIncidentAttachmentTool } from "../src/tools/removeIncidentAttachment";
 import { getMinimalToolDefinitions } from "../src/tools/index";
 
 interface RegisteredTool {
@@ -42,11 +43,13 @@ const DETAIL = {
 };
 
 describe("incident tool manifest", () => {
-  it("manifest includes the six incident tools with the right widget bindings", () => {
+  it("manifest includes the seven incident tools with the right widget bindings", () => {
     const byName = Object.fromEntries(getMinimalToolDefinitions().map(t => [t.name, t]));
-    for (const name of ["get_incident_form", "report_incident", "list_user_incidents", "get_incident_detail", "add_incident_comment", "add_incident_attachment"]) {
+    for (const name of ["get_incident_form", "report_incident", "list_user_incidents", "get_incident_detail", "add_incident_comment", "add_incident_attachment", "remove_incident_attachment"]) {
       expect(byName[name]).toBeDefined();
     }
+    const removeMeta = byName.remove_incident_attachment._meta as { ui?: { resourceUri?: string } };
+    expect(removeMeta?.ui?.resourceUri).toBe("ui://servicenow-mcp/incident-detail.html");
     const meta = byName.get_incident_form._meta as Record<string, unknown> | undefined;
     expect((meta as Record<string, unknown>)["ui/resourceUri"]).toBe("ui://servicenow-mcp/incident-form.html");
     const listMeta = byName.list_user_incidents._meta as { ui?: { resourceUri?: string } };
@@ -106,6 +109,7 @@ describe("incident tool handlers", () => {
   let getIncidentDetail: ReturnType<typeof vi.fn>;
   let addIncidentComment: ReturnType<typeof vi.fn>;
   let addIncidentAttachment: ReturnType<typeof vi.fn>;
+  let removeIncidentAttachment: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     createIncident = vi.fn().mockResolvedValue({ number: "INC0012345", sys_id: "inc-sys-1" });
@@ -115,12 +119,14 @@ describe("incident tool handlers", () => {
     getIncidentDetail = vi.fn().mockResolvedValue(DETAIL);
     addIncidentComment = vi.fn().mockResolvedValue(undefined);
     addIncidentAttachment = vi.fn().mockResolvedValue({ sysId: "att-2", fileName: "shot.png", contentType: "image/png", sizeBytes: "10", downloadLink: "x" });
+    removeIncidentAttachment = vi.fn().mockResolvedValue(undefined);
     fakeClient = {
       createIncident,
       listUserIncidents,
       getIncidentDetail,
       addIncidentComment,
-      addIncidentAttachment
+      addIncidentAttachment,
+      removeIncidentAttachment
     } as unknown as ServiceNowClient;
   });
 
@@ -204,6 +210,31 @@ describe("incident tool handlers", () => {
     expect(call[1].data.toString()).toBe("hello");
     expect(getIncidentDetail).toHaveBeenCalledWith("inc-sys-1");
     expect(result.structuredContent?.attachments).toHaveLength(1);
+  });
+
+  it("remove_incident_attachment removes the file then re-renders detail", async () => {
+    const fake = createFakeServer();
+    registerRemoveIncidentAttachmentTool(fake.server as never, fakeClient);
+    const result = (await fake.tools[0].handler({
+      incidentSysId: "inc-sys-1",
+      attachmentSysId: "att-1"
+    })) as { structuredContent?: { attachments?: unknown[] } };
+    expect(removeIncidentAttachment).toHaveBeenCalledWith("inc-sys-1", "att-1");
+    expect(getIncidentDetail).toHaveBeenCalledWith("inc-sys-1");
+    expect(result.structuredContent?.attachments).toHaveLength(1);
+  });
+
+  it("remove_incident_attachment surfaces failures as an error envelope", async () => {
+    removeIncidentAttachment.mockRejectedValueOnce(new Error("attachment not found"));
+    const fake = createFakeServer();
+    registerRemoveIncidentAttachmentTool(fake.server as never, fakeClient);
+    const result = (await fake.tools[0].handler({
+      incidentSysId: "inc-sys-1",
+      attachmentSysId: "att-x"
+    })) as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0].text) as Record<string, unknown>;
+    expect(payload.success).toBe(false);
+    expect(String(payload.error)).toMatch(/not found/i);
   });
 
   it("add_incident_attachment rejects an oversized file", async () => {

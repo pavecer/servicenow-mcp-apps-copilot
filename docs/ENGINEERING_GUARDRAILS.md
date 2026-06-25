@@ -79,7 +79,7 @@ logger.info("Calling ServiceNow API", { endpoint, method });  // Safe to log
 
 ### Per-User Enforcement:
 - ✅ Prefer delegated/OBO token exchange when enterprise policy requires per-user ACLs
-- ✅ Document the OBO setup: see [AUTH_ENTRA_OBO_OKTA.md](AUTH_ENTRA_OBO_OKTA.md)
+- ✅ Document the OBO setup: see [AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md)
 - ❌ Don't add Microsoft Graph permissions unless critical
 
 ---
@@ -180,7 +180,7 @@ git diff HEAD  # Review what you're committing
 1. **Security**: No secrets, tokens, passwords, or PII in tracked files or logs ✅
 2. **Configuration**: New env vars are in `local.settings.sample.json` and documented ✅
 3. **Permissions**: New ServiceNow/Entra permissions are justified and documented ✅
-4. **Tests**: All 243 tests pass; no test count changed unexpectedly ✅
+4. **Tests**: All 247 tests pass; no test count changed unexpectedly ✅
 5. **Docs**: README/docs updated if behavior changed ✅
 6. **Backward Compatibility**: Old MCP clients still work (no breaking tool/schema changes) ✅
 
@@ -192,7 +192,7 @@ These are checked by the test suite and will fail if violated:
 
 | Invariant | Test | Reason |
 |-----------|------|--------|
-| Tool count exact (20 MCP tools) | `test/toolManifest.test.ts` | Prevents accidental tool registration |
+| Tool count exact (21 MCP tools) | `test/toolManifest.test.ts` | Prevents accidental tool registration |
 | Widget count exact (8 SEP-1865 widgets) | `test/widgetResources.test.ts` | Ensures all widgets are tracked |
 | MCP Apps surface wiring | `test/mcpAppsSurface.test.ts` | Widget registry, `_meta.ui` binding, and resource registration stay wired |
 | Tool schema matches Zod | `test/toolManifest.test.ts` | Prevents invalid tool definitions |

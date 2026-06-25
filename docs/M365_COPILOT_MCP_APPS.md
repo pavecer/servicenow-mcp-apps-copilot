@@ -167,7 +167,7 @@ gated behind two app settings (off by default):
 Enabling it is **configuration**, not code, but has real external dependencies:
 ServiceNow must trust Entra as an OIDC provider, users must map to a `sys_user`,
 and per-user ServiceNow ACLs then apply. **Pilot in a test ServiceNow instance
-first.** Full runbook: [`docs/AUTH_ENTRA_OBO_OKTA.md`](AUTH_ENTRA_OBO_OKTA.md)
+first.** Full runbook: [`docs/AUTH_ENTRA_OBO.md`](AUTH_ENTRA_OBO.md)
 and the journal's *"last task"* section.
 
 ## Build & validate

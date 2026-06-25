@@ -89,7 +89,7 @@ export const config = {
     allowedAudiences: process.env.ENTRA_ALLOWED_AUDIENCES
       ? process.env.ENTRA_ALLOWED_AUDIENCES.split(",").map(a => a.trim()).filter(Boolean)
       : [],
-    // On-Behalf-Of (OBO) token exchange (Pattern A in docs/AUTH_ENTRA_OBO_OKTA.md).
+    // On-Behalf-Of (OBO) token exchange (Pattern A in docs/AUTH_ENTRA_OBO.md).
     // When true, the inbound user Entra Bearer token is exchanged via MSAL
     // `acquireTokenOnBehalfOf` for a downstream token whose audience ServiceNow
     // accepts (ServiceNow must be configured with Entra ID as an OIDC provider).

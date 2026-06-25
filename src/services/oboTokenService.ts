@@ -4,7 +4,7 @@ import Logger from "../utils/logger";
 
 // On-Behalf-Of (OBO) token exchange service.
 //
-// Implements Pattern A from docs/AUTH_ENTRA_OBO_OKTA.md: swap the inbound
+// Implements Pattern A from docs/AUTH_ENTRA_OBO.md: swap the inbound
 // Entra user access token (audience = this MCP server) for a downstream
 // access token (audience configured via ENTRA_OBO_DOWNSTREAM_SCOPE) that
 // ServiceNow will accept once it is configured with Entra ID as an OIDC

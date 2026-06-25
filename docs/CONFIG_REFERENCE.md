@@ -59,7 +59,7 @@ All configuration is managed via environment variables. Secrets are stored in Az
 
 ### On-Behalf-Of (OBO) Token Exchange
 
-See [AUTH_ENTRA_OBO_OKTA.md](AUTH_ENTRA_OBO_OKTA.md) for detailed setup.
+See [AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md) for detailed setup.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -138,7 +138,7 @@ azd up
 - **Secure Dynamic Client Registration** — always set `ENTRA_DCR_REGISTRATION_TOKEN` in enterprise
 - **Keep `ENTRA_DCR_ALLOW_UNAUTHENTICATED=false`** unless intentional
 - **Disable PII diagnostics** — keep `SERVICENOW_REQUESTED_FOR_DIAGNOSTICS_INCLUDE_PII=false` unless actively troubleshooting
-- **Prefer per-user ACLs** — use `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` when policy demands user-level enforcement (see [AUTH_ENTRA_OBO_OKTA.md](AUTH_ENTRA_OBO_OKTA.md))
+- **Prefer per-user ACLs** — use `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` when policy demands user-level enforcement (see [AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md))
 - **Use Key Vault** — store all secrets there and read via managed identity, never in plaintext
 
 ## Troubleshooting Config Issues

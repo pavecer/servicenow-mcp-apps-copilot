@@ -786,6 +786,43 @@
             "annotations": {
                 "readOnlyHint": true
             }
+        },
+        {
+            "name": "remove_incident_attachment",
+            "description": "Remove a file previously attached to one of the user's ServiceNow incidents. Re-renders the incident-detail widget without the removed attachment.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "incidentSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the incident the attachment belongs to"
+                    },
+                    "attachmentSysId": {
+                        "type": "string",
+                        "description": "The sys_id of the attachment to remove"
+                    }
+                },
+                "required": [
+                    "incidentSysId",
+                    "attachmentSysId"
+                ]
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/incident-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/incident-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            },
+            "annotations": {
+                "readOnlyHint": true
+            }
         }
     ]
 }

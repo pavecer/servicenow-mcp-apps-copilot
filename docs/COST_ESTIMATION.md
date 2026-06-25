@@ -166,7 +166,7 @@ If a customer asks "what does the Azure side cost per transaction?", the safe an
 ## 4. Where these numbers come from
 
 - **Azure pricing meters**: [Azure Functions pricing](https://azure.microsoft.com/pricing/details/functions/), [Storage](https://azure.microsoft.com/pricing/details/storage/blobs/), [Key Vault](https://azure.microsoft.com/pricing/details/key-vault/), [Log Analytics](https://azure.microsoft.com/pricing/details/monitor/), [Bandwidth](https://azure.microsoft.com/pricing/details/bandwidth/) — all checked against the West Europe rate card.
-- **Empirical timings**: production-shaped deployment in the tenant where the OBO rollout was validated (see `docs/AUTH_ENTRA_OBO_OKTA.md`). Wall-clock per call measured via App Insights, with the ServiceNow round-trip being the dominant component.
+- **Empirical timings**: production-shaped deployment in the tenant where the OBO rollout was validated (see `docs/AUTH_ENTRA_OBO.md`). Wall-clock per call measured via App Insights, with the ServiceNow round-trip being the dominant component.
 
 ---
 
