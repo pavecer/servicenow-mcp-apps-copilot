@@ -71,7 +71,7 @@ npm run deploy:azure
 
 **For detailed steps, see:**
 - [ServiceNow Setup](docs/SERVICENOW_SETUP.md)
-- [Entra ID Configuration](docs/) (within Deployment guide)
+- [Entra ID Configuration](docs/AUTH_ENTRA_OBO.md)
 - [M365 Copilot Integration](docs/M365_COPILOT_MCP_APPS.md)
 - [Container Deployment (Optional)](docs/DEPLOY_CONTAINER_AZURE.md)
 - [Agent 365 Registration (Optional)](docs/AGENT_365_BYO_MCP.md)
@@ -116,7 +116,7 @@ npm run deploy:azure
 - **Secure defaults**: All secrets in Key Vault, no plaintext credentials, Entra-gated endpoints
 - **Stateless**: No session storage; every request validates OAuth token
 
-**Learn more:** [Architecture & Auth Flows](docs/), [Config Reference](docs/), [Per-User ACL / OBO](docs/AUTH_ENTRA_OBO.md)
+**Learn more:** [Architecture & Auth Flows](docs/SERVICENOW_SCENARIO_FLOWS.md), [Config Reference](docs/CONFIG_REFERENCE.md), [Per-User ACL / OBO](docs/AUTH_ENTRA_OBO.md)
 
 ---
 
@@ -144,7 +144,7 @@ npm run smoke:test   # validates connectivity + sample flows
 
 | Topic | Link |
 |-------|------|
-| **Getting Started** | [ServiceNow Setup](docs/SERVICENOW_SETUP.md) • [Deployment](docs/) |
+| **Getting Started** | [ServiceNow Setup](docs/SERVICENOW_SETUP.md) • [Deployment](#quick-start) |
 | **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
 | **Operations** | [Environment Variables](docs/CONFIG_REFERENCE.md) • [Troubleshooting](docs/TROUBLESHOOTING.md) • [Cost Model](docs/COST_ESTIMATION.md) |
 | **Advanced** | [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO.md) • [Agent 365 Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
