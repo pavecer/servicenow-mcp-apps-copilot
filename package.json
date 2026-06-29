@@ -38,7 +38,7 @@
     "@azure/msal-node": "^5.2.1",
     "@modelcontextprotocol/ext-apps": "^1.7.4",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "axios": "^1.16.0",
+    "axios": "^1.18.1",
     "express": "^4.22.1",
     "serverless-http": "^4.0.0",
     "zod": "^4.4.3"
