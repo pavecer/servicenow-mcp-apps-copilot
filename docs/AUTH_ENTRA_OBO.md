@@ -228,8 +228,7 @@ downstream audience was accepted again:
 2. Discovery URL: `https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/v2.0/.well-known/openid-configuration`
 3. User claim: `preferred_username`
 4. User field: `email`
-5. OIDC entity client ID / audience:
-  `8d73a1f1-5a04-42dd-bbdc-5da72feb6fc5`
+5. OIDC entity client ID / audience: `8d73a1f1-5a04-42dd-bbdc-5da72feb6fc5`
 
 After restoring those records and re-enabling the Function App settings
 `ENTRA_OBO_ENABLED=true` and
