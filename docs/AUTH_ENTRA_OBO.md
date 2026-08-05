@@ -225,8 +225,7 @@ The fix on the new instance was to restore the inbound OIDC trust objects so the
 downstream audience was accepted again:
 
 1. Provider configuration name: `Entra MCP OBO`
-2. Discovery URL:
-  `https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/v2.0/.well-known/openid-configuration`
+2. Discovery URL: `https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/v2.0/.well-known/openid-configuration`
 3. User claim: `preferred_username`
 4. User field: `email`
 5. OIDC entity client ID / audience:
