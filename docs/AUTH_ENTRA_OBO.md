@@ -28,6 +28,12 @@ It complements:
 > `preferred_username`→`sys_user.email`. Set via `ENTRA_OBO_ENABLED=true` +
 > `ENTRA_OBO_DOWNSTREAM_SCOPE`.
 
+> **Latest verified state (2026-08-05):** After migrating to ServiceNow
+> `dev351709`, the inbound OIDC trust had to be recreated/repaired on the new
+> instance. Live deployed validation now passes again in OBO mode, including
+> catalog access and incident comment authorship through the caller's mapped
+> ServiceNow identity.
+
 ---
 
 ## Why this matters
@@ -206,6 +212,29 @@ trust the server app directly. If ServiceNow already trusts another Entra app
 this repo's dev is wired: server app `f99cb568…` exchanges to
 `api://8d73a1f1…/ServiceNow.Use`, reusing the pre-existing `Entra MCP OBO`
 registry — zero new ServiceNow records.
+
+### New-instance recovery note (`dev351709`)
+
+When the repo was moved to ServiceNow `dev351709`, OBO initially failed in a
+specific way:
+
+- Entra OBO exchange succeeded.
+- ServiceNow catalog APIs still returned HTTP 401.
+
+The fix on the new instance was to restore the inbound OIDC trust objects so the
+downstream audience was accepted again:
+
+1. Provider configuration name: `Entra MCP OBO`
+2. Discovery URL: `https://login.microsoftonline.com/1938ee32-a258-454c-b8db-3a928341bd69/v2.0/.well-known/openid-configuration`
+3. User claim: `preferred_username`
+4. User field: `email`
+5. OIDC entity client ID / audience: `8d73a1f1-5a04-42dd-bbdc-5da72feb6fc5`
+
+After restoring those records and re-enabling the Function App settings
+`ENTRA_OBO_ENABLED=true` and
+`ENTRA_OBO_DOWNSTREAM_SCOPE=api://8d73a1f1-5a04-42dd-bbdc-5da72feb6fc5/ServiceNow.Use`,
+live `/mcp` validation returned `authModeUsed=obo` and incident comments were
+authored as the mapped caller identity rather than `mcp_integration`.
 
 ### Trade-offs
 

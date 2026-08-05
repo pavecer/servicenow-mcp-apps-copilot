@@ -10,6 +10,13 @@ Catalog, hosted on **Azure Functions** (Node.js 20, TypeScript). It delivers
 catalog ordering (search → form → order → track, plus a cart) to **Microsoft 365
 Copilot / Cowork** via **MCP Apps (SEP-1865)** interactive HTML widgets.
 
+## Resume here first
+
+- For tracked continuity and the latest verified operational state, read
+  [docs/REPO_STATE.md](docs/REPO_STATE.md) before broader exploration.
+- For per-user attribution and OBO specifics, read
+  [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md).
+
 ## Build / test / run
 
 ```bash
