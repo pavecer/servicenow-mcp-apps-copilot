@@ -62,9 +62,9 @@ the shortest path to resume work safely.
 
 ## Resume checklist
 
-- Read [docs/AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md) before changing any OBO or
+- Read [AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md) before changing any OBO or
   attribution behavior.
-- Read [docs/TROUBLESHOOTING.md](TROUBLESHOOTING.md) before rotating secrets or
+- Read [TROUBLESHOOTING.md](TROUBLESHOOTING.md) before rotating secrets or
   recreating ServiceNow auth objects.
 - If widget HTML changes, always run `npm run build` before `npm test` because
   generated widget resources are rebuilt during the build step.
