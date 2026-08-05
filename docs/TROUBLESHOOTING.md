@@ -204,6 +204,42 @@ password itself is usually fine — these flags are the blockers.
 
 ---
 
+### OBO exchange succeeds but ServiceNow still returns 401
+
+**Symptom:** `validate_servicenow_config` reports a successful OBO exchange, but
+catalog or incident APIs still fail with HTTP 401 when OBO is enabled.
+
+**Likely cause:** ServiceNow does not currently trust the downstream audience in
+its inbound OIDC configuration, or the token's user claim no longer maps to a
+valid `sys_user` record.
+
+**Known good dev setup for this repo:**
+1. Function App settings:
+   - `ENTRA_OBO_ENABLED=true`
+   - `ENTRA_OBO_DOWNSTREAM_SCOPE=api://8d73a1f1-5a04-42dd-bbdc-5da72feb6fc5/ServiceNow.Use`
+2. ServiceNow inbound OIDC provider config:
+   - name: `Entra MCP OBO`
+   - claim mapping: `preferred_username` -> `email`
+3. ServiceNow oauth OIDC entity:
+   - name: `Entra MCP OBO`
+   - `client_id=8d73a1f1-5a04-42dd-bbdc-5da72feb6fc5`
+   - `inbound_grant_type=oidc`
+
+**How to verify:**
+1. Run the deployed diagnostic tool path and confirm it says:
+   - `authModeUsed=obo`
+   - `auth.obo_exchange` passed
+2. If the exchange passes but API calls 401, inspect the ServiceNow provider and
+   entity records above.
+3. Confirm the caller's Entra `preferred_username` matches a real
+   `sys_user.email`.
+
+**Important:** In this failure mode there is no automatic fallback to the
+integration user, because the OBO exchange already succeeded. Fix trust or user
+mapping first; disabling OBO is only a temporary workaround.
+
+---
+
 ## MCP & Widget Issues
 
 ### MCP client can't call tools
