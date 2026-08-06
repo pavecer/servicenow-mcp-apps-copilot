@@ -81,6 +81,20 @@ the shortest path to resume work safely.
   Agent Registry metadata, not tool loss. Test the approved copy specifically,
   assign an owner, and allow analytics/metadata synchronization before
   escalating or republishing.
+- Published organizational agent initially couldn't call tools although its
+  package and live endpoint were healthy. Root cause: publishing an Agents
+  Toolkit package doesn't automatically onboard the remote MCP server into
+  Agent 365 Tools; Admin Center showed zero tool requests.
+- Submitted external server `ext_ServiceNowMCP` with all 23 tools on 2026-08-06.
+  Agent 365 CLI `.default` handling failed to add the downstream permission, so
+  the generated RemoteProxy was repaired with delegated `access_as_user`, a
+  service principal, and an `AllPrincipals` consent grant. Future templates use
+  the named scope.
+- Tool approval is still pending. CLI approval failed with Unauthorized because
+  the Agent 365 signed-in identity isn't AI Administrator or Global
+  Administrator. An appropriately privileged admin must approve it under
+  **Agents > Tools > Requests**, then the published agent must be reinstalled
+  and tested in a new chat after propagation.
 
 ## OBO / per-user attribution status
 

@@ -189,6 +189,39 @@ entries are difficult to reconcile and MCP republishing has preview limitations.
 The test suite asserts that the Agent 365 registration template has the same
 exact tool names as the runtime manifest.
 
+### Published agent cannot call the MCP server
+
+Publishing the declarative agent package doesn't automatically register its
+remote MCP server in the Agent 365 Tools registry. A published agent can display
+the `RemoteMCPServer` metadata in **Data & tools** yet still tell users it has no
+access to the tools when tenant tool governance has no approved server entry.
+
+Diagnose this state in this order:
+
+1. Validate the live endpoint with `npm run validate:live`.
+2. Open **Microsoft 365 admin center > Agents > Tools > Requests/Registry**.
+3. If no matching endpoint/server exists, submit the external MCP registration.
+4. Verify the generated RemoteProxy has delegated `access_as_user` permission
+  to the MCP API and tenant-wide admin consent.
+5. Have an AI Administrator or Global Administrator approve the tool request.
+6. Wait for propagation, reinstall the published organizational agent, and
+  start a new Copilot chat.
+
+Use the named `access_as_user` scope in `remoteScopes`. Although `.default` is a
+valid OAuth token request convention after permissions are configured, Agent
+365 CLI `1.1.165-preview` treats remote scopes as named exposed scopes. With
+`.default`, it creates the proxy apps but warns that the scope wasn't found and
+doesn't add the downstream permission.
+
+On 2026-08-06, the test tenant registration created three proxy applications:
+`ext_ServiceNowMCP-A365Proxy`, `ext_ServiceNowMCP-RemoteProxy`, and
+`ext_ServiceNowMCP-PublicClients`. The initial `.default` warning was repaired
+by adding the MCP API's delegated `access_as_user` permission to the
+RemoteProxy, creating its service principal, and granting `AllPrincipals`
+consent. The MCP request was submitted, but CLI approval was blocked because the
+signed-in identity wasn't an AI Administrator or Global Administrator. Admin
+Center approval remains mandatory.
+
 ## Monitoring Expectations
 
 After organizational approval:

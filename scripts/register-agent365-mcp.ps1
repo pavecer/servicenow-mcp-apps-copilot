@@ -36,7 +36,7 @@
 .PARAMETER EntraClientId
     The Entra app registration client ID configured on the deployed MCP server
     (ENTRA_CLIENT_ID). Used to build the EntraOAuth remote scope
-    api://<EntraClientId>/.default.
+    api://<EntraClientId>/access_as_user.
 
 .PARAMETER Description
     Optional override for the description text submitted to Agent 365.
@@ -203,7 +203,7 @@ function New-RegistrationPayload {
     $template.publisherName = $PublisherName
     $template.serverUrl = $McpEndpointUrl
     $template.description = $Description
-    $template.remoteScopes = "api://$EntraClientId/.default"
+    $template.remoteScopes = "api://$EntraClientId/access_as_user"
     if ($PSBoundParameters.ContainsKey('TenantId') -and -not [string]::IsNullOrWhiteSpace($TenantId)) {
         $template.tenantId = $TenantId
     } else {

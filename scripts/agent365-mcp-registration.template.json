@@ -5,7 +5,7 @@
   "authType": "EntraOAuth",
   "description": "ServiceNow Service Catalog: search items, fill forms, place and manage orders.",
   "publisherName": "YOUR-ORG-NAME",
-  "remoteScopes": "api://YOUR-ENTRA-CLIENT-ID/.default",
+  "remoteScopes": "api://YOUR-ENTRA-CLIENT-ID/access_as_user",
   "tenantId": "YOUR-ENTRA-TENANT-ID",
   "tools": [
     {

@@ -80,6 +80,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented the observed metadata differences between developer-installed and
   approved organizational Agents Toolkit records, including incomplete expanded
   MCP operation metadata, separate usage counters, and owner assignment.
+- Corrected Agent 365 external MCP registration to use the named
+  `access_as_user` delegated scope. Documented that publishing an agent package
+  doesn't automatically approve its remote MCP server in the tenant Tools
+  registry.
 - `get_order_detail` now reads ServiceNow fields fetched with
   `sysparm_display_value=all` (handles both plain strings and
   `{ display_value, value }` objects).

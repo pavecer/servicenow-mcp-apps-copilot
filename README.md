@@ -19,7 +19,7 @@
 - 8 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail, incident form, my incidents, incident detail
 - Per-user authentication: orders and incidents stamped with the real user (not a service account)
 - Stateless, scalable: Flex Consumption Azure Functions + Node.js 20
-- Production-ready: 256 unit tests, secret management, audit logging, security guidelines
+- Production-ready: 257 unit tests, secret management, audit logging, security guidelines
 
 **Quick facts:**
 | | |

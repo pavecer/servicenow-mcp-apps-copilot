@@ -91,8 +91,8 @@ You will need:
 ## Step 1 — Confirm the server is configured for `EntraOAuth`
 
 The Agent 365 Tooling Gateway authenticates to this server using a delegated
-Entra token issued for **`api://<ENTRA_CLIENT_ID>/.default`**. Tokens with that
-scope have `aud = api://<ENTRA_CLIENT_ID>`.
+Entra token issued for **`api://<ENTRA_CLIENT_ID>/access_as_user`**. Tokens with
+that scope have `aud = api://<ENTRA_CLIENT_ID>`.
 
 The server already accepts that audience because
 [`buildAcceptedAudiences`](../src/services/entraTokenValidator.ts) auto-includes
@@ -137,7 +137,7 @@ requesting their own client credentials.
 A starter payload is included at
 [`scripts/agent365-mcp-registration.template.json`](../scripts/agent365-mcp-registration.template.json).
 It declares the 23 tools this server exposes and uses `EntraOAuth` with the
-`api://<ENTRA_CLIENT_ID>/.default` scope.
+`api://<ENTRA_CLIENT_ID>/access_as_user` scope.
 
 > ❗ **Server name constraints** (Agent 365 CLI rules):
 >
@@ -168,7 +168,7 @@ notepad scripts/agent365-mcp-registration.json
 Replace:
 
 - `serverUrl` → your real endpoint (e.g. `https://func-xyz.azurewebsites.net/mcp`).
-- `remoteScopes` → `api://<your-entra-client-id>/.default`.
+- `remoteScopes` → `api://<your-entra-client-id>/access_as_user`.
 - `publisherName` → your organization's display name.
 - `tenantId` → your Entra tenant ID (or delete the line to use the current
   `az login` tenant).
@@ -224,7 +224,7 @@ a365 develop-mcp register-external-mcp-server `
   --publisher "Contoso IT" `
   --description "ServiceNow Service Catalog: search items, fill forms, place and manage orders." `
   --auth-type EntraOAuth `
-  --remote-scopes "api://<ENTRA_CLIENT_ID>/.default" `
+  --remote-scopes "api://<ENTRA_CLIENT_ID>/access_as_user" `
   --tools "search_catalog_items,get_catalog_item_form,place_order,list_user_orders,update_order,get_order_detail,approve_order_approval,reject_order_approval,validate_servicenow_config,add_to_cart,view_cart,update_cart_item,remove_cart_item,submit_cart,update_order_item,remove_order_item,get_incident_form,report_incident,list_user_incidents,get_incident_detail,add_incident_comment,add_incident_attachment,remove_incident_attachment" `
   --tenant-id "<ENTRA_TENANT_ID>"
 ```
@@ -257,7 +257,7 @@ A tenant admin (Global admin or AI admin) must:
    click **Approve**.
 4. Grant tenant-wide Microsoft Entra consent for the permissions Agent 365
    requests on behalf of the server (this lets the Tooling Gateway acquire
-   tokens with `api://<ENTRA_CLIENT_ID>/.default`).
+  tokens with `api://<ENTRA_CLIENT_ID>/access_as_user`).
 5. Wait up to 30 minutes for the server to propagate to MCP clients and
    other surfaces.
 

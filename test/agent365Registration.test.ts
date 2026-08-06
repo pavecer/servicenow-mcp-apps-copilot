@@ -6,6 +6,7 @@ import { getMinimalToolDefinitions } from "../src/tools/index";
 interface RegistrationTemplate {
   serverName: string;
   description: string;
+  remoteScopes: string;
   tools: Array<{ name: string; description: string }>;
 }
 
@@ -33,5 +34,9 @@ describe("Agent 365 BYO MCP registration template", () => {
       expect(tool.name.length).toBeLessThanOrEqual(30);
       expect(tool.description.trim().length).toBeGreaterThan(0);
     }
+  });
+
+  it("uses the named delegated MCP scope so the CLI can grant it", () => {
+    expect(template.remoteScopes).toBe("api://YOUR-ENTRA-CLIENT-ID/access_as_user");
   });
 });
