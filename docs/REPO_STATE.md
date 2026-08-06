@@ -70,6 +70,17 @@ the shortest path to resume work safely.
 - Release automation accepts `--agent-environment` independently from the azd
   `--environment`; it defaults to `dev`, while production must use a separately
   configured `prod` Agents Toolkit environment/app ID.
+- Post-approval screenshots on 2026-08-06 confirm a second organizational
+  registry record for `ServiceNow Assistantdev` v1.1.5. It shows Publisher type
+  `Your org`, Created 6 August 2026, Last used `Never`, and blank Last published,
+  Owner/Created by, and Entra agent ID. Its Data & tools view shows the
+  RemoteMCPServer summary but not the expanded 23-operation list shown on the
+  developer record.
+- The submitted ZIP still contains all 23 functions and full instructions.
+  Treat the reduced approved-record view as capability-dependent or delayed
+  Agent Registry metadata, not tool loss. Test the approved copy specifically,
+  assign an owner, and allow analytics/metadata synchronization before
+  escalating or republishing.
 
 ## OBO / per-user attribution status
 

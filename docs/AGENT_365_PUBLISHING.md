@@ -99,6 +99,69 @@ The `dev` suffix is intentional for the test environment. A production rollout
 should use a separate `.env.prod`, Teams app ID, and OAuth configuration, with no
 `dev` suffix.
 
+## Post-Approval Registry Projection
+
+Approval can produce two visible records for the same logical agent package:
+
+1. The developer-installed/shared record created by `atk provision`.
+2. The organizational record created by catalog publication and approval.
+
+This was observed for `ServiceNow Assistantdev` version `1.1.5` on 2026-08-06.
+The developer record displayed the expanded `RemoteMCPServer` endpoint,
+`OAuthPluginVault` authentication, and all 23 operations. The approved
+**Published by your org** record displayed the tool name and description but not
+the expanded operation list.
+
+This difference isn't evidence that the approved package lost its tools. The
+exact submitted ZIP contains the same `RemoteMCPServer` runtime and 23 function
+definitions, and Microsoft documents that Data & tools metadata varies by agent
+type/platform and might not yet be synchronized to the admin center.
+
+The approved record also initially showed:
+
+- `Created`: 6 August 2026
+- `Last published`: blank
+- `Last used`: Never
+- `Publisher type`: Your org
+- `Owner` and `Created by`: blank
+- `Entra agent ID`: blank
+
+Interpret these fields as follows:
+
+- **Publisher type: Your org** confirms that organizational publication and
+  approval succeeded, even if `Last published` is blank.
+- **Last used: Never** applies to the new organizational record. Using the older
+  developer copy doesn't update it. Install and invoke the approved copy, then
+  allow usage analytics to ingest the interaction.
+- **Owner blank** is a governance action. Assign an accountable user or group.
+- **Entra agent ID blank** remains expected for this non-Agent-ID-backed
+  declarative agent.
+- **Expanded MCP operations missing** is currently a registry metadata
+  projection/synchronization limitation for this published Agents Toolkit
+  record, not a runtime packaging failure.
+
+Microsoft's admin documentation explicitly states that Data & tools metadata
+isn't available for every agent type and can be empty or incomplete when the
+agent type doesn't support fields or metadata hasn't synchronized yet. Tabs and
+fields are capability-dependent.
+
+### Verify the approved copy
+
+1. Distinguish the records by **Publisher type** (`Your org` versus the
+   developer/shared record), not by display name alone.
+2. Configure **Users > Available to** for a small test group.
+3. Install the approved organizational copy for the test user.
+4. Remove or unpin the older developer copy to avoid testing the wrong record.
+5. Start a new Copilot chat and invoke a catalog search plus one approval flow.
+6. Allow telemetry/registry ingestion time, then refresh the agent registry and
+   recheck **Last used**, **Activity**, and **Data & tools**.
+7. If the approved copy executes all 23 tools but the operation list remains
+   collapsed or absent, record it as an admin-center metadata limitation.
+
+Do not republish merely to populate these display fields. Republish only for an
+actual versioned package change; every catalog update requires a version bump
+and admin approval.
+
 ## Agent 365 MCP Tool Registry
 
 Tool registration is optional for running the declarative agent but recommended

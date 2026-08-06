@@ -77,6 +77,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Agent 365 registration now has a functional `-DryRun` mode that writes the
   ignored resolved payload and invokes the CLI's no-mutation validator. Generic
   PowerShell `-WhatIf` intentionally remains a full skip.
+- Documented the observed metadata differences between developer-installed and
+  approved organizational Agents Toolkit records, including incomplete expanded
+  MCP operation metadata, separate usage counters, and owner assignment.
 - `get_order_detail` now reads ServiceNow fields fetched with
   `sysparm_display_value=all` (handles both plain strings and
   `{ display_value, value }` objects).
