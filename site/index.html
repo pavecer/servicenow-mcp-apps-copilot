@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Technical overview of the ServiceNow MCP Apps server for Microsoft 365 Copilot: architecture, tools, widgets, security, deployment, and operations.">
+  <meta name="theme-color" content="#f7f4ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#3d3b3a" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="ServiceNow MCP Apps for Microsoft 365 Copilot">
+  <meta property="og:description" content="A stateless Azure Functions MCP server with 23 ServiceNow tools and 8 interactive MCP Apps widgets.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://pavecer.github.io/servicenow-mcp-apps-copilot/">
+  <title>ServiceNow MCP Apps for Microsoft 365 Copilot</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.55;
+      letter-spacing: 0;
+    }
+    a { color: var(--cp-link); text-underline-offset: 3px; }
+    a:hover { color: var(--cp-accent); }
+    code, pre { font-family: Consolas, "Courier New", Courier, monospace; }
+    code { font-size: 0.9em; }
+    img { max-width: 100%; }
+
+    .skip-link {
+      position: fixed;
+      left: 16px;
+      top: -64px;
+      z-index: 100;
+      padding: 10px 14px;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      border-radius: 0.625rem;
+    }
+    .skip-link:focus { top: 12px; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      min-height: 64px;
+      background: var(--cp-panel-strong);
+      border-bottom: 1px solid var(--cp-border);
+    }
+    .topbar-inner {
+      width: min(1180px, calc(100% - 40px));
+      min-height: 64px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--cp-text);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--cp-accent);
+      border-radius: 8px;
+      color: var(--cp-accent);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 14px;
+    }
+    .nav a { color: var(--cp-text-muted); text-decoration: none; }
+    .nav a:hover { color: var(--cp-text); }
+    .repo-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 0.625rem;
+      color: var(--cp-text) !important;
+      font-weight: 600;
+    }
+
+    main { overflow: hidden; }
+    .section {
+      padding: 72px 0;
+      border-bottom: 1px solid var(--cp-border);
+    }
+    .section:nth-child(even) { background: var(--cp-bg-elevated); }
+    .container { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+
+    .intro {
+      min-height: calc(100vh - 128px);
+      padding-top: 54px;
+      padding-bottom: 40px;
+      display: grid;
+      align-content: center;
+    }
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--cp-accent);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+    h1, h2, h3 { line-height: 1.16; letter-spacing: 0; }
+    h1 { max-width: 900px; margin: 0; font-size: 48px; font-weight: 760; }
+    h2 { margin: 0 0 14px; font-size: 32px; }
+    h3 { margin: 0 0 8px; font-size: 18px; }
+    .lede { max-width: 780px; margin: 20px 0 26px; color: var(--cp-text-muted); font-size: 20px; }
+    .intro-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 34px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid var(--cp-accent);
+      border-radius: 0.625rem;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .button:hover { background: var(--cp-accent-hover); color: var(--cp-accent-fg); }
+    .button.secondary { background: var(--cp-surface); color: var(--cp-text); border-color: var(--cp-border-strong); }
+    .button.secondary:hover { background: var(--cp-surface-soft); color: var(--cp-text); }
+
+    .architecture {
+      position: relative;
+      padding: 22px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      box-shadow: 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border);
+    }
+    .architecture figcaption {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+      color: var(--cp-text-muted);
+      font-size: 13px;
+    }
+    .arch-flow {
+      display: grid;
+      grid-template-columns: 1fr 48px 1.2fr 48px 1fr;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .arch-node {
+      min-height: 152px;
+      padding: 18px;
+      border: 1px solid var(--cp-border);
+      border-radius: 8px;
+      background: var(--cp-bg-elevated);
+    }
+    .arch-node strong { display: block; margin-bottom: 6px; font-size: 17px; }
+    .arch-node span { color: var(--cp-text-muted); font-size: 14px; }
+    .arch-node ul { margin: 14px 0 0; padding: 0; list-style: none; font-size: 13px; }
+    .arch-node li { margin-top: 5px; }
+    .arch-node.center { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+    .connector {
+      display: grid;
+      place-items: center;
+      color: var(--cp-accent);
+      font-size: 26px;
+      font-weight: 700;
+    }
+    .connector small { display: block; color: var(--cp-text-muted); font-size: 10px; font-weight: 600; text-align: center; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      margin-top: 20px;
+      background: var(--cp-border);
+      border: 1px solid var(--cp-border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .metric { padding: 14px 16px; background: var(--cp-surface-soft); }
+    .metric strong { display: block; font-size: 24px; color: var(--cp-accent); }
+    .metric span { color: var(--cp-text-muted); font-size: 12px; }
+
+    .section-head { max-width: 760px; margin-bottom: 34px; }
+    .section-head p { margin: 0; color: var(--cp-text-muted); font-size: 18px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card {
+      padding: 22px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      box-shadow: 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border);
+    }
+    .card p { margin: 0; color: var(--cp-text-muted); }
+    .card .label {
+      display: inline-block;
+      margin-bottom: 14px;
+      padding: 3px 8px;
+      border-radius: 0.625rem;
+      background: var(--cp-accent-soft);
+      color: var(--cp-accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .tool-list { margin: 18px 0 0; padding: 0; list-style: none; }
+    .tool-list li { margin-top: 8px; color: var(--cp-text-muted); font-size: 14px; }
+    .tool-list code { color: var(--cp-text); }
+
+    .split { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 42px; align-items: start; }
+    .step-list { margin: 0; padding: 0; list-style: none; counter-reset: flow; }
+    .step-list li {
+      position: relative;
+      padding: 0 0 26px 52px;
+      counter-increment: flow;
+    }
+    .step-list li::before {
+      content: counter(flow);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      font-weight: 700;
+    }
+    .step-list li::after {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 36px;
+      bottom: 4px;
+      width: 1px;
+      background: var(--cp-border-strong);
+    }
+    .step-list li:last-child::after { display: none; }
+    .step-list strong { display: block; margin-bottom: 4px; }
+    .step-list span { color: var(--cp-text-muted); }
+
+    .code-panel {
+      overflow: hidden;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      box-shadow: 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border);
+    }
+    .code-title {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface-soft);
+      color: var(--cp-text-muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    pre { margin: 0; padding: 20px; overflow-x: auto; color: var(--cp-text); font-size: 13px; line-height: 1.7; }
+    .prompt { color: var(--cp-accent); }
+    .comment { color: var(--cp-text-muted); }
+
+    .security-band {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 32px;
+      padding: 28px;
+      border-left: 4px solid var(--cp-success);
+      background: var(--cp-surface);
+      border-radius: 0 16px 16px 0;
+    }
+    .security-band p { margin: 8px 0 0; color: var(--cp-text-muted); }
+    .checks { margin: 0; padding: 0; list-style: none; }
+    .checks li { margin: 10px 0; color: var(--cp-text-muted); }
+    .checks strong { color: var(--cp-success); }
+
+    .repo-map {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 16px;
+    }
+    .tree { margin: 0; padding: 0; list-style: none; }
+    .tree li {
+      display: grid;
+      grid-template-columns: 148px 1fr;
+      gap: 14px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--cp-border);
+    }
+    .tree li:last-child { border-bottom: 0; }
+    .tree code { color: var(--cp-accent); font-weight: 700; }
+    .tree span { color: var(--cp-text-muted); }
+
+    .footer { padding: 36px 0; background: var(--cp-bg-elevated); }
+    .footer-inner { display: flex; justify-content: space-between; gap: 20px; color: var(--cp-text-muted); font-size: 14px; }
+
+    @media (max-width: 900px) {
+      h1 { font-size: 38px; }
+      .nav a:not(.repo-link) { display: none; }
+      .arch-flow { grid-template-columns: 1fr; }
+      .connector { min-height: 32px; transform: rotate(90deg); }
+      .connector small { display: none; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .grid { grid-template-columns: 1fr 1fr; }
+      .split, .security-band, .repo-map { grid-template-columns: 1fr; }
+      .intro { min-height: auto; }
+    }
+    @media (max-width: 620px) {
+      .topbar-inner, .container { width: min(100% - 24px, 1120px); }
+      .brand span { max-width: 190px; line-height: 1.2; }
+      .repo-link { padding: 0 10px; }
+      .section { padding: 54px 0; }
+      .intro { min-height: auto; padding-top: 38px; padding-bottom: 34px; }
+      h1 { font-size: 32px; }
+      h2 { font-size: 27px; }
+      .lede { font-size: 18px; }
+      .architecture { padding: 14px; }
+      .architecture figcaption { display: block; }
+      .grid, .metrics { grid-template-columns: 1fr; }
+      .tree li { grid-template-columns: 1fr; gap: 4px; }
+      .footer-inner { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top" aria-label="ServiceNow MCP Apps overview">
+        <span class="brand-mark" aria-hidden="true">MCP</span>
+        <span>ServiceNow MCP Apps</span>
+      </a>
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#security">Security</a>
+        <a href="#operate">Operate</a>
+        <a class="repo-link" href="https://github.com/pavecer/servicenow-mcp-apps-copilot">View source</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="content">
+    <section class="section intro" id="top">
+      <div class="container">
+        <p class="eyebrow">Open-source reference implementation</p>
+        <h1>ServiceNow MCP Apps for Microsoft 365 Copilot</h1>
+        <p class="lede">A stateless TypeScript MCP server that turns ServiceNow catalog ordering, request approvals, and incident management into secure, interactive experiences inside Copilot.</p>
+        <div class="intro-actions">
+          <a class="button" href="https://github.com/pavecer/servicenow-mcp-apps-copilot#quick-start">Deploy the solution</a>
+          <a class="button secondary" href="#architecture">Inspect the architecture</a>
+        </div>
+
+        <figure class="architecture" id="architecture" aria-labelledby="architecture-title">
+          <figcaption>
+            <strong id="architecture-title">Runtime architecture</strong>
+            <span>Two OAuth boundaries, one conversational surface</span>
+          </figcaption>
+          <div class="arch-flow">
+            <div class="arch-node">
+              <strong>Microsoft 365 Copilot</strong>
+              <span>Declarative agent and sandboxed MCP Apps widgets</span>
+              <ul>
+                <li>Natural-language intent</li>
+                <li>Interactive inline UI</li>
+                <li>User Entra identity</li>
+              </ul>
+            </div>
+            <div class="connector" aria-hidden="true"><span>→<small>OAuth + MCP</small></span></div>
+            <div class="arch-node center">
+              <strong>Azure Functions MCP server</strong>
+              <span>Node.js 20, strict TypeScript, Flex Consumption</span>
+              <ul>
+                <li>Tool and widget registry</li>
+                <li>OBO token exchange</li>
+                <li>Compact structured content</li>
+              </ul>
+            </div>
+            <div class="connector" aria-hidden="true"><span>→<small>OBO + REST</small></span></div>
+            <div class="arch-node">
+              <strong>ServiceNow</strong>
+              <span>Service Catalog, request approvals, and incidents</span>
+              <ul>
+                <li>Per-user ACL enforcement</li>
+                <li>Native workflow state</li>
+                <li>Auditable authorship</li>
+              </ul>
+            </div>
+          </div>
+          <div class="metrics" aria-label="Project inventory">
+            <div class="metric"><strong>23</strong><span>MCP tools</span></div>
+            <div class="metric"><strong>8</strong><span>Interactive widgets</span></div>
+            <div class="metric"><strong>254</strong><span>Automated tests</span></div>
+            <div class="metric"><strong>2</strong><span>Identity boundaries</span></div>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section" id="capabilities">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Capability surface</p>
+          <h2>Atomic tools, purpose-built widgets</h2>
+          <p>The model selects narrowly scoped tools. Each user-facing result carries structured data for a corresponding MCP App instead of verbose JSON or a replicated ServiceNow interface.</p>
+        </div>
+        <div class="grid">
+          <article class="card">
+            <span class="label">Service Catalog</span>
+            <h3>Discover and order</h3>
+            <p>Search visible catalog items, render variable-aware forms, place a single order, or collect multiple items in a cart.</p>
+            <ul class="tool-list">
+              <li><code>search_catalog_items</code></li>
+              <li><code>get_catalog_item_form</code></li>
+              <li><code>place_order</code> / <code>submit_cart</code></li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="label">Requests</span>
+            <h3>Track and manage</h3>
+            <p>List caller-owned requests, inspect requested items, edit permitted fields, and remove individual lines.</p>
+            <ul class="tool-list">
+              <li><code>list_user_orders</code></li>
+              <li><code>get_order_detail</code></li>
+              <li><code>update_order_item</code></li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="label">Approvals</span>
+            <h3>Decide in context</h3>
+            <p>Approve or reject a pending request from the order-detail widget. The server verifies the approval belongs to the request before mutation.</p>
+            <ul class="tool-list">
+              <li><code>approve_order_approval</code></li>
+              <li><code>reject_order_approval</code></li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="label">Incidents</span>
+            <h3>Report and follow up</h3>
+            <p>Create caller-attributed incidents, review activity, post customer-visible comments, and manage attachments.</p>
+            <ul class="tool-list">
+              <li><code>report_incident</code></li>
+              <li><code>get_incident_detail</code></li>
+              <li><code>add_incident_attachment</code></li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="label">MCP Apps</span>
+            <h3>Eight inline experiences</h3>
+            <p>Catalog browse, order form, cart, order list/detail, incident form, incident list, and incident detail render natively in Copilot.</p>
+          </article>
+          <article class="card">
+            <span class="label">Operations</span>
+            <h3>Validate before users do</h3>
+            <p>Configuration probes, readiness checks, repeatable demo fixtures, and a release command establish a clear operator boundary.</p>
+            <ul class="tool-list">
+              <li><code>validate_servicenow_config</code></li>
+              <li><code>npm run release:auto</code></li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="security">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Identity and trust</p>
+          <h2>Calls run as the person in the conversation</h2>
+          <p>The default production pattern validates the inbound Copilot token, exchanges it through Entra On-Behalf-Of, and presents a downstream token that ServiceNow maps to <code>sys_user</code>.</p>
+        </div>
+        <div class="split">
+          <ol class="step-list">
+            <li><strong>Copilot authenticates the user</strong><span>The declarative agent obtains an access token for the MCP API.</span></li>
+            <li><strong>The Function validates the bearer token</strong><span>Issuer, audience, tenant, and signing keys are checked before tool execution.</span></li>
+            <li><strong>MSAL performs OBO exchange</strong><span>The inbound assertion becomes a token for the ServiceNow-trusted downstream audience.</span></li>
+            <li><strong>ServiceNow maps the identity</strong><span><code>preferred_username</code> resolves against <code>sys_user.email</code>, enforcing native ACLs and authorship.</span></li>
+          </ol>
+          <div class="security-band">
+            <div>
+              <h3>Security posture</h3>
+              <p>Secrets are referenced from Key Vault, deployment storage is private, and the Flex Function reaches Blob packages through VNet integration and a private endpoint.</p>
+            </div>
+            <ul class="checks">
+              <li><strong>✓</strong> No secrets committed</li>
+              <li><strong>✓</strong> Per-user ServiceNow ACLs</li>
+              <li><strong>✓</strong> Private deployment storage</li>
+              <li><strong>✓</strong> Application Insights telemetry</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="operate">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Build and operate</p>
+          <h2>From clone to Copilot-ready</h2>
+          <p>The repository ships the application, Azure infrastructure, M365 agent package, repeatable tests, and policy-aware release automation as one versioned unit.</p>
+        </div>
+        <div class="split">
+          <div class="code-panel" aria-label="Quick start commands">
+            <div class="code-title">Terminal · repository root</div>
+            <pre><span class="comment"># Install and validate locally</span>
+npm install
+npm run build
+npm test
+
+<span class="comment"># Validate ServiceNow surfaces</span>
+npm run preflight:readiness
+
+<span class="comment"># Deploy through the human test boundary</span>
+npm run release:auto -- \
+  --environment snowmcpwidg-dev
+
+<span class="comment"># Prepare a repeatable approval demo</span>
+npm run demo:seed
+npm run demo:verify</pre>
+          </div>
+          <ol class="step-list">
+            <li><strong>Provision ServiceNow</strong><span>Create the OAuth app and least-privilege integration identity, then establish OIDC trust for OBO.</span></li>
+            <li><strong>Provision Azure</strong><span>Bicep creates Flex Consumption, Key Vault, private storage connectivity, and observability.</span></li>
+            <li><strong>Publish the agent</strong><span>Agents Toolkit validates and updates the existing M365 app package without duplicating OAuth registration.</span></li>
+            <li><strong>Prompt-test in Copilot</strong><span>The automated path stops deliberately where a human starts a new conversation and verifies the experience.</span></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="repository">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Repository anatomy</p>
+          <h2>One repo, explicit ownership boundaries</h2>
+          <p>Runtime, ServiceNow integration, widgets, infrastructure, tenant packaging, and tests are separated so changes can stay narrow while contract parity remains enforced.</p>
+        </div>
+        <div class="repo-map">
+          <article class="card">
+            <ul class="tree">
+              <li><code>src/tools/</code><span>One MCP tool per module and the central manifest drift guard.</span></li>
+              <li><code>src/services/</code><span>ServiceNow REST, token management, catalog, request, cart, and incident behavior.</span></li>
+              <li><code>src/ui/widgets/</code><span>Self-contained widget sources, host bridge, registry, and generated modules.</span></li>
+              <li><code>infra/</code><span>Azure Flex Consumption, identity, storage, networking, Key Vault, and monitoring.</span></li>
+              <li><code>m365-agent/</code><span>Declarative agent manifest, plugin snapshot, tool declarations, and ATK lifecycle.</span></li>
+              <li><code>test/</code><span>Behavior, auth, manifest parity, widget resources, and structured-content contracts.</span></li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="label">Contract invariant</span>
+            <h3>Tool and widget lockstep</h3>
+            <p>A tool change is complete only when runtime registration, Zod schema, minimal manifest, widget binding, tests, and M365 package snapshots agree.</p>
+            <div class="code-panel" style="margin-top: 20px; box-shadow: none;">
+              <div class="code-title">Validation boundary</div>
+              <pre><span class="prompt">npm run build</span>
+<span class="prompt">npm test</span>
+
+<span class="comment"># Current verified result</span>
+30 test files
+254 tests passing
+23 tools · 8 widgets</pre>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>ServiceNow MCP Apps for Microsoft 365 Copilot</span>
+      <span>MIT licensed · <a href="https://github.com/pavecer/servicenow-mcp-apps-copilot">Source and documentation</a></span>
+    </div>
+  </footer>
+</body>
+</html>

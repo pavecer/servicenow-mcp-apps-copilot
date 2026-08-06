@@ -2,6 +2,8 @@
 
 **Order from ServiceNow directly inside Microsoft 365 Copilot** — a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that brings ServiceNow Service Catalog to life in Microsoft 365 Copilot and Cowork via interactive MCP Apps widgets. Search, fill forms, place orders, track status, and manage your cart — all with natural language.
 
+**Technical project site:** [pavecer.github.io/servicenow-mcp-apps-copilot](https://pavecer.github.io/servicenow-mcp-apps-copilot/)
+
 ```
 ┌─────────────────────┐        ┌──────────────────────┐        ┌──────────────┐
 │ Microsoft 365       │        │ ServiceNow MCP       │        │ ServiceNow   │

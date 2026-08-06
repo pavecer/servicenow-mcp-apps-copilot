@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pavecer.github.io/servicenow-mcp-apps-copilot/sitemap.xml
