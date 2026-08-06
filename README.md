@@ -19,7 +19,7 @@
 - 8 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail, incident form, my incidents, incident detail
 - Per-user authentication: orders and incidents stamped with the real user (not a service account)
 - Stateless, scalable: Flex Consumption Azure Functions + Node.js 20
-- Production-ready: 243 unit tests, secret management, audit logging, security guidelines
+- Production-ready: 256 unit tests, secret management, audit logging, security guidelines
 
 **Quick facts:**
 | | |
@@ -154,6 +154,17 @@ the exemption and restores disabled access immediately after deployment.
 When tool schemas change, bump `m365-agent/appPackage/manifest.json` before
 running the command so Copilot receives a new cached package version.
 
+To submit the validated package to the tenant organizational catalog instead
+of only provisioning the developer copy, run:
+
+```bash
+npm run release:publish -- --environment snowmcpwidg-dev
+```
+
+This still requires approval in Teams Admin Center. Use a separate `prod`
+Agents Toolkit environment and app ID for production; the committed `dev`
+environment intentionally produces the `ServiceNow Assistantdev` test name.
+
 **Phase 1 readiness preflight (IT + HR + KB planning):**
 
 ```bash
@@ -189,7 +200,7 @@ admin in the configured ServiceNow development instance. See
 | **Demo** | [Approval Demo Data and Prompts](docs/DEMO_APPROVAL_FLOW.md) |
 | **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
 | **Operations** | [Environment Variables](docs/CONFIG_REFERENCE.md) • [Troubleshooting](docs/TROUBLESHOOTING.md) • [Cost Model](docs/COST_ESTIMATION.md) |
-| **Advanced** | [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO.md) • [Agent 365 Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
+| **Advanced** | [Agent 365 Publishing & Governance](docs/AGENT_365_PUBLISHING.md) • [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO.md) • [Agent 365 MCP Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
 | **Development** | [Contributing](CONTRIBUTING.md) • [Engineering Guardrails](docs/ENGINEERING_GUARDRAILS.md) • [Build/Test Commands](AGENTS.md) |
 | **Security** | [Security Guidelines](SECURITY.md) • [Code of Conduct](CODE_OF_CONDUCT.md) |
 

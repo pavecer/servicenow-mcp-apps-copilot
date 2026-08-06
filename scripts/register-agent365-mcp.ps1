@@ -48,6 +48,9 @@
 .PARAMETER WhatIf
     Render the registration JSON but do not call the Agent 365 CLI.
 
+.PARAMETER DryRun
+    Render the registration JSON and call the Agent 365 CLI with --dry-run.
+
 .EXAMPLE
     pwsh -File scripts/register-agent365-mcp.ps1 `
       -ServerName "ext_ServiceNowMCP" `
@@ -65,7 +68,8 @@ param(
     [string]$EntraClientId,
     [string]$TenantId,
     [string]$Description = "ServiceNow Service Catalog: search items, fill forms, place and manage orders.",
-    [switch]$SkipServicePrincipalCheck
+    [switch]$SkipServicePrincipalCheck,
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -256,16 +260,25 @@ Write-Host "    (this file is gitignored — do not commit tenant-specific value
 Write-Host ""
 
 if ($PSCmdlet.ShouldProcess($McpEndpointUrl, "a365 develop-mcp register-external-mcp-server")) {
-    & a365 develop-mcp register-external-mcp-server -f $payloadPath
+    $cliArgs = @("develop-mcp", "register-external-mcp-server", "-f", $payloadPath)
+    if ($DryRun) {
+        $cliArgs += "--dry-run"
+    }
+    & a365 @cliArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Agent 365 CLI registration failed with exit code $LASTEXITCODE."
     }
 
     Write-Host ""
-    Write-Host "==> Registration submitted."
-    Write-Host "    Next: a Global admin or AI admin must approve the request in"
-    Write-Host "    Microsoft 365 admin center > Agents > Tools > Requests."
-    Write-Host "    See docs/AGENT_365_BYO_MCP.md (Step 5) for details."
+    if ($DryRun) {
+        Write-Host "==> Registration dry run completed; no tenant changes were submitted."
+    }
+    else {
+        Write-Host "==> Registration submitted."
+        Write-Host "    Next: a Global admin or AI admin must approve the request in"
+        Write-Host "    Microsoft 365 admin center > Agents > Tools > Requests."
+        Write-Host "    See docs/AGENT_365_BYO_MCP.md (Step 5) for details."
+    }
 }
 else {
     Write-Host "==> Skipping CLI invocation (WhatIf). Inspect $payloadPath and re-run without -WhatIf."

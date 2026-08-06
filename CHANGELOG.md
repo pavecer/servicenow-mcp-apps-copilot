@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and pending approvals for Alex Baker and admin. Mutations use the signed-in
   Entra admin through the configured ServiceNow OBO trust; no admin password is
   stored.
+- **Organizational-catalog release path.** Added `release:publish`, which runs
+  the verified deployment flow and submits a version-bumped Agents Toolkit
+  package for Teams Admin Center approval. Added a publication/governance
+  runbook covering Agent 365 metadata and Entra Agent ID expectations.
+- **Agent 365 tool inventory drift guard.** The BYO MCP registration template
+  now contains all 23 tools, and tests require exact parity with the runtime
+  manifest.
 - **Per-user authorship via Entra OBO (Pattern A) — enabled.** ServiceNow writes
   now run **as the real end user** when `ENTRA_OBO_ENABLED=true`, so incident
   comments and attachments are authored by the user (`sys_created_by`) instead of
@@ -67,6 +74,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release automation preserves `ENTRA_OBO_ENABLED` and
   `ENTRA_OBO_DOWNSTREAM_SCOPE` from local/azd configuration so infrastructure
   provisioning cannot silently disable delegated ServiceNow access.
+- Agent 365 registration now has a functional `-DryRun` mode that writes the
+  ignored resolved payload and invokes the CLI's no-mutation validator. Generic
+  PowerShell `-WhatIf` intentionally remains a full skip.
 - `get_order_detail` now reads ServiceNow fields fetched with
   `sysparm_display_value=all` (handles both plain strings and
   `{ display_value, value }` objects).

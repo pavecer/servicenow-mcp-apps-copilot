@@ -16,6 +16,9 @@ Copilot / Cowork** via **MCP Apps (SEP-1865)** interactive HTML widgets.
   [docs/REPO_STATE.md](docs/REPO_STATE.md) before broader exploration.
 - For per-user attribution and OBO specifics, read
   [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md).
+- For dev provisioning vs organizational publication, Agent 365 tool
+  registration, Entra Agent ID, and admin metadata, read
+  [docs/AGENT_365_PUBLISHING.md](docs/AGENT_365_PUBLISHING.md).
 
 ## Build / test / run
 
@@ -24,6 +27,7 @@ npm install            # install deps
 npm run build          # build-widgets.mjs (regenerates generated/) THEN tsc
 npm test               # vitest — full suite (exact-count manifest/widget tests)
 npm run release:auto -- --environment snowmcpwidg-dev # deploy through M365 prompt-test readiness
+npm run release:publish -- --environment snowmcpwidg-dev # submit catalog package for admin approval
 npm run demo:seed       # create/reset Alex + admin approval demo records
 npm run demo:verify     # inspect demo records without mutation
 npm run demo:cleanup    # remove only marker-owned demo records
@@ -66,6 +70,11 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
 - `release:auto` stops at the human test boundary: build, tests, policy-aware
   Azure deployment, live tool validation, and existing M365 agent package
   update. It does not automate a Copilot conversation.
+- `release:publish` additionally submits a version-bumped package to the
+  organizational catalog. Submission is not publication: Teams Admin Center
+  approval is still required. Never confuse the MCP OAuth app ID with an Entra
+  Agent ID, and check for an existing Agent 365 MCP tool registration before
+  submitting another one.
 
 ## Critical invariants (violating these breaks cold start or tests)
 
@@ -84,6 +93,7 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
    - `test/toolManifest.test.ts` (exact tool-name list + count)
    - `test/widgetResources.test.ts` (exact `ui://` resource count)
    - `m365-agent/appPackage/mcp-tools-1.json` + `ai-plugin.json`
+  - `scripts/agent365-mcp-registration.template.json` (exact tool inventory)
 3. **No secrets in code.** Secrets come from env / Key Vault. `src/utils/logger.ts`
    redacts sensitive keys. Never commit `.env` or `local.settings.json`.
 

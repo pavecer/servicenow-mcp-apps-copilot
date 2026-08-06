@@ -111,6 +111,31 @@ annotations:
 3. In Copilot, remove the old agent, re-add the freshly published one, and start a
    **new chat** (the snapshot is cached per version / session).
 
+`atk provision` updates or sideloads the developer copy. It does **not** submit
+the app to the organizational catalog, so Microsoft 365 admin center can show
+`Last published: —`. For a catalog release after testing:
+
+```bash
+atk publish --env dev --folder m365-agent --interactive false
+```
+
+or from the repository root:
+
+```bash
+npm run release:publish -- --environment snowmcpwidg-dev
+```
+
+The command submits the package to Teams Admin Center; an administrator must
+approve it before it becomes **Published by your org**. Production should use a
+separate `.env.prod`/app ID and no `dev` display-name suffix.
+
+The **Entra agent ID** field is separate from `ENTRA_CLIENT_ID` and the plugin
+OAuth app registration. Agents Toolkit declarative-agent packages don't create
+or bind a purpose-built Entra Agent ID automatically. A blank field is therefore
+expected unless the agent is explicitly onboarded to Entra Agent ID through a
+supported blueprint/agent-identity integration; do not paste the OAuth client
+ID into that field or create an unassociated identity only to fill metadata.
+
 ### No per-call confirmation
 
 Copilot prompts "Allow this action?" for any tool whose `tools/list` entry is **not**

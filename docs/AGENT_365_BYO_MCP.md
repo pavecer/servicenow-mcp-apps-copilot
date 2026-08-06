@@ -136,7 +136,7 @@ requesting their own client credentials.
 
 A starter payload is included at
 [`scripts/agent365-mcp-registration.template.json`](../scripts/agent365-mcp-registration.template.json).
-It declares the twenty tools this server exposes and uses `EntraOAuth` with the
+It declares the 23 tools this server exposes and uses `EntraOAuth` with the
 `api://<ENTRA_CLIENT_ID>/.default` scope.
 
 > ❗ **Server name constraints** (Agent 365 CLI rules):
@@ -200,6 +200,11 @@ pwsh -File scripts/register-agent365-mcp.ps1 `
   -TenantId "<ENTRA_TENANT_ID>"
 ```
 
+Add `-DryRun` to render the tenant-specific JSON and invoke the CLI's real
+validation-only mode without submitting a registration request. PowerShell's
+generic `-WhatIf` skips file creation and therefore isn't suitable for CLI
+payload validation.
+
 The script:
 
 1. Verifies the Agent 365 CLI version (>= 1.1.165-preview).
@@ -220,7 +225,7 @@ a365 develop-mcp register-external-mcp-server `
   --description "ServiceNow Service Catalog: search items, fill forms, place and manage orders." `
   --auth-type EntraOAuth `
   --remote-scopes "api://<ENTRA_CLIENT_ID>/.default" `
-  --tools "search_catalog_items,get_catalog_item_form,place_order,list_user_orders,update_order,get_order_detail,validate_servicenow_config,add_to_cart,view_cart,update_cart_item,remove_cart_item,submit_cart,update_order_item,remove_order_item,get_incident_form,report_incident,list_user_incidents,get_incident_detail,add_incident_comment,add_incident_attachment,remove_incident_attachment" `
+  --tools "search_catalog_items,get_catalog_item_form,place_order,list_user_orders,update_order,get_order_detail,approve_order_approval,reject_order_approval,validate_servicenow_config,add_to_cart,view_cart,update_cart_item,remove_cart_item,submit_cart,update_order_item,remove_order_item,get_incident_form,report_incident,list_user_incidents,get_incident_detail,add_incident_comment,add_incident_attachment,remove_incident_attachment" `
   --tenant-id "<ENTRA_TENANT_ID>"
 ```
 
@@ -302,6 +307,8 @@ you submit to Agent 365.
 | `list_user_orders` | Retrieve all current (non-closed) orders for the authenticated user. |
 | `update_order` | Update a small allowlist of fields on the caller's catalog order. |
 | `get_order_detail` | Retrieve a single ServiceNow request (sc_request) by sys_id, including its items and approval records. |
+| `approve_order_approval` | Approve a pending ServiceNow order approval and return refreshed order detail. |
+| `reject_order_approval` | Reject a pending ServiceNow order approval and return refreshed order detail. |
 | `validate_servicenow_config` | Validate ServiceNow authentication and catalog access end-to-end. |
 | `add_to_cart` | Add a ServiceNow catalog item to the user's cart without ordering yet. |
 | `view_cart` | Retrieve the authenticated user's current ServiceNow cart contents. |

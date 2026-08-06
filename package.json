@@ -29,6 +29,7 @@
     "smoke:test": "node scripts/smoke-test.mjs",
     "validate:live": "node scripts/dev/validate-live-tools.mjs",
     "release:auto": "node scripts/dev/release-automate.mjs",
+    "release:publish": "node scripts/dev/release-automate.mjs --publish",
     "demo:seed": "node scripts/dev/seed-approval-demo.mjs seed --confirm",
     "demo:verify": "node scripts/dev/seed-approval-demo.mjs verify",
     "demo:cleanup": "node scripts/dev/seed-approval-demo.mjs cleanup --confirm",

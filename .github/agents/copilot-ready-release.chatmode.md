@@ -24,6 +24,10 @@ Stop there and return a concise "ready for prompt test" outcome.
 Before running, ensure `appPackage/manifest.json` has a new patch version when
 tool names, schemas, annotations, or widget bindings changed.
 
+Use `npm run release:auto -- --environment <env>` for developer provisioning.
+Use `npm run release:publish -- --environment <env>` only for a version-bumped
+organizational-catalog submission; it requires admin approval afterward.
+
 ## Command
 
 ```bash

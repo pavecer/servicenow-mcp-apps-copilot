@@ -28,6 +28,10 @@ function getArg(name) {
   return process.argv[i + 1] ?? "";
 }
 
+function hasArg(name) {
+  return process.argv.includes(name);
+}
+
 function runChecked(cmd, args, opts = {}) {
   console.log(`\n==> ${cmd} ${args.join(" ")}`);
   const result = spawnSync(cmd, args, {
@@ -269,6 +273,15 @@ function refreshM365Agent() {
   }
 }
 
+function publishM365Agent() {
+  const projectPath = path.join(repoRoot, "m365-agent");
+  runChecked(
+    "atk",
+    ["publish", "--env", "dev", "--folder", projectPath, "--interactive", "false"],
+    { env: { ...process.env, ATK_CLI_SKILL: "true" } }
+  );
+}
+
 function runCapture(cmd, args) {
   const result = spawnSync(cmd, args, {
     cwd: repoRoot,
@@ -309,6 +322,7 @@ function required(values, key) {
 
 function main() {
   const environmentName = getArg("--environment") || process.env.AZD_ENV_NAME || "snowmcpwidg-dev";
+  const publish = hasArg("--publish");
 
   const values = loadValues();
   const serviceNowInstanceUrl = required(values, "SERVICENOW_INSTANCE_URL");
@@ -385,9 +399,15 @@ function main() {
 
   runChecked("node", ["scripts/dev/validate-live-tools.mjs", "--endpoint", endpoint]);
   refreshM365Agent();
+  if (publish) {
+    publishM365Agent();
+  }
 
   console.log("\nReady for M365 Copilot prompt testing.");
   console.log(`Endpoint: ${endpoint}`);
+  if (publish) {
+    console.log("Agent package submitted to the organizational catalog. Admin approval is still required.");
+  }
   console.log("Next: open your test tenant agent and send prompts for catalog/order flow including pending approval actions.");
 }
 

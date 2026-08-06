@@ -52,6 +52,21 @@ the shortest path to resume work safely.
     `4344079997220310a1cd3b90f053af1f`
 - The deployed admin approval action was exercised successfully, then all three
   fixtures were reset to request/approval state `requested`.
+- Agent package `1.1.5` was formally submitted to the test tenant organizational
+  catalog with `atk publish` on 2026-08-06; all 61 package checks passed. Teams
+  Admin Center approval remains required before `Last published` is expected to
+  populate.
+- The Admin Center `Entra agent ID` field is expected to be blank: this
+  declarative Agents Toolkit app uses an OAuth application but has no explicitly
+  associated Entra Agent ID. Do not substitute the OAuth client ID.
+- The submitted ZIP contains 5,202 characters of resolved instructions. A blank
+  Instructions panel is registry metadata ingestion/display, not missing package
+  content.
+- Publisher is Pavel Vecer while owner/creator is David Vecer; reassign the
+  registry owner to the enduring owner or owning group during admin approval.
+- Agent 365 CLI `1.1.165-preview` is installed and the complete 23-tool external
+  MCP registration passes a no-mutation dry run. No real tool registration was
+  submitted because an existing registry entry could not be safely ruled out.
 
 ## OBO / per-user attribution status
 
@@ -101,7 +116,11 @@ the shortest path to resume work safely.
 - If widget HTML changes, always run `npm run build` before `npm test` because
   generated widget resources are rebuilt during the build step.
 - For a test-tenant release, bump the M365 app patch version when tool schemas
-  or annotations change, then run `npm run release:auto -- --environment
-  snowmcpwidg-dev`.
+  or annotations change, run `npm run release:auto -- --environment
+  snowmcpwidg-dev`, test the developer copy, then use `npm run release:publish
+  -- --environment snowmcpwidg-dev` for catalog submission.
+- Read [AGENT_365_PUBLISHING.md](AGENT_365_PUBLISHING.md) before interpreting
+  `Last published`, Entra Agent ID, Instructions, Environment, or tool-registry
+  metadata in Microsoft 365 admin center.
 - If a future task changes verified environment state, update this file in the
   same change so the state remains visible to repo-scoped and cloud agents.
