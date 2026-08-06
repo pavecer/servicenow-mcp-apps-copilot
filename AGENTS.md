@@ -72,7 +72,8 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
   update. It does not automate a Copilot conversation.
 - `release:publish` additionally submits a version-bumped package to the
   organizational catalog. Submission is not publication: Teams Admin Center
-  approval is still required. Never confuse the MCP OAuth app ID with an Entra
+  approval is still required. Use `--agent-environment prod` for a separately
+  configured production package. Never confuse the MCP OAuth app ID with an Entra
   Agent ID, and check for an existing Agent 365 MCP tool registration before
   submitting another one.
 
@@ -93,7 +94,7 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
    - `test/toolManifest.test.ts` (exact tool-name list + count)
    - `test/widgetResources.test.ts` (exact `ui://` resource count)
    - `m365-agent/appPackage/mcp-tools-1.json` + `ai-plugin.json`
-  - `scripts/agent365-mcp-registration.template.json` (exact tool inventory)
+    - `scripts/agent365-mcp-registration.template.json` (exact tool inventory)
 3. **No secrets in code.** Secrets come from env / Key Vault. `src/utils/logger.ts`
    redacts sensitive keys. Never commit `.env` or `local.settings.json`.
 

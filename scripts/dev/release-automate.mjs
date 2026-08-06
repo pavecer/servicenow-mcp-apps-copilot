@@ -246,7 +246,7 @@ function deploySourcePackage() {
   }
 }
 
-function refreshM365Agent() {
+function refreshM365Agent(agentEnvironment) {
   const projectPath = path.join(repoRoot, "m365-agent");
   const lifecyclePath = path.join(projectPath, "m365agents.yml");
   const buildPath = path.join(projectPath, "appPackage", "build");
@@ -265,7 +265,7 @@ function refreshM365Agent() {
   try {
     runChecked(
       "atk",
-      ["provision", "--env", "dev", "--folder", projectPath, "--interactive", "false"],
+      ["provision", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"],
       { env: { ...process.env, ATK_CLI_SKILL: "true" } }
     );
   } finally {
@@ -273,11 +273,11 @@ function refreshM365Agent() {
   }
 }
 
-function publishM365Agent() {
+function publishM365Agent(agentEnvironment) {
   const projectPath = path.join(repoRoot, "m365-agent");
   runChecked(
     "atk",
-    ["publish", "--env", "dev", "--folder", projectPath, "--interactive", "false"],
+    ["publish", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"],
     { env: { ...process.env, ATK_CLI_SKILL: "true" } }
   );
 }
@@ -322,6 +322,7 @@ function required(values, key) {
 
 function main() {
   const environmentName = getArg("--environment") || process.env.AZD_ENV_NAME || "snowmcpwidg-dev";
+  const agentEnvironment = getArg("--agent-environment") || "dev";
   const publish = hasArg("--publish");
 
   const values = loadValues();
@@ -398,9 +399,9 @@ function main() {
   }
 
   runChecked("node", ["scripts/dev/validate-live-tools.mjs", "--endpoint", endpoint]);
-  refreshM365Agent();
+  refreshM365Agent(agentEnvironment);
   if (publish) {
-    publishM365Agent();
+    publishM365Agent(agentEnvironment);
   }
 
   console.log("\nReady for M365 Copilot prompt testing.");

@@ -46,6 +46,15 @@ Publication still requires an administrator to approve the submission in
 **Teams Admin Center > Teams apps > Manage apps**. The package isn't
 organizationally published until that approval completes.
 
+The Azure/azd environment and Agents Toolkit environment are distinct. Select
+the latter explicitly for production:
+
+```bash
+npm run release:publish -- \
+  --environment <azd-environment> \
+  --agent-environment prod
+```
+
 ## Interpreting Microsoft 365 Admin Center Fields
 
 The following observations apply to an Agents Toolkit declarative agent such as

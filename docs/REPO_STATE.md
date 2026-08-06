@@ -67,6 +67,9 @@ the shortest path to resume work safely.
 - Agent 365 CLI `1.1.165-preview` is installed and the complete 23-tool external
   MCP registration passes a no-mutation dry run. No real tool registration was
   submitted because an existing registry entry could not be safely ruled out.
+- Release automation accepts `--agent-environment` independently from the azd
+  `--environment`; it defaults to `dev`, while production must use a separately
+  configured `prod` Agents Toolkit environment/app ID.
 
 ## OBO / per-user attribution status
 

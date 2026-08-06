@@ -164,6 +164,7 @@ npm run release:publish -- --environment snowmcpwidg-dev
 This still requires approval in Teams Admin Center. Use a separate `prod`
 Agents Toolkit environment and app ID for production; the committed `dev`
 environment intentionally produces the `ServiceNow Assistantdev` test name.
+For a separately configured production package, add `--agent-environment prod`.
 
 **Phase 1 readiness preflight (IT + HR + KB planning):**
 
