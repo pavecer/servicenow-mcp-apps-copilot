@@ -81,10 +81,9 @@ the shortest path to resume work safely.
   Agent Registry metadata, not tool loss. Test the approved copy specifically,
   assign an owner, and allow analytics/metadata synchronization before
   escalating or republishing.
-- Published organizational agent initially couldn't call tools although its
-  package and live endpoint were healthy. Root cause: publishing an Agents
-  Toolkit package doesn't automatically onboard the remote MCP server into
-  Agent 365 Tools; Admin Center showed zero tool requests.
+- Published organizational agent still can't call tools although its package
+  and live endpoint are healthy. The earlier diagnosis that Agent 365 Tools
+  registration was required was incorrect.
 - Submitted external server `ext_ServiceNowMCP` with all 23 tools on 2026-08-06.
   Agent 365 CLI `.default` handling failed to add the downstream permission, so
   the generated RemoteProxy was repaired with delegated `access_as_user`, a
@@ -97,7 +96,13 @@ the shortest path to resume work safely.
   and tested in a new chat after propagation.
 - The admin subsequently approved `ext_ServiceNowMCP`. The A365Proxy service
   principal has `Tools.ListInvoke.All`; RemoteProxy has tenant-wide delegated
-  `access_as_user`; the live endpoint exposes 23 tools.
+  `access_as_user`; the live endpoint exposes 23 tools. This didn't enable the
+  declarative agent. Official docs state Agent 365 BYO MCP preview supports
+  Copilot Studio and coding clients, not Microsoft 365 Declarative Agents.
+- Correct investigation target: native `RemoteMCPServer` plus
+  `OAuthPluginVault` resolution for the published organizational package. A
+  fresh HAR from the failing org-agent chat is required; the existing HAR is a
+  June developer-copy capture and predates this failure.
 - Selecting **Uninstall** on the published org agent removed its organizational
   registry projection entirely in this tenant; only the developer record
   remained as `Not available`, even with filters cleared. Recovery first checks

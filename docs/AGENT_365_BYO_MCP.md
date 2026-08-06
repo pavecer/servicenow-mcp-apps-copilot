@@ -2,8 +2,8 @@
 
 This guide describes how to register the **ServiceNow MCP Server** (this repo) with
 **Microsoft Agent 365** as a Bring-Your-Own (BYO) MCP server, so that it appears
-in the **Microsoft 365 admin center > Agents > Tools** registry and can be
-governed centrally for Microsoft 365 agent experiences.
+in the **Microsoft 365 admin center > Agents > Tools** registry for currently
+supported Agent 365 clients.
 
 > Microsoft reference:
 > [Manage tools for agents — Bring your own (BYO) MCP server](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/manage-tools-for-agent?view=o365-worldwide#bring-your-own-byo-mcp-server)
@@ -11,6 +11,13 @@ governed centrally for Microsoft 365 agent experiences.
 > **Preview limitation (per Microsoft):** Republishing new versions of an
 > already-registered remote MCP server isn't currently supported. Pick a stable
 > tool list before submitting.
+>
+> **Critical client limitation:** Microsoft 365 Declarative Agents are **not**
+> currently supported clients for Agent 365 BYO MCP servers. Supported preview
+> clients are Copilot Studio, VS Code, Claude Code, and GitHub Copilot CLI.
+> Registering or approving this server does not enable the declarative agent in
+> `m365-agent/`; that package uses its native `RemoteMCPServer` authentication
+> configuration.
 
 ---
 
@@ -35,8 +42,8 @@ changes are required.
 
 ```
 +--------------------------+        +-----------------------------+        +-----------------+
-| M365 agent runtime       |        | Agent 365 Tooling Gateway   |        | This MCP Server |
-| (caller signed in)       | ─────▶ | (governance + telemetry)    | ─────▶ | /mcp on Azure   |
+| Supported A365 client    |        | Agent 365 Tooling Gateway   |        | This MCP Server |
+| (not M365 DA)            | ─────▶ | (governance + telemetry)    | ─────▶ | /mcp on Azure   |
 |                          |  user  | acquires Entra token        |  Bearer| Functions       |
 |                          | token  | for api://<MCP_APP>/.default| token  | + ServiceNow    |
 +--------------------------+        +-----------------------------+        +-----------------+
@@ -47,9 +54,9 @@ changes are required.
                                   approves / blocks / monitors
 ```
 
-The Agent 365 Tooling Gateway sits between every supported client and this MCP
-server. Tenant admins approve or block the server in one place; Defender XDR
-captures every tool invocation.
+The Agent 365 Tooling Gateway sits between supported preview clients and this
+MCP server. It isn't in the execution path for the declarative agent shipped in
+this repository.
 
 ---
 
@@ -268,10 +275,9 @@ server is ready to invoke.
 
 ## Step 6 — Use the approved server
 
-### Microsoft 365 agent experiences
-
-Use the approved server from the Microsoft 365 admin center tool registry
-according to your tenant governance policy.
+Use the approved server from a currently supported client: Copilot Studio,
+VS Code, Claude Code, or GitHub Copilot CLI. Do not use this flow to repair or
+enable the repository's Microsoft 365 declarative agent.
 
 ---
 

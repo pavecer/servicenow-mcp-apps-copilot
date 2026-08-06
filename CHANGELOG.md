@@ -84,6 +84,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `access_as_user` delegated scope. Documented that publishing an agent package
   doesn't automatically approve its remote MCP server in the tenant Tools
   registry.
+- Corrected earlier guidance that implied Agent 365 BYO MCP approval could
+  enable this Microsoft 365 Declarative Agent. Current preview documentation
+  explicitly excludes declarative agents; investigation returned to the native
+  `RemoteMCPServer` authentication configuration.
 - Documented organizational-agent recovery after Admin Center Uninstall. The
   approved record might remain Available or disappear entirely; recovery checks
   filters first, then republishes/reapproves only when the org record is absent.

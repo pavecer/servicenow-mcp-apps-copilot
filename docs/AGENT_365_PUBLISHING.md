@@ -10,7 +10,7 @@ are expected for an Agents Toolkit declarative agent.
 | Control plane | Repository path / command | Purpose |
 | --- | --- | --- |
 | Microsoft 365 agent app | `m365-agent/`, `atk provision`, `atk publish` | Packages and distributes the declarative agent in Copilot. |
-| Agent 365 tool registry | `scripts/register-agent365-mcp.ps1` | Registers the remote MCP server for tenant-wide tool approval, blocking, and gateway telemetry. |
+| Agent 365 tool registry | `scripts/register-agent365-mcp.ps1` | Registers the server for supported preview clients; not an M365 Declarative Agent invocation path. |
 | Microsoft Entra Agent ID | Agent identity blueprint and agent identity APIs | Gives an agent a purpose-built nonhuman identity for identity governance and Conditional Access. |
 
 These planes complement each other but are not interchangeable. Publishing the
@@ -194,9 +194,9 @@ developer copy. Don't republish if an Available **Your org** record still exists
 
 ## Agent 365 MCP Tool Registry
 
-Tool registration is optional for running the declarative agent but recommended
-when the tenant needs centralized tool governance and Tooling Gateway telemetry.
-It is separate from agent app publication.
+Tool registration is separate from agent app publication and currently doesn't
+support Microsoft 365 Declarative Agents as clients. Use it only for supported
+preview clients such as Copilot Studio and coding agents.
 
 Validate the current 23-tool payload without tenant mutation:
 
@@ -221,21 +221,19 @@ exact tool names as the runtime manifest.
 
 ### Published agent cannot call the MCP server
 
-Publishing the declarative agent package doesn't automatically register its
-remote MCP server in the Agent 365 Tools registry. A published agent can display
-the `RemoteMCPServer` metadata in **Data & tools** yet still tell users it has no
-access to the tools when tenant tool governance has no approved server entry.
+Do not use Agent 365 BYO MCP registration as this repair. Microsoft 365
+Declarative Agents are not supported BYO MCP clients in the current preview.
 
 Diagnose this state in this order:
 
 1. Validate the live endpoint with `npm run validate:live`.
-2. Open **Microsoft 365 admin center > Agents > Tools > Requests/Registry**.
-3. If no matching endpoint/server exists, submit the external MCP registration.
-4. Verify the generated RemoteProxy has delegated `access_as_user` permission
-  to the MCP API and tenant-wide admin consent.
-5. Have an AI Administrator or Global Administrator approve the tool request.
-6. Wait for propagation, reinstall the published organizational agent, and
-  start a new Copilot chat.
+2. Verify the submitted package contains the expected `RemoteMCPServer`, all
+  functions, and the correct `OAuthPluginVault.reference_id`.
+3. Verify the referenced auth configuration exists for the organizational app.
+4. Capture a HAR from the failing published-agent chat and compare its
+  package/action/auth-config discovery with a working developer copy.
+5. Check for first-use connection/sign-in prompts and connection consent.
+6. Repair the native auth configuration and retest in a new chat.
 
 Use the named `access_as_user` scope in `remoteScopes`. Although `.default` is a
 valid OAuth token request convention after permissions are configured, Agent
