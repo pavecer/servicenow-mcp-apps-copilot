@@ -84,6 +84,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `access_as_user` delegated scope. Documented that publishing an agent package
   doesn't automatically approve its remote MCP server in the tenant Tools
   registry.
+- Documented organizational-agent recovery after Admin Center Uninstall. The
+  approved record might remain Available or disappear entirely; recovery checks
+  filters first, then republishes/reapproves only when the org record is absent.
 - `get_order_detail` now reads ServiceNow fields fetched with
   `sysparm_display_value=all` (handles both plain strings and
   `{ display_value, value }` objects).

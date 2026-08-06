@@ -95,6 +95,16 @@ the shortest path to resume work safely.
   Administrator. An appropriately privileged admin must approve it under
   **Agents > Tools > Requests**, then the published agent must be reinstalled
   and tested in a new chat after propagation.
+- The admin subsequently approved `ext_ServiceNowMCP`. The A365Proxy service
+  principal has `Tools.ListInvoke.All`; RemoteProxy has tenant-wide delegated
+  `access_as_user`; the live endpoint exposes 23 tools.
+- Selecting **Uninstall** on the published org agent removed its organizational
+  registry projection entirely in this tenant; only the developer record
+  remained as `Not available`, even with filters cleared. Recovery first checks
+  Registry **Status > Available**; when no **Your org** record exists, resubmit
+  the same package and approve it again. Version `1.1.5` was resubmitted on
+  2026-08-06 and passed all 61 checks. Do not use `atk install`, which creates
+  another developer copy.
 
 ## OBO / per-user attribution status
 

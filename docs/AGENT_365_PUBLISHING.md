@@ -162,6 +162,36 @@ Do not republish merely to populate these display fields. Republish only for an
 actual versioned package change; every catalog update requires a version bump
 and admin approval.
 
+### Recover after selecting Uninstall
+
+The Microsoft 365 admin center **Uninstall** action removes the agent deployment
+from users. Its registry/catalog projection isn't consistent across current
+tenant experiences: it might remain as **Available**, or the approved
+organizational record might disappear entirely while the developer record
+remains.
+
+Use this two-stage recovery and don't create another sideloaded copy:
+
+1. Open **Agents > All agents > Registry**.
+2. Clear existing filters and select **Status > Available**.
+3. Search for `ServiceNow Assistantdev` and choose the record whose Publisher
+  type is **Your org**.
+4. If it exists, select **Install**, target the test user/group, and grant the
+  requested permissions.
+5. If no **Your org** record exists after clearing filters, resubmit the exact
+  package with `atk publish --env <env>` (or `release:publish`) and approve the
+  new request in Teams Admin Center. Reusing the same package version is valid
+  in this recovery case because the organizational record is absent.
+6. After propagation, install the restored organizational record, open that
+  copy in Copilot, and start a new chat.
+
+Observed on 2026-08-06: after Uninstall, the registry search showed only the old
+developer record (`Not available`). Resubmitting version `1.1.5` passed all 61
+checks and created a fresh approval request.
+
+Do not run `atk install` for this recovery; that command sideloads another
+developer copy. Don't republish if an Available **Your org** record still exists.
+
 ## Agent 365 MCP Tool Registry
 
 Tool registration is optional for running the declarative agent but recommended
