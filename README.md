@@ -7,13 +7,13 @@
 │ Microsoft 365       │        │ ServiceNow MCP       │        │ ServiceNow   │
 │ Copilot / Cowork    │────────│ Server (Azure Fn)    │────────│ Catalog      │
 │                     │        │                      │        │              │
-│ "Order a laptop"    │ OAuth  │ + 21 MCP Tools       │ OAuth  │ + Cart       │
+│ "Order a laptop"    │ OAuth  │ + 23 MCP Tools       │ OAuth  │ + Cart       │
 │ + 8 Widgets         │        │ + 8 SEP-1865 Widgets │        │ + Orders     │
 └─────────────────────┘        └──────────────────────┘        └──────────────┘
 ```
 
 **What you get:**
-- 21 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, report & track incidents, add comments/attachments, validate config
+- 23 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, approve/reject request approvals, report & track incidents, add comments/attachments, validate config
 - 8 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail, incident form, my incidents, incident detail
 - Per-user authentication: orders and incidents stamped with the real user (not a service account)
 - Stateless, scalable: Flex Consumption Azure Functions + Node.js 20
@@ -136,6 +136,45 @@ npm run start:dev # runs on http://localhost:7071/mcp
 npm run smoke:test   # validates connectivity + sample flows
 ```
 
+**Automated release up to M365 Copilot prompt testing:**
+
+```bash
+npm run release:auto -- --environment snowmcpwidg-dev
+```
+
+This runs build + tests, provisions Azure configuration, deploys the Function,
+validates required live MCP tools, validates and updates the existing M365 agent
+package, and stops at "ready for human prompt test in M365 Copilot". In tenants
+where policy disables deployment-storage public access, it creates a narrow,
+two-hour exemption for that one policy rule and storage account, then removes
+the exemption and restores disabled access immediately after deployment.
+
+When tool schemas change, bump `m365-agent/appPackage/manifest.json` before
+running the command so Copilot receives a new cached package version.
+
+**Phase 1 readiness preflight (IT + HR + KB planning):**
+
+```bash
+npm run preflight:readiness
+```
+
+This verifies local ServiceNow/API readiness for catalog, incident, knowledge,
+and HR table surfaces before new scenario implementation. See
+[docs/PHASE1_HR_KB_VALIDATION.md](docs/PHASE1_HR_KB_VALIDATION.md).
+
+**Create repeatable approval demo data:**
+
+```bash
+npm run demo:seed
+npm run demo:verify
+# After the demo:
+npm run demo:cleanup
+```
+
+This creates marked, reusable requests and pending approvals for Alex Baker and
+admin in the configured ServiceNow development instance. See
+[docs/DEMO_APPROVAL_FLOW.md](docs/DEMO_APPROVAL_FLOW.md).
+
 **See also:** [Local Development Guide](docs/LOCAL_DEVELOPMENT.md)
 
 ---
@@ -145,6 +184,7 @@ npm run smoke:test   # validates connectivity + sample flows
 | Topic | Link |
 |-------|------|
 | **Getting Started** | [ServiceNow Setup](docs/SERVICENOW_SETUP.md) • [Deployment](#quick-start) |
+| **Demo** | [Approval Demo Data and Prompts](docs/DEMO_APPROVAL_FLOW.md) |
 | **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
 | **Operations** | [Environment Variables](docs/CONFIG_REFERENCE.md) • [Troubleshooting](docs/TROUBLESHOOTING.md) • [Cost Model](docs/COST_ESTIMATION.md) |
 | **Advanced** | [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO.md) • [Agent 365 Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
@@ -162,6 +202,7 @@ dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - Catalog search, item form, single-item order, and order tracking tools.
 - ServiceNow cart flow (`add_to_cart` → `submit_cart`).
 - Per-item order edits (`update_order_item` / `remove_order_item`).
+- Manager approval actions from order detail (`approve_order_approval` / `reject_order_approval`).
 - Incident management for end users: report a problem, track your incidents,
   read the comment activity, add a comment, and attach or remove a file/screenshot
   (`report_incident`, `list_user_incidents`, `get_incident_detail`,
@@ -174,13 +215,13 @@ dates. Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
   `ENTRA_OBO_DOWNSTREAM_SCOPE` — see [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md).
 
 **Next**
-- Approval actions (approve / reject) surfaced in the order-detail widget.
 - Attachment upload on catalog requests.
 - Richer catalog faceting (category browse, variable validation hints).
 - Expanded automated test coverage for the ServiceNow client error paths.
+- Phase 1 foundation for IT + HR + KB expansion: readiness preflight, admin
+  setup validation, and deployment runbook hardening.
 
 **Later / exploring**
-- Additional MCP hosts beyond Microsoft 365 Copilot (IDE clients, CLI agents).
 - Optional Okta / non-Entra identity brokering (see [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md)).
 - Multi-instance / multi-tenant ServiceNow routing.
 

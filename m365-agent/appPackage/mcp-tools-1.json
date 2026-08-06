@@ -294,6 +294,89 @@
             }
         },
         {
+            "name": "approve_order_approval",
+            "description": "Approve a pending ServiceNow order approval row for a request and return refreshed order detail.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "orderSysId": {
+                        "type": "string",
+                        "description": "The parent order sys_id (sc_request)"
+                    },
+                    "approvalSysId": {
+                        "type": "string",
+                        "description": "The approval row sys_id (sysapproval_approver)"
+                    },
+                    "comment": {
+                        "type": "string",
+                        "description": "Optional approval comment"
+                    }
+                },
+                "required": [
+                    "orderSysId",
+                    "approvalSysId"
+                ]
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/order-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/order-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
+            "name": "reject_order_approval",
+            "description": "Reject a pending ServiceNow order approval row for a request and return refreshed order detail.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "orderSysId": {
+                        "type": "string",
+                        "description": "The parent order sys_id (sc_request)"
+                    },
+                    "approvalSysId": {
+                        "type": "string",
+                        "description": "The approval row sys_id (sysapproval_approver)"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Rejection reason to store in ServiceNow comments"
+                    }
+                },
+                "required": [
+                    "orderSysId",
+                    "approvalSysId",
+                    "reason"
+                ]
+            },
+            "annotations": {
+                "readOnlyHint": true
+            },
+            "_meta": {
+                "ui": {
+                    "resourceUri": "ui://servicenow-mcp/order-detail.html",
+                    "visibility": [
+                        "model",
+                        "app"
+                    ]
+                },
+                "ui/resourceUri": "ui://servicenow-mcp/order-detail.html",
+                "openai/outputTemplate": "ui://servicenow-mcp/order-detail.html",
+                "openai/widgetAccessible": true,
+                "openai/visibility": "public"
+            }
+        },
+        {
             "name": "add_to_cart",
             "description": "Add a ServiceNow catalog item to the user's cart without ordering yet. Use when collecting multiple items before checkout instead of place_order. Renders the cart widget.",
             "inputSchema": {

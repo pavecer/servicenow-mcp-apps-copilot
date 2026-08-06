@@ -3,7 +3,7 @@
 This guide describes how to register the **ServiceNow MCP Server** (this repo) with
 **Microsoft Agent 365** as a Bring-Your-Own (BYO) MCP server, so that it appears
 in the **Microsoft 365 admin center > Agents > Tools** registry and can be
-governed centrally for MCP clients such as VS Code, Claude Code, and GitHub Copilot CLI.
+governed centrally for Microsoft 365 agent experiences.
 
 > Microsoft reference:
 > [Manage tools for agents — Bring your own (BYO) MCP server](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/manage-tools-for-agent?view=o365-worldwide#bring-your-own-byo-mcp-server)
@@ -35,9 +35,9 @@ changes are required.
 
 ```
 +--------------------------+        +-----------------------------+        +-----------------+
-| VS Code / Claude Code    |        | Agent 365 Tooling Gateway   |        | This MCP Server |
-| GitHub Copilot CLI       | ─────▶ | (governance + telemetry)    | ─────▶ | /mcp on Azure   |
-| (caller signed in)       |  user  | acquires Entra token        |  Bearer| Functions       |
+| M365 agent runtime       |        | Agent 365 Tooling Gateway   |        | This MCP Server |
+| (caller signed in)       | ─────▶ | (governance + telemetry)    | ─────▶ | /mcp on Azure   |
+|                          |  user  | acquires Entra token        |  Bearer| Functions       |
 |                          | token  | for api://<MCP_APP>/.default| token  | + ServiceNow    |
 +--------------------------+        +-----------------------------+        +-----------------+
                                               │
@@ -263,10 +263,10 @@ server is ready to invoke.
 
 ## Step 6 — Use the approved server
 
-### VS Code, Claude Code, GitHub Copilot CLI
+### Microsoft 365 agent experiences
 
-Follow [Set up Work IQ MCP Servers for coding agents](https://learn.microsoft.com/en-us/microsoft-agent-365/tooling-servers-overview#extend-your-agents-with-available-or-custom-mcp-servers).
-Each surface picks the approved server from the same tenant registry.
+Use the approved server from the Microsoft 365 admin center tool registry
+according to your tenant governance policy.
 
 ---
 

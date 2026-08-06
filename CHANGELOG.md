@@ -7,15 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Incident comment activity is now read from the incident record's own
-  `comments` journal field (display value) instead of a direct
-  `sys_journal_field` table query. The latter is gated by an out-of-box read ACL
-  requiring the `admin` role, so the new approach works for a least-privilege
-  scoped integration user (and for end-user OBO). No `sys_journal_field` access
-  is required.
-
 ### Added
+
+- **Manager approval actions.** Added `approve_order_approval` and
+  `reject_order_approval`, pending approval controls in the order-detail MCP App,
+  and ServiceNow request/approval ownership validation. The server now exposes
+  23 tools and 8 widgets.
+- **Copilot-ready release automation.** `npm run release:auto` now builds,
+  tests, provisions, performs policy-aware Flex deployment, validates the live
+  MCP tool surface, and updates the existing M365 agent package before stopping
+  at the human prompt-test boundary. Policy-secured deployment storage uses a
+  VNet, Blob private endpoint, and private DNS.
+- **Repeatable approval demo fixtures.** `demo:seed`, `demo:verify`, and
+  `demo:cleanup` create/reset or remove marker-owned requests, requested items,
+  and pending approvals for Alex Baker and admin. Mutations use the signed-in
+  Entra admin through the configured ServiceNow OBO trust; no admin password is
+  stored.
 - **Per-user authorship via Entra OBO (Pattern A) — enabled.** ServiceNow writes
   now run **as the real end user** when `ENTRA_OBO_ENABLED=true`, so incident
   comments and attachments are authored by the user (`sys_created_by`) instead of
@@ -27,7 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Remove incident attachments (MCP Apps).** New `remove_incident_attachment`
   tool plus a **Remove** button on each attachment in the incident-detail and
   my-incidents widgets. The server verifies the attachment belongs to the target
-  incident before deleting it. The server now exposes 21 tools and 8 widgets.
+  incident before deleting it. At that stage, the server exposed 21 tools and
+  8 widgets.
 - **Resilient incident widgets.** The incident-detail and my-incidents widgets no
   longer blank out the detail when a host returns an empty widget-initiated tool
   result (observed in M365 Copilot); they retain the last good detail, classify
@@ -41,24 +49,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   customer-visible comment activity, add a comment, and attach a file/screenshot
   (max 5 MB). Incidents are attributed to the real caller via `caller_id`
   (delegated identity, same model as orders) and the list/detail views are
-  caller-scoped. The server now exposes 20 tools and 8 widgets.
-
-### Removed
-- The `MCP_APPS_ENABLED` feature flag and the legacy Adaptive Card surface. MCP
-  Apps is now the only surface: widget resources and `_meta.ui` are always
-  registered, the cart and order line-item tools are always exposed, and every
-  widget-backed tool returns compact `structuredContent` plus a concise, neutral
-  `content` summary. The `buildOrderFormAdaptiveCard` /
-  `buildCatalogItemSelectionAdaptiveCard` / `buildOrderConfirmationAdaptiveCard`
-  builders and `src/utils/adaptiveCards.ts` are gone; the shared field helpers
-  moved to `src/utils/catalogFields.ts`.
-
-### Added
+  caller-scoped. At that stage, the server exposed 20 tools and 8 widgets.
 - Public-readiness pass: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, this changelog,
   GitHub issue/PR templates, and README **Roadmap**, **Contributing**, and
   **License** sections.
+- `docs/SERVICENOW_SCENARIO_FLOWS.md` documents the end-to-end flow of every
+  supported scenario and the ServiceNow APIs/tables each one touches.
 
 ### Changed
+
+- Incident comment activity is now read from the incident record's own
+  `comments` journal field (display value) instead of a direct
+  `sys_journal_field` table query. The latter is gated by an out-of-box read ACL
+  requiring the `admin` role, so the new approach works for a least-privilege
+  scoped integration user (and for end-user OBO). No `sys_journal_field` access
+  is required.
+- Release automation preserves `ENTRA_OBO_ENABLED` and
+  `ENTRA_OBO_DOWNSTREAM_SCOPE` from local/azd configuration so infrastructure
+  provisioning cannot silently disable delegated ServiceNow access.
 - `get_order_detail` now reads ServiceNow fields fetched with
   `sysparm_display_value=all` (handles both plain strings and
   `{ display_value, value }` objects).
@@ -69,13 +77,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `package.json` and the declarative-agent manifest.
 - Added the copyright holder (Pavel Vecer) to the MIT `LICENSE`.
 
-### Added (docs)
-- `docs/SERVICENOW_SCENARIO_FLOWS.md` — end-to-end flow of every supported
-  scenario and the ServiceNow APIs/tables each one touches.
+### Removed
+
+- The `MCP_APPS_ENABLED` feature flag and the legacy Adaptive Card surface. MCP
+  Apps is now the only surface: widget resources and `_meta.ui` are always
+  registered, the cart and order line-item tools are always exposed, and every
+  widget-backed tool returns compact `structuredContent` plus a concise, neutral
+  `content` summary. The `buildOrderFormAdaptiveCard` /
+  `buildCatalogItemSelectionAdaptiveCard` / `buildOrderConfirmationAdaptiveCard`
+  builders and `src/utils/adaptiveCards.ts` are gone; the shared field helpers
+  moved to `src/utils/catalogFields.ts`.
 
 ## [1.0.0]
 
-### Added
+### Initial release
+
 - Stateless ServiceNow Service Catalog MCP server on Azure Functions
   (Flex Consumption), Node.js 20, TypeScript.
 - MCP tools: `search_catalog_items`, `get_catalog_item_form`, `place_order`,

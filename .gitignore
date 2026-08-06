@@ -32,6 +32,7 @@ find_urls.ps1
 
 # Scratch / temporary markdown (PR body drafts, ad-hoc notes)
 *.tmp.md
+.tmp/
 
 # Generated MCP App widget modules (HTML embedded as TS string literals).
 # Regenerated on every build by scripts/dev/build-widgets.mjs.

@@ -1257,6 +1257,74 @@ export class ServiceNowClient {
   }
 
   /**
+   * Decide one approval row (sysapproval_approver) for a request.
+   *
+   * This is the manager/approver action behind MCP tools that approve/reject
+   * a request from the order-detail widget. When requestSysId is provided we
+   * verify the approval row belongs to that request before patching.
+   */
+  async decideOrderApproval(
+    approvalSysId: string,
+    decision: "approved" | "rejected",
+    options?: { comment?: string; requestSysId?: string }
+  ): Promise<Record<string, unknown>> {
+    const client = await this.getClient();
+
+    try {
+      const detail = await client.get<{ result?: Record<string, unknown> }>(
+        `/api/now/table/sysapproval_approver/${approvalSysId}`,
+        {
+          params: {
+            sysparm_fields: "sys_id,sysapproval,state"
+          }
+        }
+      );
+
+      const row = detail.data.result;
+      if (!row) {
+        throw new Error(`Approval '${approvalSysId}' not found.`);
+      }
+
+      if (options?.requestSysId) {
+        const sysapproval = row.sysapproval;
+        const rowRequestSysId =
+          sysapproval && typeof sysapproval === "object"
+            ? String((sysapproval as { value?: string }).value ?? "")
+            : String(sysapproval ?? "");
+
+        if (!rowRequestSysId || rowRequestSysId !== options.requestSysId) {
+          throw new Error("Approval row does not belong to the specified order.");
+        }
+      }
+
+      const payload: Record<string, unknown> = { state: decision };
+      if (options?.comment && options.comment.trim()) {
+        payload.comments = options.comment.trim();
+      }
+
+      Logger.info("Deciding ServiceNow order approval", {
+        operation: "order_approval.decide",
+        approvalSysId,
+        decision
+      });
+
+      const response = await client.patch<{ result: Record<string, unknown> }>(
+        `/api/now/table/sysapproval_approver/${approvalSysId}`,
+        payload
+      );
+
+      return response.data.result;
+    } catch (error) {
+      Logger.error("Failed to decide order approval", {
+        operation: "order_approval.decide_failed",
+        approvalSysId,
+        decision
+      }, error);
+      throw error;
+    }
+  }
+
+  /**
    * Fetch a single sc_request along with its child sc_req_item records and
    * any sysapproval_approver rows that reference it. Used by the
    * `get_order_detail` MCP tool (and the corresponding MCP App widget) so the

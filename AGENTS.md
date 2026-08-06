@@ -23,6 +23,10 @@ Copilot / Cowork** via **MCP Apps (SEP-1865)** interactive HTML widgets.
 npm install            # install deps
 npm run build          # build-widgets.mjs (regenerates generated/) THEN tsc
 npm test               # vitest — full suite (exact-count manifest/widget tests)
+npm run release:auto -- --environment snowmcpwidg-dev # deploy through M365 prompt-test readiness
+npm run demo:seed       # create/reset Alex + admin approval demo records
+npm run demo:verify     # inspect demo records without mutation
+npm run demo:cleanup    # remove only marker-owned demo records
 npx vitest run <file>  # run a single test file
 npm start              # run the Functions host locally (func start)
 ```
@@ -55,9 +59,13 @@ m365-agent/               Declarative-agent package (manifest, ai-plugin, tools)
 scripts/                  deploy/setup PowerShell + dev/ helper scripts
 docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy)
 .github/
-  agents/*.chatmode.md    Custom VS Code agents (deploy, mcp-apps-ui)
+  agents/*.chatmode.md    Custom VS Code agents (Copilot-ready release, deploy, MCP Apps UI)
   skills/mcp-apps-ui/     Skill: MCP Apps UI/UX guidelines + repo conventions
 ```
+
+- `release:auto` stops at the human test boundary: build, tests, policy-aware
+  Azure deployment, live tool validation, and existing M365 agent package
+  update. It does not automate a Copilot conversation.
 
 ## Critical invariants (violating these breaks cold start or tests)
 

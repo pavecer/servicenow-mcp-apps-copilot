@@ -35,6 +35,14 @@
             "description": "Retrieve a single ServiceNow service catalog request (sc_request) by sys_id, including its items and approval records."
         },
         {
+            "name": "approve_order_approval",
+            "description": "Approve a pending ServiceNow order approval row for a request and return refreshed order detail."
+        },
+        {
+            "name": "reject_order_approval",
+            "description": "Reject a pending ServiceNow order approval row for a request and return refreshed order detail."
+        },
+        {
             "name": "add_to_cart",
             "description": "Add a ServiceNow catalog item to the user's cart without ordering yet. Use when collecting multiple items before checkout instead of placing a single order."
         },
@@ -115,6 +123,8 @@
                 "submit_cart",
                 "update_order_item",
                 "remove_order_item",
+                "approve_order_approval",
+                "reject_order_approval",
                 "get_incident_form",
                 "report_incident",
                 "list_user_incidents",

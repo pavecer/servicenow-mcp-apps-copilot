@@ -397,6 +397,8 @@ sequenceDiagram
 | `submit_cart` | order-detail | `POST /servicecatalog/cart/submit_order` |
 | `list_user_orders` | my-orders | `GET /table/sc_request` |
 | `get_order_detail` | order-detail | `GET /table/sc_request/{id}` |
+| `approve_order_approval` | order-detail | `PATCH /table/sysapproval_approver/{id}` (`state=approved`) |
+| `reject_order_approval` | order-detail | `PATCH /table/sysapproval_approver/{id}` (`state=rejected`) |
 | `update_order` | order-detail | `PATCH /table/sc_request/{id}` |
 | `update_order_item` | order-detail | `PATCH /table/sc_req_item/{id}` |
 | `remove_order_item` | order-detail | `DELETE /table/sc_req_item/{id}` |

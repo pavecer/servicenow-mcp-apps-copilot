@@ -7,5 +7,7 @@
     "azureFunctions.projectLanguageModel": 4,
     "azureFunctions.preDeployTask": "npm prune (functions)",
     "sarif-viewer.connectToGithubCodeScanning": "off",
-    "codeQL.githubDatabase.update": "never"
+    "codeQL.githubDatabase.update": "never",
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "vscode-edge-devtools.webhint": false
 }

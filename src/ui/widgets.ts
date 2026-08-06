@@ -110,7 +110,14 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
     // update_order_item/remove_order_item also return order-detail
     // structuredContent so editing or removing a line item re-renders this
     // widget in place.
-    boundToolNames: ["place_order", "submit_cart", "update_order_item", "remove_order_item"],
+    boundToolNames: [
+      "place_order",
+      "submit_cart",
+      "update_order_item",
+      "remove_order_item",
+      "approve_order_approval",
+      "reject_order_approval"
+    ],
     uri: `${WIDGET_URI_NAMESPACE}/order-detail.html`,
     name: "order-detail",
     description: "Show a single ServiceNow request with items, approvals, and a comment form.",

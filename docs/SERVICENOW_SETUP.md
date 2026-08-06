@@ -73,6 +73,8 @@ Preferred enterprise approach:
 - Replace broad `itil` with explicit table/API ACLs for only:
   - `sc_request` (read + update of requestor-owned records)
   - `sc_req_item` (read + update for request enrichment)
+  - `sysapproval_approver` (read + update for approval actions; the optional
+    demo-data script performs create/delete through a delegated admin token)
   - `incident` (create + read + update of caller-owned records — the end-user
     incident flow; the customer-visible comment activity is read from the
     incident record's own `comments` journal field, so no `sys_journal_field`
@@ -156,6 +158,8 @@ The MCP server calls these standard ServiceNow Service Catalog APIs:
 | `/api/sn_sc/servicecatalog/items/{sys_id}/order_now` | POST | Place an order |
 | `/api/now/table/sys_user` | GET | Resolve caller identity (for requested_for / caller_id) |
 | `/api/now/table/sc_request/{sys_id}` | PATCH | Correct requested_for after order creation |
+| `/api/now/table/sc_req_item` | GET / PATCH / DELETE | Read and manage request line items |
+| `/api/now/table/sysapproval_approver/{sys_id}` | GET / PATCH | Read and decide request approvals |
 | `/api/now/table/incident` | GET / POST | List caller incidents; report a new incident |
 | `/api/now/table/incident/{sys_id}` | GET / PATCH | Read incident detail + comment activity; add a customer-visible comment |
 | `/api/now/attachment` | GET | List a caller's incident attachments |

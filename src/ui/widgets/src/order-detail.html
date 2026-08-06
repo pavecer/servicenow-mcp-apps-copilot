@@ -129,6 +129,11 @@
     if (typeof v === "object") return v.display_value || v.value || "";
     return String(v);
   }
+  function isPendingApprovalState(state) {
+    var s = String(state || "").toLowerCase();
+    if (!s) return false;
+    return s !== "approved" && s !== "rejected" && s !== "cancelled" && s !== "not required";
+  }
 
   var root = document.getElementById("root");
   applyTheme();
@@ -278,7 +283,70 @@
       var alist = document.createElement("div"); alist.className = "approvals";
       approvals.forEach(function (ap) {
         var a = document.createElement("div"); a.className = "approval";
-        a.textContent = (readStr(ap.approver) || readStr(ap.sys_id)) + " \u2014 " + (readStr(ap.state) || "pending");
+        var approvalSysId = readStr(ap.sys_id);
+        var approver = readStr(ap.approver) || approvalSysId;
+        var stateText = readStr(ap.state) || "pending";
+        a.textContent = approver + " \u2014 " + stateText;
+
+        if (approvalSysId && isPendingApprovalState(stateText)) {
+          var ctrls = document.createElement("div"); ctrls.className = "item-controls";
+          var note = document.createElement("input");
+          note.type = "text"; note.className = "qty-input";
+          note.style.width = "240px";
+          note.placeholder = "Optional note (required for Reject)";
+          ctrls.appendChild(note);
+
+          var approveBtn = document.createElement("button");
+          approveBtn.className = "btn-small";
+          approveBtn.textContent = "Approve";
+          (function (approvalSysId, a, note, approver) {
+            approveBtn.addEventListener("click", function () {
+              setBusy(a, true);
+              applyOrderResult(
+                tryCall("approve_order_approval", {
+                  orderSysId: orderSysId,
+                  approvalSysId: approvalSysId,
+                  comment: note.value && note.value.trim() ? note.value.trim() : undefined
+                }),
+                "Approval recorded.",
+                function () {
+                  var suffix = note.value && note.value.trim() ? (" Comment: " + note.value.trim()) : "";
+                  sendFollowUp("Approve pending approval " + approvalSysId + " for order " + number + "." + suffix);
+                }
+              );
+            });
+          })(approvalSysId, a, note, approver);
+          ctrls.appendChild(approveBtn);
+
+          var rejectBtn = document.createElement("button");
+          rejectBtn.className = "btn-small btn-danger";
+          rejectBtn.textContent = "Reject";
+          (function (approvalSysId, a, note, approver) {
+            rejectBtn.addEventListener("click", function () {
+              var reason = (note.value || "").trim();
+              if (!reason) {
+                note.focus();
+                note.placeholder = "Reason required for Reject";
+                return;
+              }
+              setBusy(a, true);
+              applyOrderResult(
+                tryCall("reject_order_approval", {
+                  orderSysId: orderSysId,
+                  approvalSysId: approvalSysId,
+                  reason: reason
+                }),
+                "Rejection recorded.",
+                function () {
+                  sendFollowUp("Reject pending approval " + approvalSysId + " for order " + number + ". Reason: " + reason);
+                }
+              );
+            });
+          })(approvalSysId, a, note, approver);
+          ctrls.appendChild(rejectBtn);
+
+          a.appendChild(ctrls);
+        }
         alist.appendChild(a);
       });
       root.appendChild(alist);

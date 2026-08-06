@@ -239,6 +239,103 @@ resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/con
 }
 
 // ---------------------------------------------------------------------------
+// Private networking for policy-secured Function deployment storage
+// ---------------------------------------------------------------------------
+
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-07-01' = {
+  name: 'vnet-${resourceToken}'
+  location: location
+  tags: tags
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        '10.0.0.0/24'
+      ]
+    }
+  }
+}
+
+resource functionIntegrationSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' = {
+  parent: virtualNetwork
+  name: 'snet-functions-flex'
+  properties: {
+    addressPrefix: '10.0.0.0/27'
+    delegations: [
+      {
+        name: 'flex-consumption'
+        properties: {
+          serviceName: 'Microsoft.App/environments'
+        }
+      }
+    ]
+  }
+}
+
+resource privateEndpointSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' = {
+  parent: virtualNetwork
+  name: 'snet-private-endpoints'
+  properties: {
+    addressPrefix: '10.0.0.32/28'
+    privateEndpointNetworkPolicies: 'Disabled'
+  }
+}
+
+resource blobPrivateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
+  name: 'privatelink.blob.${environment().suffixes.storage}'
+  location: 'global'
+  tags: tags
+}
+
+resource blobPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: blobPrivateDnsZone
+  name: 'link-${virtualNetwork.name}'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: virtualNetwork.id
+    }
+  }
+}
+
+resource storageBlobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-07-01' = {
+  name: 'pep-${storage.name}-blob'
+  location: location
+  tags: tags
+  properties: {
+    subnet: {
+      id: privateEndpointSubnet.id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'storage-blob'
+        properties: {
+          privateLinkServiceId: storage.id
+          groupIds: [
+            'blob'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource storageBlobPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-07-01' = {
+  parent: storageBlobPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'blob'
+        properties: {
+          privateDnsZoneId: blobPrivateDnsZone.id
+        }
+      }
+    ]
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Flex Consumption Hosting Plan (FC1)
 // ---------------------------------------------------------------------------
 
@@ -270,6 +367,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   }
   properties: {
     serverFarmId: hostingPlan.id
+    virtualNetworkSubnetId: functionIntegrationSubnet.id
     siteConfig: {
       // Platform-level CORS. The Azure Functions host intercepts OPTIONS
       // preflight requests BEFORE app code runs, so browser clients (e.g. the
@@ -354,7 +452,11 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       }
     }
   }
-  dependsOn: [deploymentContainer]
+  dependsOn: [
+    deploymentContainer
+    blobPrivateDnsZoneVnetLink
+    storageBlobPrivateDnsZoneGroup
+  ]
 }
 
 // ---------------------------------------------------------------------------
@@ -362,14 +464,14 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 // (required for Flex Consumption deployment package access)
 // ---------------------------------------------------------------------------
 
-// Storage Blob Data Owner — needed to read/write deployment packages
+// Storage Blob Data Contributor — needed to read/write deployment packages
 resource functionAppStorageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storage.id, functionApp.id, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
   scope: storage
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
-      'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Owner
+      'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
     )
     principalId: functionApp.identity.principalId
     principalType: 'ServicePrincipal'

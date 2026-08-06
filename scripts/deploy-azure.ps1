@@ -12,6 +12,9 @@ param(
   [string]$EntraClientId,
   [string]$EntraClientSecret,
   [string]$EntraAudience,
+  [switch]$SkipNpmInstall,
+  [switch]$SkipBuild,
+  [switch]$ProvisionOnly,
   [switch]$SkipSmokeTest
 )
 
@@ -92,6 +95,42 @@ function Mask-SecretForDisplay {
   return $Value.Substring(0, 4) + "..." + $Value.Substring($Value.Length - 4)
 }
 
+function Use-EnvFallback {
+  param(
+    [string]$CurrentValue,
+    [string]$EnvKey
+  )
+
+  if (-not [string]::IsNullOrWhiteSpace($CurrentValue)) {
+    return $CurrentValue
+  }
+
+  return [Environment]::GetEnvironmentVariable($EnvKey)
+}
+
+function Ensure-NpmRegistry {
+  $preferred = "https://registry.npmjs.org/"
+  $current = [Environment]::GetEnvironmentVariable("NPM_CONFIG_REGISTRY")
+  if ([string]::IsNullOrWhiteSpace($current)) {
+    $env:NPM_CONFIG_REGISTRY = $preferred
+    Write-Host "==> Using npm registry: $preferred"
+  } else {
+    Write-Host "==> Using npm registry from environment: $current"
+  }
+
+  # Force an isolated npm config for child processes (including azd packaging)
+  # so user-level scoped registries do not redirect to unavailable feeds.
+  $tmpNpmrc = Join-Path ([System.IO.Path]::GetTempPath()) "servicenow-mcp-deploy.npmrc"
+  @(
+    "registry=$preferred"
+    "@types:registry=$preferred"
+    "@azure:registry=$preferred"
+  ) | Set-Content -Path $tmpNpmrc -Encoding utf8
+
+  $env:NPM_CONFIG_USERCONFIG = $tmpNpmrc
+  Write-Host "==> Using npm user config: $tmpNpmrc"
+}
+
 Require-Command -Name "az"
 Require-Command -Name "azd"
 Require-Command -Name "node"
@@ -100,6 +139,19 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $repoRoot
 
 try {
+  Ensure-NpmRegistry
+
+  $ServiceNowInstanceUrl = Use-EnvFallback -CurrentValue $ServiceNowInstanceUrl -EnvKey "SERVICENOW_INSTANCE_URL"
+  $ServiceNowClientId = Use-EnvFallback -CurrentValue $ServiceNowClientId -EnvKey "SERVICENOW_CLIENT_ID"
+  $ServiceNowClientSecret = Use-EnvFallback -CurrentValue $ServiceNowClientSecret -EnvKey "SERVICENOW_CLIENT_SECRET"
+  $ServiceNowUsername = Use-EnvFallback -CurrentValue $ServiceNowUsername -EnvKey "SERVICENOW_USERNAME"
+  $ServiceNowPassword = Use-EnvFallback -CurrentValue $ServiceNowPassword -EnvKey "SERVICENOW_PASSWORD"
+  $ServiceNowOAuthTokenPath = Use-EnvFallback -CurrentValue $ServiceNowOAuthTokenPath -EnvKey "SERVICENOW_OAUTH_TOKEN_PATH"
+  $EntraTenantId = Use-EnvFallback -CurrentValue $EntraTenantId -EnvKey "ENTRA_TENANT_ID"
+  $EntraClientId = Use-EnvFallback -CurrentValue $EntraClientId -EnvKey "ENTRA_CLIENT_ID"
+  $EntraClientSecret = Use-EnvFallback -CurrentValue $EntraClientSecret -EnvKey "ENTRA_CLIENT_SECRET"
+  $EntraAudience = Use-EnvFallback -CurrentValue $EntraAudience -EnvKey "ENTRA_AUDIENCE"
+
   $EnvironmentName = Read-RequiredValue -Prompt "Enter azd environment name" -CurrentValue $EnvironmentName
   $ServiceNowInstanceUrl = Read-RequiredValue -Prompt "Enter ServiceNow instance URL (https://...service-now.com)" -CurrentValue $ServiceNowInstanceUrl
   $ServiceNowClientId = Read-RequiredValue -Prompt "Enter ServiceNow OAuth client ID" -CurrentValue $ServiceNowClientId
@@ -171,12 +223,24 @@ try {
     }
   }
 
-  Invoke-Checked -Description "Install npm dependencies" -Script {
-    npm install
+  if (-not $SkipNpmInstall.IsPresent) {
+    Invoke-Checked -Description "Install npm dependencies" -Script {
+      npm install
+    }
   }
 
-  Invoke-Checked -Description "Build TypeScript project" -Script {
-    npm run build
+  if (-not $SkipBuild.IsPresent) {
+    Invoke-Checked -Description "Build TypeScript project" -Script {
+      npm run build
+    }
+  }
+
+  if ($ProvisionOnly.IsPresent) {
+    Invoke-Checked -Description "Provision infrastructure with azd" -Script {
+      azd provision --no-prompt
+    }
+    Write-Host "Infrastructure provisioning complete."
+    return
   }
 
   Invoke-Checked -Description "Provision and deploy with azd" -Script {

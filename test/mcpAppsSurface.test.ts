@@ -54,6 +54,9 @@ describe("MCP Apps surface", () => {
       // Order line-item tools re-render the order-detail widget in place.
       ["update_order_item", /order-detail\.html$/],
       ["remove_order_item", /order-detail\.html$/],
+      // Manager approval actions also re-render order-detail.
+      ["approve_order_approval", /order-detail\.html$/],
+      ["reject_order_approval", /order-detail\.html$/],
       // Incident tools: form, list, detail. report_incident + add_incident_comment
       // render the incident-detail widget.
       ["get_incident_form", /incident-form\.html$/],

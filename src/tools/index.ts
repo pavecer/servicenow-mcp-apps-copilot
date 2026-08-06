@@ -13,6 +13,10 @@ import {
   registerRemoveOrderItemTool
 } from "./orderItems";
 import {
+  registerApproveOrderApprovalTool,
+  registerRejectOrderApprovalTool
+} from "./orderApprovals";
+import {
   registerAddToCartTool,
   registerViewCartTool,
   registerUpdateCartItemTool,
@@ -71,6 +75,12 @@ const ORDER_ITEM_TOOL_NAMES = [
   "remove_order_item"
 ] as const;
 
+// Order approval action tools used by managers from the order-detail widget.
+const ORDER_APPROVAL_TOOL_NAMES = [
+  "approve_order_approval",
+  "reject_order_approval"
+] as const;
+
 // Incident-management tools — the end-user "report a problem & track it" flow.
 // report/list/detail/comment each mount a SEP-1865 widget (incident-form,
 // my-incidents, incident-detail).
@@ -88,6 +98,7 @@ export type RegisteredToolName =
   | (typeof BASE_TOOL_NAMES)[number]
   | (typeof CART_TOOL_NAMES)[number]
   | (typeof ORDER_ITEM_TOOL_NAMES)[number]
+  | (typeof ORDER_APPROVAL_TOOL_NAMES)[number]
   | (typeof INCIDENT_TOOL_NAMES)[number];
 
 // The effective set of tool names this server exposes. The MCP Apps surface is
@@ -95,7 +106,13 @@ export type RegisteredToolName =
 // incident tools are all exposed. The minimal manifest and registerTools() both
 // derive from this single list so the import-time drift guard stays consistent.
 function effectiveToolNames(): string[] {
-  return [...BASE_TOOL_NAMES, ...CART_TOOL_NAMES, ...ORDER_ITEM_TOOL_NAMES, ...INCIDENT_TOOL_NAMES];
+  return [
+    ...BASE_TOOL_NAMES,
+    ...CART_TOOL_NAMES,
+    ...ORDER_ITEM_TOOL_NAMES,
+    ...ORDER_APPROVAL_TOOL_NAMES,
+    ...INCIDENT_TOOL_NAMES
+  ];
 }
 
 export function getMinimalToolDefinitions() {
@@ -451,6 +468,52 @@ export function getMinimalToolDefinitions() {
           },
           required: ["orderItemSysId"]
         }
+      },
+      {
+        name: "approve_order_approval",
+        description: "Approve a pending ServiceNow order approval row for a request and return refreshed order detail.",
+        annotations: { readOnlyHint: true },
+        inputSchema: {
+          type: "object",
+          properties: {
+            orderSysId: {
+              type: "string",
+              description: "The parent order sys_id (sc_request)"
+            },
+            approvalSysId: {
+              type: "string",
+              description: "The approval row sys_id (sysapproval_approver)"
+            },
+            comment: {
+              type: "string",
+              description: "Optional approval comment"
+            }
+          },
+          required: ["orderSysId", "approvalSysId"]
+        }
+      },
+      {
+        name: "reject_order_approval",
+        description: "Reject a pending ServiceNow order approval row for a request and return refreshed order detail.",
+        annotations: { readOnlyHint: true },
+        inputSchema: {
+          type: "object",
+          properties: {
+            orderSysId: {
+              type: "string",
+              description: "The parent order sys_id (sc_request)"
+            },
+            approvalSysId: {
+              type: "string",
+              description: "The approval row sys_id (sysapproval_approver)"
+            },
+            reason: {
+              type: "string",
+              description: "Rejection reason to store in ServiceNow comments"
+            }
+          },
+          required: ["orderSysId", "approvalSysId", "reason"]
+        }
       }
     );
 
@@ -640,6 +703,8 @@ export function registerTools(
   registerSubmitCartTool(server, client);
   registerUpdateOrderItemTool(server, client);
   registerRemoveOrderItemTool(server, client);
+  registerApproveOrderApprovalTool(server, client);
+  registerRejectOrderApprovalTool(server, client);
 
   // Incident-management tools — end-user report/track flow.
   registerGetIncidentFormTool(server);
