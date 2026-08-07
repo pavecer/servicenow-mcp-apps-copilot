@@ -311,24 +311,49 @@ mapping first; disabling OBO is only a temporary workaround.
 
 ## Microsoft 365 Copilot Agent Issues
 
+### Function endpoint returns `403 - This web app is stopped`
+
+**Symptom:** The MCP endpoint returns an App Service HTML page stating that the
+web app is stopped, and ARM reports Function state `AdminDisabled`.
+
+**Cause:** Azure administratively stopped the Function because its subscription
+is disabled or has a billing/credit issue. `az account show` can temporarily
+continue reporting the subscription object as `Enabled`.
+
+**Solution:** Reactivate the Azure subscription, then start the Function App if
+it does not resume automatically:
+
+```bash
+az functionapp start \
+   --name func-yj453fjwuhph4 \
+   --resource-group rg-snowmcpwidg-dev
+```
+
+Validate the endpoint and delegated ServiceNow path after it starts:
+
+```bash
+npm run validate:live -- \
+   --endpoint https://func-yj453fjwuhph4.azurewebsites.net/mcp
+```
+
+Do not republish the Microsoft 365 agent or rotate credentials for an
+`AdminDisabled` Function. The last pre-disable live validation passed OBO and
+catalog search.
+
 ### Agent asks for confirmation on every tool call
 
 **Symptom:** Copilot shows an "Allow this action?" card before every tool runs.
 
 **Cause:** Copilot requires confirmation for any MCP tool whose `tools/list` entry
 is **not** annotated `readOnlyHint: true` (tools with no annotation are treated as
-destructive). These annotations are read from the **plugin manifest snapshot
-captured when the agent was published**, not from the live server.
+destructive). This agent uses dynamic discovery, so Copilot reads annotations
+from the live MCP server.
 
 **Solution:**
 1. Ensure every tool sets `annotations: { readOnlyHint: true }` in
-   [`src/tools/index.ts`](../src/tools/index.ts) (the live `tools/list`) **and** in
-   [`m365-agent/appPackage/mcp-tools-1.json`](../m365-agent/appPackage/mcp-tools-1.json)
-   (the published snapshot).
-2. Bump the agent `version` in `m365-agent/appPackage/manifest.json` and
-   re-provision (`atk provision --env <env>`).
-3. Remove the old agent in Copilot, re-add the freshly published one, and start a
-   **new chat** (the snapshot is cached per agent version / session).
+   [`src/tools/index.ts`](../src/tools/index.ts), the live `tools/list` source.
+2. Deploy the updated server.
+3. Start a new agent chat so Copilot performs a fresh tool-discovery pass.
 
 ---
 

@@ -253,7 +253,9 @@ cold-start/tests throw (see `/memories/repo/widget-and-tool-invariants.md`):
 3. `registerTools()` registers the tool.
 4. `test/toolManifest.test.ts` exact tool-name list + count.
 5. `test/widgetResources.test.ts` EXACT `ui://` resource count.
-6. `m365-agent/appPackage/mcp-tools-1.json` + `ai-plugin.json` enumerate tools.
+6. `m365-agent/appPackage/ai-plugin.json` remains configured for dynamic tool
+  discovery (`functions: []`, `run_for_functions: ["*"]`); the live MCP
+  `tools/list` response is the package's tool source.
 7. Tool `content` must never carry verbose JSON or Adaptive Card payloads.
 
 ### Build + verify

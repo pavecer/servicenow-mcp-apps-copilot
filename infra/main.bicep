@@ -122,6 +122,9 @@ param logIncludeCallerIdentity string = 'false'
 @allowed([ 'true', 'false' ])
 param logIncludeErrorStack string = 'false'
 
+@description('Deployment-generated revision that forces secure Key Vault values into a fresh secret version.')
+param secretVersionRevision string = utcNow('yyyyMMddHHmmss')
+
 // ---------------------------------------------------------------------------
 // Variables
 // ---------------------------------------------------------------------------
@@ -177,7 +180,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enabledForDeployment: false
     enabledForTemplateDeployment: false
     enabledForDiskEncryption: false
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
   }
 }
 
@@ -186,6 +189,7 @@ resource serviceNowClientSecretKeyVaultSecret 'Microsoft.KeyVault/vaults/secrets
   name: 'servicenow-client-secret'
   properties: {
     value: serviceNowClientSecret
+    contentType: 'mcp-runtime-${secretVersionRevision}'
   }
 }
 
@@ -194,6 +198,7 @@ resource serviceNowPasswordKeyVaultSecret 'Microsoft.KeyVault/vaults/secrets@202
   name: 'servicenow-password'
   properties: {
     value: serviceNowPassword
+    contentType: 'mcp-runtime-${secretVersionRevision}'
   }
 }
 
@@ -202,6 +207,7 @@ resource entraClientSecretKeyVaultSecret 'Microsoft.KeyVault/vaults/secrets@2023
   name: 'entra-client-secret'
   properties: {
     value: entraClientSecret
+    contentType: 'mcp-runtime-${secretVersionRevision}'
   }
 }
 
@@ -210,6 +216,7 @@ resource entraDcrRegistrationTokenKeyVaultSecret 'Microsoft.KeyVault/vaults/secr
   name: 'entra-dcr-registration-token'
   properties: {
     value: entraDcrRegistrationToken
+    contentType: 'mcp-runtime-${secretVersionRevision}'
   }
 }
 
@@ -335,6 +342,61 @@ resource storageBlobPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/priv
   }
 }
 
+resource keyVaultPrivateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
+  name: 'privatelink.vaultcore.azure.net'
+  location: 'global'
+  tags: tags
+}
+
+resource keyVaultPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: keyVaultPrivateDnsZone
+  name: 'link-${virtualNetwork.name}'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: virtualNetwork.id
+    }
+  }
+}
+
+resource keyVaultPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-07-01' = {
+  name: 'pep-${keyVault.name}-vault'
+  location: location
+  tags: tags
+  properties: {
+    subnet: {
+      id: privateEndpointSubnet.id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'key-vault'
+        properties: {
+          privateLinkServiceId: keyVault.id
+          groupIds: [
+            'vault'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource keyVaultPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-07-01' = {
+  parent: keyVaultPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'vault'
+        properties: {
+          privateDnsZoneId: keyVaultPrivateDnsZone.id
+        }
+      }
+    ]
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Flex Consumption Hosting Plan (FC1)
 // ---------------------------------------------------------------------------
@@ -388,7 +450,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'SERVICENOW_CLIENT_ID', value: serviceNowClientId }
         {
           name: 'SERVICENOW_CLIENT_SECRET'
-          value: '@Microsoft.KeyVault(SecretUri=${serviceNowClientSecretKeyVaultSecret.properties.secretUriWithVersion})'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/${serviceNowClientSecretKeyVaultSecret.name})'
         }
         { name: 'SERVICENOW_OAUTH_TOKEN_PATH', value: serviceNowOauthTokenPath }
         { name: 'SERVICENOW_OAUTH_GRANT_TYPE', value: serviceNowOauthGrantType }
@@ -397,7 +459,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'SERVICENOW_PASSWORD'
           // Reference Key Vault when a password was provided; otherwise empty.
-          value: empty(serviceNowPassword) ? '' : '@Microsoft.KeyVault(SecretUri=${serviceNowPasswordKeyVaultSecret!.properties.secretUriWithVersion})'
+          value: empty(serviceNowPassword) ? '' : '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/${serviceNowPasswordKeyVaultSecret!.name})'
         }
         { name: 'SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN', value: serviceNowRequireCallerAccessToken }
         { name: 'SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS', value: serviceNowRequestedForLookupFields }
@@ -410,7 +472,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ENTRA_CLIENT_ID', value: entraClientId }
         {
           name: 'ENTRA_CLIENT_SECRET'
-          value: empty(entraClientSecret) ? '' : '@Microsoft.KeyVault(SecretUri=${entraClientSecretKeyVaultSecret!.properties.secretUriWithVersion})'
+          value: empty(entraClientSecret) ? '' : '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/${entraClientSecretKeyVaultSecret!.name})'
         }
         { name: 'ENTRA_AUDIENCE', value: entraAudience }
         { name: 'ENTRA_ALLOWED_AUDIENCES', value: entraAllowedAudiences }
@@ -420,7 +482,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ENTRA_AUTH_DISABLED', value: entraAuthDisabled }
         {
           name: 'ENTRA_DCR_REGISTRATION_TOKEN'
-          value: empty(entraDcrRegistrationToken) ? '' : '@Microsoft.KeyVault(SecretUri=${entraDcrRegistrationTokenKeyVaultSecret!.properties.secretUriWithVersion})'
+          value: empty(entraDcrRegistrationToken) ? '' : '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/${entraDcrRegistrationTokenKeyVaultSecret!.name})'
         }
         { name: 'ENTRA_DCR_ALLOW_UNAUTHENTICATED', value: entraDcrAllowUnauthenticated }
         { name: 'ENTRA_OBO_ENABLED', value: entraOboEnabled }

@@ -70,8 +70,10 @@ This template shows how to wrap your existing MCP Server into a Microsoft 365 
 
 ## MCP‑specific tips
 
-- **Discovery URL**: your MCP server’s /discover endpoint must expose JSON‑Schema for every action.
-- **Tool selection**: the run_for_functions array in ai-plugin.json limits which MCP tools your agent can call.  
+- **Discovery URL**: the MCP endpoint must implement `initialize` and `tools/list`.
+- **Tool selection**: `ai-plugin.json` uses dynamic discovery with
+    `functions: []` and `run_for_functions: ["*"]`; the live server controls the
+    available tool surface.
 
 - **Auth flows**: ATK supports both OAuth2.1 and API‑Key; you don’t need to hand‑edit auth blocks.  
 
@@ -94,6 +96,11 @@ from these at provision time, so set them before running `atk provision`:
 | `TEAMS_APP_ID` | app identity | (set by `teamsApp/create`) |
 | `MCP_DA_AUTH_ID_*` | `ai-plugin.json` OAuth `reference_id` | (set by `oauth/register`) |
 
+Provision runs both `oauth/register` and `oauth/update`. The registration is
+kept available to both the developer and organizational app identities with
+`applicableToApps: AnyApp`, while `targetAudience: HomeTenant` limits token use
+to this tenant. Do not remove these lifecycle actions during release.
+
 > If `MCP_SERVER_URL` / `MCP_SERVER_HOST` still resolve to the
 > `YOUR-FUNCTION-APP.azurewebsites.net` placeholder, every tool call hits a dead URL
 > and widgets render `WIDGET_ERROR` / "Tool response was null". Set them to your real
@@ -101,10 +108,10 @@ from these at provision time, so set them before running `atk provision`:
 
 ### Publishing changes (bump the version!)
 
-Microsoft 365 Copilot caches the agent's plugin manifest **by version**, and (for
-custom agents) reads tool annotations from the **snapshot captured at publish
-time** — not from the live MCP server. So whenever you change tools, schemas, or
-annotations:
+Microsoft 365 Copilot caches the agent's plugin manifest **by version**. This
+package uses dynamic MCP tool discovery, so tool schemas and annotations come
+from the live server's `tools/list` response rather than a pinned package
+snapshot. When the agent package itself changes:
 
 1. Bump `version` in `appPackage/manifest.json` (e.g. `1.1.2` → `1.1.3`).
 2. Re-provision: `atk provision --env <env>`.
@@ -129,6 +136,12 @@ The command submits the package to Teams Admin Center; an administrator must
 approve it before it becomes **Published by your org**. Production should use a
 separate `.env.prod`/app ID and no `dev` display-name suffix.
 
+The organizational copy has a separate app/session identity from the sideloaded
+developer copy. After installing or updating it, sign out under **Chat settings
+> Agents**, reopen the organizational agent, and complete its first-use sign-in
+when prompted. Microsoft documents failed or skipped sign-in as a cause of an
+empty MCP tool list.
+
 The **Entra agent ID** field is separate from `ENTRA_CLIENT_ID` and the plugin
 OAuth app registration. Agents Toolkit declarative-agent packages don't create
 or bind a purpose-built Entra Agent ID automatically. A blank field is therefore
@@ -140,9 +153,8 @@ ID into that field or create an unassociated identity only to fill metadata.
 
 Copilot prompts "Allow this action?" for any tool whose `tools/list` entry is **not**
 annotated `readOnlyHint: true`. To run tools without confirmation, every tool sets
-`annotations: { readOnlyHint: true }` in both
-[`appPackage/mcp-tools-1.json`](appPackage/mcp-tools-1.json) (the published snapshot)
-and `src/tools/index.ts` (the live server manifest). Keep them in sync.
+`annotations: { readOnlyHint: true }` in `src/tools/index.ts`, which generates
+the live `tools/list` response used by dynamic discovery.
 
 ## Evaluating Agents
 

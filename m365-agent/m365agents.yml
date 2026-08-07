@@ -19,29 +19,49 @@ provision:
 
   # Register the OAuth client (Microsoft Entra as the OAuth 2.0 provider) in the
   # Teams Developer Portal so the MCP plugin can obtain a per-user bearer token.
-  # Idempotent: skipped automatically when MCP_DA_AUTH_ID is already set.
+  # Registration is idempotent; the following oauth/update action reconciles
+  # its app and tenant restrictions on every provision.
   #
   # Configure these in env/.env.dev before provisioning (see m365-agent/README.md):
-  #   ENTRA_TENANT_ID            - your Entra directory (tenant) ID
-  #   MCP_SERVER_URL             - https://<your-func-app>.azurewebsites.net/mcp
-  #   MCP_DA_OAUTH_CLIENT_ID     - Entra app registration client ID
-  #   SECRET_MCP_DA_OAUTH_CLIENT_SECRET - Entra app client secret
-  #   MCP_DA_OAUTH_SCOPE         - api://<ENTRA_CLIENT_ID>/access_as_user ...
+  #   TEAMS_APP_TENANT_ID                     - Entra directory (tenant) ID
+  #   MCP_SERVER_URL                          - remote MCP endpoint
+  #   MCP_DA_OAUTH_CLIENT_ID_FUNCYJ453F       - Entra app client ID
+  #   SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F - Entra client secret
+  #   MCP_DA_OAUTH_SCOPE_FUNCYJ453F           - delegated access_as_user scope
   - uses: oauth/register
     with:
       name: servicenowcatalog
       appId: ${{TEAMS_APP_ID}}
+      applicableToApps: AnyApp
+      targetAudience: HomeTenant
       flow: authorizationCode
       identityProvider: Custom
-      clientId: ${{MCP_DA_OAUTH_CLIENT_ID}}
-      clientSecret: ${{SECRET_MCP_DA_OAUTH_CLIENT_SECRET}}
-      scope: ${{MCP_DA_OAUTH_SCOPE}}
-      authorizationUrl: https://login.microsoftonline.com/${{ENTRA_TENANT_ID}}/oauth2/v2.0/authorize
-      tokenUrl: https://login.microsoftonline.com/${{ENTRA_TENANT_ID}}/oauth2/v2.0/token
-      refreshUrl: https://login.microsoftonline.com/${{ENTRA_TENANT_ID}}/oauth2/v2.0/token
+      clientId: ${{MCP_DA_OAUTH_CLIENT_ID_FUNCYJ453F}}
+      clientSecret: ${{SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F}}
+      scope: ${{MCP_DA_OAUTH_SCOPE_FUNCYJ453F}}
+      authorizationUrl: https://login.microsoftonline.com/${{TEAMS_APP_TENANT_ID}}/oauth2/v2.0/authorize
+      tokenUrl: https://login.microsoftonline.com/${{TEAMS_APP_TENANT_ID}}/oauth2/v2.0/token
+      refreshUrl: https://login.microsoftonline.com/${{TEAMS_APP_TENANT_ID}}/oauth2/v2.0/token
       baseUrl: ${{MCP_SERVER_URL}}
     writeToEnvironmentFile:
-      configurationId: MCP_DA_AUTH_ID
+      configurationId: MCP_DA_AUTH_ID_FUNCYJ453F
+
+  - uses: oauth/update
+    with:
+      name: servicenowcatalog
+      configurationId: ${{MCP_DA_AUTH_ID_FUNCYJ453F}}
+      appId: ${{TEAMS_APP_ID}}
+      applicableToApps: AnyApp
+      targetAudience: HomeTenant
+      clientId: ${{MCP_DA_OAUTH_CLIENT_ID_FUNCYJ453F}}
+      clientSecret: ${{SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F}}
+      scope: ${{MCP_DA_OAUTH_SCOPE_FUNCYJ453F}}
+      authorizationUrl: https://login.microsoftonline.com/${{TEAMS_APP_TENANT_ID}}/oauth2/v2.0/authorize
+      tokenUrl: https://login.microsoftonline.com/${{TEAMS_APP_TENANT_ID}}/oauth2/v2.0/token
+      refreshUrl: https://login.microsoftonline.com/${{TEAMS_APP_TENANT_ID}}/oauth2/v2.0/token
+      baseUrl: ${{MCP_SERVER_URL}}
+      isPKCEEnabled: false
+      tokenExchangeMethodType: BasicAuthorizationHeader
 
   # Build app package with latest env value
   - uses: teamsApp/zipAppPackage

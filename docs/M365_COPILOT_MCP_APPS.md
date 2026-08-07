@@ -129,18 +129,15 @@ running any MCP tool whose `tools/list` entry is **not** annotated
 keep the catalog/incident flows frictionless, **every** tool in this repo sets
 `annotations: { readOnlyHint: true }`.
 
-Two places must stay in sync:
+`src/tools/index.ts` is the single source: `getMinimalToolDefinitions()` creates
+the live `tools/list` response, including annotations. The declarative agent uses
+dynamic discovery (`functions: []`, `run_for_functions: ["*"]`), so there is no
+separate pinned tool snapshot in the package.
 
-- `src/tools/index.ts` — `getMinimalToolDefinitions()`, the live `tools/list`
-  the server returns.
-- `m365-agent/appPackage/mcp-tools-1.json` — the static snapshot captured in the
-  published agent package.
-
-> For custom (non-Microsoft-published) declarative agents, Copilot reads these
-> annotations from the **published snapshot**, not the live server. Deploying the
-> server alone does not change an already-published agent's confirmation
-> behavior — bump the manifest `version`, re-provision, and reload the agent in a
-> fresh chat. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#microsoft-365-copilot-agent-issues).
+After changing a tool schema or annotation, deploy the server and start a fresh
+agent chat so Copilot performs a new discovery pass. Bump the agent package
+version only when package files change. See
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md#microsoft-365-copilot-agent-issues).
 
 ## Per-user identity ("Opened by") — OBO status
 

@@ -20,6 +20,17 @@ the shortest path to resume work safely.
 
 ## Operational checkpoint
 
+- As of 2026-08-07, Function App `func-yj453fjwuhph4` is externally blocked in
+  ARM state `AdminDisabled` because the Azure subscription was disabled. The
+  Azure CLI subscription object can still report `Enabled` while App Service
+  enforces the administrative stop. This is an Azure subscription/billing state,
+  not an MCP, OAuth, Key Vault, or code regression.
+- The last live check before the administrative stop passed OBO, ServiceNow
+  catalog list/detail (HTTP 200), and a five-result laptop search. After the
+  subscription is reactivated, start the Function App if needed and rerun
+  `npm run validate:live -- --endpoint
+  https://func-yj453fjwuhph4.azurewebsites.net/mcp`, followed by the delegated
+  `validate_servicenow_config` and `search_catalog_items` checks.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).
 - Deployed Function App has been migrated to `dev351709` and validated live.
@@ -29,7 +40,7 @@ the shortest path to resume work safely.
 - Step 1 manager approval actions are deployed: `approve_order_approval` and
   `reject_order_approval` both render the order-detail widget.
 - The live endpoint exposes all 23 tools, including both approval actions.
-- M365 agent package `1.1.5` was validated and applied to the existing tenant
+- M365 agent package `1.1.6` was validated and applied to the existing tenant
   app `0d52a642-334e-4835-94b6-f6acc349569d`; OAuth registration was preserved.
 - `npm run release:auto -- --environment snowmcpwidg-dev` is the verified
   automation path through the human M365 Copilot prompt-test boundary.
@@ -52,7 +63,7 @@ the shortest path to resume work safely.
     `4344079997220310a1cd3b90f053af1f`
 - The deployed admin approval action was exercised successfully, then all three
   fixtures were reset to request/approval state `requested`.
-- Agent package `1.1.5` was formally submitted to the test tenant organizational
+- Agent package `1.1.6` was formally submitted to the test tenant organizational
   catalog with `atk publish` on 2026-08-06; all 61 package checks passed. Teams
   Admin Center approval remains required before `Last published` is expected to
   populate.
@@ -76,11 +87,11 @@ the shortest path to resume work safely.
   Owner/Created by, and Entra agent ID. Its Data & tools view shows the
   RemoteMCPServer summary but not the expanded 23-operation list shown on the
   developer record.
-- The submitted ZIP still contains all 23 functions and full instructions.
-  Treat the reduced approved-record view as capability-dependent or delayed
-  Agent Registry metadata, not tool loss. Test the approved copy specifically,
-  assign an owner, and allow analytics/metadata synchronization before
-  escalating or republishing.
+- The failed `1.1.5` org runtime retained the action summary but omitted the
+  pinned operation projection. Version `1.1.6` uses dynamic discovery instead:
+  the package has `functions: []` and `run_for_functions: ["*"]`, and the live
+  authenticated MCP `tools/list` response supplies all 23 tools and MCP Apps
+  metadata.
 - Published organizational agent still can't call tools although its package
   and live endpoint are healthy. The earlier diagnosis that Agent 365 Tools
   registration was required was incorrect.
@@ -100,9 +111,70 @@ the shortest path to resume work safely.
   declarative agent. Official docs state Agent 365 BYO MCP preview supports
   Copilot Studio and coding clients, not Microsoft 365 Declarative Agents.
 - Correct investigation target: native `RemoteMCPServer` plus
-  `OAuthPluginVault` resolution for the published organizational package. A
-  fresh HAR from the failing org-agent chat is required; the existing HAR is a
-  June developer-copy capture and predates this failure.
+  `OAuthPluginVault` resolution for the published organizational package.
+- Full HAR `debug/m365-published-agent-full.har` captured the failing published
+  turn on 2026-08-06 from `12:22:21Z` through `12:22:29Z`. The organizational
+  runtime is title `T_c7d7f997-2c2b-3d39-d317-9f2d8cf26387`, Teams app
+  `ea189b84-1e69-41b0-94f0-d12a74ae7fbd`, package version `1.1.5`.
+- The HAR proves that the correct organizational title was selected end to end.
+  Its bootstrap record is acquired, has `isAutoInvokeDisabled=false`, and
+  includes `action_1` with `RemoteMCPServer`, `OAuthPluginVault`, and the expected
+  auth reference. No authentication card, action execution event, or explicit
+  runtime error appeared in the non-developer-mode turn.
+- Application Insights had zero requests, traces, and exceptions during the
+  failing turn window, while it recorded successful `/mcp` requests at `11:40Z`.
+  The action therefore stopped before dispatch to the Function; browser HAR
+  absence alone would not prove this because MCP invocation is server-side.
+- Do not assume the different organizational Teams app ID invalidates the auth
+  config. The installed Agents Toolkit `oauth/register` driver defaults
+  `applicableToApps` to `AnyApp` when this project omits that property; its
+  required `appId` input is used only when `SpecificApp` is selected. A later
+  Teams developer portal edit could still change the effective restriction.
+- Updated developer-mode HAR captured the explicit
+  `search_catalog_items` prompt at `12:40:33Z`. Client telemetry says
+  `Developer flag enabled`, but the turn emitted no `DeveloperLogs`,
+  `TriggerPlugin`, `AuthError`, or execution message. `PlugInInfo` contained only
+  built-in `BingWebSearch`; `DiscoverMCPServers` succeeded with
+  `TotalDiscoveredServers: 0`; the selected org conversation had `plugins: []`.
+- The same turn completed with `AuthBlockEncountered=false`,
+  `ClientBlockEncountered=false`, and `ServiceBlockEncountered=false`, and
+  Application Insights again recorded no Function traffic. Screenshots then
+  confirmed the org agent is assigned to Alex and its bundled **ServiceNow
+  Assistant** action is present. The separate Agent 365 `ext_ServiceNowMCP`
+  registry entry is unrelated.
+- Grounded repair: switched the declarative agent action from pinned operations
+  to the current documented dynamic-discovery pattern, bumped to `1.1.6`, passed
+  build plus 32 files / 260 tests, validated 23 live tools, passed all 61 Toolkit
+  package checks, updated the developer title, and submitted the org package.
+  Admin approval of `1.1.6`, propagation, re-add, and a fresh org-agent chat are
+  now the remaining human boundary.
+- OAuth lifecycle defect fixed after the `1.1.6` test: `m365agents.yml` now uses
+  the actual suffixed OAuth variables and reconciles the vault registration with
+  `oauth/update`; release automation no longer removes those actions. The live
+  token-store record was already `AnyApp`; Toolkit updated its audience from
+  `AnyTenant` to `HomeTenant`. This change did not create another catalog
+  submission.
+- Immediate test boundary: Alex must clear the organizational agent connection
+  under **Chat settings > Agents**, reopen the **Published by your org** copy,
+  complete first-use sign-in, and send one explicit catalog prompt in a new chat.
+  Empty Functions before sign-in is consistent with Microsoft's documented
+  authenticated dynamic-discovery behavior.
+- Application Insights for the admin `1.1.6` test proved the agent itself was
+  working: Copilot initialized MCP, listed tools, selected
+  `search_catalog_items`, and called `/mcp`. The displayed HTTP 401 was
+  downstream. OBO failed with `AADSTS7000215` because the Function was pinned to
+  an invalid historical Key Vault secret version; ServiceNow password fallback
+  was also pinned to stale credentials and returned `access_denied`.
+- Infrastructure recovery completed on 2026-08-06: validated local/azd Entra and
+  ServiceNow credentials, forced fresh Key Vault versions, changed Function app
+  settings to versionless secret references, and added approved private endpoint
+  `pep-kv-yj453fjwuhph4-vault` plus linked private DNS zone
+  `privatelink.vaultcore.azure.net`. Key Vault public access is `Disabled` and no
+  temporary exemption remains.
+- Post-recovery live delegated validation passes: OBO exchange passed, catalog
+  list/detail returned HTTP 200, and `search_catalog_items("laptop")` returned
+  five items. The deployed backend is ready for admin and Alex Copilot retests;
+  no agent republish is required.
 - Selecting **Uninstall** on the published org agent removed its organizational
   registry projection entirely in this tenant; only the developer record
   remained as `Not available`, even with filters cleared. Recovery first checks

@@ -93,8 +93,9 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
    - `src/ui/widgets.ts` `WIDGETS` registry (for widgets)
    - `test/toolManifest.test.ts` (exact tool-name list + count)
    - `test/widgetResources.test.ts` (exact `ui://` resource count)
-   - `m365-agent/appPackage/mcp-tools-1.json` + `ai-plugin.json`
-    - `scripts/agent365-mcp-registration.template.json` (exact tool inventory)
+   - `m365-agent/appPackage/ai-plugin.json` stays in dynamic discovery mode
+     (`functions: []`, `run_for_functions: ["*"]`)
+   - `scripts/agent365-mcp-registration.template.json` (exact tool inventory)
 3. **No secrets in code.** Secrets come from env / Key Vault. `src/utils/logger.ts`
    redacts sensitive keys. Never commit `.env` or `local.settings.json`.
 

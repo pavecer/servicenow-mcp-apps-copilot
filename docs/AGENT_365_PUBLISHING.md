@@ -63,7 +63,7 @@ this project.
 | Field | Meaning | Expected state |
 | --- | --- | --- |
 | Platform | Where the agent was created | `Microsoft 365 Agents Toolkit` |
-| Version | Version from `appPackage/manifest.json` | Must match the submitted package, currently `1.1.5` |
+| Version | Version from `appPackage/manifest.json` | Must match the submitted package, currently `1.1.6` |
 | Last updated | Most recent registry/package update | Populated after `provision` or package update |
 | Last published | Organizational-catalog publication | Blank for a developer/sideloaded copy; populated after `atk publish` submission is approved and propagated |
 | Last used | Latest observed agent activity | Confirms the agent is discoverable in inventory and usage telemetry is arriving |
@@ -85,9 +85,9 @@ As of 2026-08-06:
 - Display name: `ServiceNow Assistantdev`
 - M365 title ID: `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169`
 - M365 app ID: `78042b33-06cc-48ec-84e2-2cd20e185e9b`
-- Package version: `1.1.5`
+- Package version: `1.1.6`
 - `atk publish` completed successfully with 61 package checks and submitted the
-  package to the Admin Portal.
+  dynamic-discovery package to the Admin Portal.
 - Admin approval remains required before `Last published` is expected to
   populate.
 - The exact submitted ZIP contains a 5,202-character resolved `instructions`
@@ -112,10 +112,11 @@ The developer record displayed the expanded `RemoteMCPServer` endpoint,
 **Published by your org** record displayed the tool name and description but not
 the expanded operation list.
 
-This difference isn't evidence that the approved package lost its tools. The
-exact submitted ZIP contains the same `RemoteMCPServer` runtime and 23 function
-definitions, and Microsoft documents that Data & tools metadata varies by agent
-type/platform and might not yet be synchronized to the admin center.
+The `1.1.5` package pinned 23 functions into the plugin manifest. The org record
+retained the bundled action summary but its runtime conversation received no
+plugin and discovered zero MCP servers. Version `1.1.6` replaces that pinned
+snapshot with the current Agents Toolkit dynamic-discovery pattern so Copilot
+resolves tools from the authenticated live MCP server.
 
 The approved record also initially showed:
 
@@ -227,13 +228,95 @@ Declarative Agents are not supported BYO MCP clients in the current preview.
 Diagnose this state in this order:
 
 1. Validate the live endpoint with `npm run validate:live`.
-2. Verify the submitted package contains the expected `RemoteMCPServer`, all
-  functions, and the correct `OAuthPluginVault.reference_id`.
-3. Verify the referenced auth configuration exists for the organizational app.
-4. Capture a HAR from the failing published-agent chat and compare its
-  package/action/auth-config discovery with a working developer copy.
-5. Check for first-use connection/sign-in prompts and connection consent.
-6. Repair the native auth configuration and retest in a new chat.
+2. Verify the submitted package contains the expected `RemoteMCPServer`, an
+  empty top-level `functions` array, `run_for_functions: ["*"]`, and the correct
+  `OAuthPluginVault.reference_id`.
+3. In the published agent chat, send `-developer on`, then retry an explicit
+  tool prompt. Download the diagnostic log or preserve the full debug card.
+4. If **No actions enabled** appears, verify the bundled action under the
+  organizational agent's **Data & tools** tab and the user's assignment under
+  **Users**. Do not substitute a standalone Agent 365 Tools registry entry.
+5. If **No matched functions** or **No functions selected for execution**
+  appears, inspect the published action index and function descriptions.
+6. If a function is selected without execution details, inspect parameter
+  schemas and runtime validation.
+7. If an OAuth error appears, use the exact error to check app/org restriction,
+  base URL, or `reference_id` in Teams developer portal.
+8. Correlate the prompt timestamp with Application Insights. Remote MCP calls are
+  made by the Copilot backend, so their absence from a browser HAR is expected
+  and isn't sufficient evidence that the Function was not contacted.
+9. Capture a full HAR only for client package/title/auth metadata and sign-in UI;
+  redact tokens and conversation content. Retest in a new chat after any repair.
+
+Observed on 2026-08-06: full HAR capture of the failing turn selected published
+title `T_c7d7f997-2c2b-3d39-d317-9f2d8cf26387` and Teams app
+`ea189b84-1e69-41b0-94f0-d12a74ae7fbd` throughout. The acquired agent was version
+`1.1.5`, had `isAutoInvokeDisabled=false`, and exposed `action_1` as
+`RemoteMCPServer` with the expected `OAuthPluginVault` reference. The ordinary
+turn contained no auth card or explicit action error. Application Insights had
+zero Function requests, traces, or exceptions from `12:21:30Z` through
+`12:23:30Z`, despite successful `/mcp` requests at `11:40Z`, proving that this
+turn stopped before MCP dispatch.
+
+A subsequent developer-mode capture at `12:40Z` narrowed this to action
+availability. The client confirmed `Developer flag enabled`, but the explicit
+`search_catalog_items` turn emitted no `DeveloperLogs`, `TriggerPlugin`,
+`AuthError`, or action execution message. Its `PlugInInfo` listed only built-in
+`BingWebSearch`; MCP discovery completed with `TotalDiscoveredServers: 0`; and
+the selected organizational conversation had an empty `plugins` array. Turn
+telemetry reported no auth, client, or service block, and Application Insights
+again had no Function request.
+
+The admin screenshots show that the organizational agent itself is available to
+Alex Baker and its bundled **ServiceNow Assistant** action is present under
+**Data & tools**. The separate `ext_ServiceNowMCP` entry under **Agents > Tools**
+is an Agent 365 BYO MCP registration and isn't the declarative agent's action.
+Do not install or change that entry to repair this agent.
+
+The remaining package-level difference was the pinned operation projection.
+Microsoft's current Agents Toolkit flow generates MCP actions with dynamic tool
+discovery by default. Version `1.1.6` now follows that pattern: `functions` is
+empty, `run_for_functions` is `["*"]`, and the authenticated live server supplies
+the 23 tools and widget metadata through `tools/list`. The package passed all 61
+checks, the developer title was updated, and `1.1.6` was submitted for org
+approval. After approval, install/re-add that org version and start a new chat.
+A repaired session should discover at least one MCP server and then produce
+`/mcp` request telemetry.
+
+The release lifecycle also had an independent authentication defect: it referred
+to nonexistent unsuffixed OAuth variables, and `release-automate.mjs` deleted the
+OAuth block to avoid the resulting failure. This is now fixed. Provision runs
+`oauth/register` followed by `oauth/update` with the existing vault reference,
+the real suffixed variables, `applicableToApps: AnyApp`, and
+`targetAudience: HomeTenant`. The live update confirmed the existing record was
+already `AnyApp` and changed only `AnyTenant` to `HomeTenant`.
+
+No new catalog submission is required for that vault update. The published copy
+uses a distinct app/session identity, so clear its stored connection under
+**Chat settings > Agents**, reopen the **Published by your org** copy, and retry
+once. Complete the first-use sign-in prompt before evaluating the Functions
+table. Microsoft explicitly documents failed or skipped authentication as a
+cause of an empty MCP tool list.
+
+The subsequent admin test proved the organizational action mechanics were
+working: the debug card listed and selected `search_catalog_items`, and
+Application Insights showed `initialize`, `tools/list`, and `tools/call` at the
+Function. The HTTP 401 shown in chat came from downstream credential drift, not
+from the agent package. OBO logged `AADSTS7000215`, then the stale ServiceNow
+password fallback returned `access_denied`.
+
+The runtime is repaired without another agent publication. Key Vault credentials
+now rotate into fresh versions on every infrastructure provision, Function app
+settings use versionless references, and the policy-restricted vault is reachable
+through a private endpoint and VNet-linked private DNS. Live delegated tests now
+pass OBO plus catalog list/detail and return laptop search results. Retest the
+existing approved `1.1.6` agent in a new chat.
+
+Do not infer an app restriction from `oauth/register`'s required `appId` field.
+With the installed Toolkit, `applicableToApps` defaults to `AnyApp`; `appId` is
+written into the auth registration only when `SpecificApp` is explicitly chosen.
+This project's lifecycle omits `applicableToApps`. Verify the effective record in
+Teams developer portal because a later portal edit can still restrict it.
 
 Use the named `access_as_user` scope in `remoteScopes`. Although `.default` is a
 valid OAuth token request convention after permissions are configured, Agent
@@ -274,7 +357,7 @@ the corresponding licenses.
 After `release:publish` succeeds:
 
 1. Open **Teams Admin Center > Teams apps > Manage apps**.
-2. Find the pending `ServiceNow Assistantdev` version `1.1.5` submission.
+2. Find the pending `ServiceNow Assistantdev` version `1.1.6` submission.
 3. Review permissions, valid domains, privacy/terms URLs, tools, and publisher.
 4. Approve the package for the intended test users or groups.
 5. In Microsoft 365 admin center, assign the correct owner or owning group.
@@ -300,6 +383,9 @@ MCP server.
 ## References
 
 - [Publish agents for Microsoft 365 Copilot](https://learn.microsoft.com/microsoft-365/copilot/extensibility/publish)
+- [Use developer mode to debug agents](https://learn.microsoft.com/microsoft-365/copilot/extensibility/debugging-agents-copilot-studio)
+- [Troubleshoot MCP apps](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-mcp-apps-troubleshooting)
+- [Troubleshoot MCP and API plugin authentication](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-authentication-troubleshooting)
 - [Understand agent details in Microsoft 365 admin center](https://learn.microsoft.com/microsoft-365/admin/manage/agent-details)
 - [Microsoft Agent 365 overview](https://learn.microsoft.com/microsoft-agent-365/overview)
 - [Microsoft Entra Agent ID](https://learn.microsoft.com/entra/agent-id/what-is-microsoft-entra-agent-id)

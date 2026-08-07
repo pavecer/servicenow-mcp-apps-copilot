@@ -65,6 +65,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Organizational MCP action discovery.** Switched the declarative agent's
+  bundled `RemoteMCPServer` action from a pinned 23-tool package snapshot to
+  Microsoft 365 Agents Toolkit's current dynamic-discovery pattern
+  (`functions: []`, `run_for_functions: ["*"]`). Package version `1.1.6` now
+  resolves tools and MCP Apps metadata from the authenticated live server at
+  runtime, avoiding the organizational catalog projection that retained the
+  action summary but omitted its pinned operations.
+- **OAuth lifecycle reconciliation.** Fixed `m365agents.yml` to use the actual
+  suffixed OAuth environment variables, explicitly maintain the static OAuth
+  registration as `AnyApp` within `HomeTenant`, and run `oauth/update` during
+  provision. Release automation no longer deletes the OAuth lifecycle block.
+  The existing vault record was verified as `AnyApp` and updated from
+  `AnyTenant` to `HomeTenant` without another catalog submission.
+- **Key Vault credential delivery.** Fixed the production HTTP 401 regression
+  found through Application Insights. Function settings no longer pin historical
+  Key Vault secret versions; every infrastructure provision writes fresh secret
+  versions from secure azd inputs. Added a Key Vault private endpoint and
+  `privatelink.vaultcore.azure.net` VNet DNS link so the Flex Function can resolve
+  rotated credentials while vault public access remains disabled.
 - Incident comment activity is now read from the incident record's own
   `comments` journal field (display value) instead of a direct
   `sys_journal_field` table query. The latter is gated by an out-of-box read ACL

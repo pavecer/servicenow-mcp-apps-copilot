@@ -248,29 +248,13 @@ function deploySourcePackage() {
 
 function refreshM365Agent(agentEnvironment) {
   const projectPath = path.join(repoRoot, "m365-agent");
-  const lifecyclePath = path.join(projectPath, "m365agents.yml");
   const buildPath = path.join(projectPath, "appPackage", "build");
-  const originalLifecycle = fs.readFileSync(lifecyclePath, "utf8");
-  const oauthStart = originalLifecycle.indexOf("  # Register the OAuth client");
-  const packageStart = originalLifecycle.indexOf("  # Build app package with latest env value", oauthStart);
-
-  if (oauthStart === -1 || packageStart === -1) {
-    throw new Error("Could not isolate oauth/register in m365-agent/m365agents.yml.");
-  }
-
-  const releaseLifecycle = originalLifecycle.slice(0, oauthStart) + originalLifecycle.slice(packageStart);
   fs.rmSync(buildPath, { recursive: true, force: true });
-  fs.writeFileSync(lifecyclePath, releaseLifecycle, "utf8");
-
-  try {
-    runChecked(
-      "atk",
-      ["provision", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"],
-      { env: { ...process.env, ATK_CLI_SKILL: "true" } }
-    );
-  } finally {
-    fs.writeFileSync(lifecyclePath, originalLifecycle, "utf8");
-  }
+  runChecked(
+    "atk",
+    ["provision", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"],
+    { env: { ...process.env, ATK_CLI_SKILL: "true" } }
+  );
 }
 
 function publishM365Agent(agentEnvironment) {
