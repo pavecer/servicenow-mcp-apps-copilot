@@ -83,7 +83,7 @@ const stamp = new Date().toISOString();
 const shortDescription = `[automated test] Incident flow smoke ${stamp}`;
 
 console.log(`\nLive incident-flow test against ${instanceUrl}`);
-console.log(`Caller attribution: ${callerUpn}\n`);
+console.log("Caller attribution: configured\n");
 
 let createdSysId = "";
 let createdNumber = "";
