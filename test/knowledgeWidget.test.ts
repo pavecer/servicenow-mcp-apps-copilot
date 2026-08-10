@@ -12,7 +12,7 @@ class TestElement {
   disabled = false;
   name = "";
   type = "";
-  value = "";
+  value: string | number = "";
   private ownText = "";
 
   constructor(readonly tagName: string) {}
@@ -37,8 +37,21 @@ class TestElement {
   querySelector() { return null; }
 }
 
-function mountSearchWidget(articleCount: number): TestElement {
+function mountWidget(payload: Record<string, unknown>): TestElement {
   const root = new TestElement("div");
+  const document = {
+    createElement: (name: string) => new TestElement(name),
+    createTextNode: (value: string) => { const node = new TestElement("#text"); node.textContent = value; return node; },
+    getElementById: () => root
+  };
+  const window = { mcpHost: { applyTheme() {}, getData: () => payload, markRendered() {}, onData: (callback: (data: Record<string, unknown>) => void) => callback(payload) } };
+  const scriptStart = html.indexOf("<script>") + "<script>".length;
+  const scriptEnd = html.lastIndexOf("</script>");
+  new Function("window", "document", html.slice(scriptStart, scriptEnd))(window, document);
+  return root;
+}
+
+function mountSearchWidget(articleCount: number): TestElement {
   const articles = Array.from({ length: articleCount }, (_, index) => ({
     sysId: String(index + 1).padStart(32, "0"),
     number: `KB${index + 1}`,
@@ -49,17 +62,8 @@ function mountSearchWidget(articleCount: number): TestElement {
     category: "Access",
     updatedOn: "2026-08-10 00:30:00"
   }));
-  const document = {
-    createElement: (name: string) => new TestElement(name),
-    createTextNode: (value: string) => { const node = new TestElement("#text"); node.textContent = value; return node; },
-    getElementById: () => root
-  };
   const payload = { mode: "search", query: "reset password", attempt: 1, articles, triedArticles: [] };
-  const window = { mcpHost: { applyTheme() {}, getData: () => payload, markRendered() {}, onData: (callback: (data: typeof payload) => void) => callback(payload) } };
-  const scriptStart = html.indexOf("<script>") + "<script>".length;
-  const scriptEnd = html.lastIndexOf("</script>");
-  new Function("window", "document", html.slice(scriptStart, scriptEnd))(window, document);
-  return root;
+  return mountWidget(payload);
 }
 
 describe("Knowledge MCP App", () => {
@@ -97,6 +101,49 @@ describe("Knowledge MCP App", () => {
     expect(html).toContain(".source-knowledge-base, .source-updated { display: none; }");
     expect(html).toContain('actionButton("Read selected article"');
     expect(html).not.toContain('[article.knowledgeBase, article.category, article.updatedOn]');
+  });
+
+  it("renders sanitized article text with useful semantic structure", () => {
+    const root = mountWidget({
+      mode: "detail",
+      attempt: 1,
+      originalQuestion: "How do I reset my password?",
+      triedArticles: [],
+      article: {
+        number: "KB0005012",
+        title: "Locked out of your computer",
+        knowledgeBase: "IT",
+        category: "Access",
+        updatedOn: "2026-08-10",
+        content: "Symptoms\nYou cannot log in.\n\n2 possible resolutions:\n2. Wait 30 minutes.\n4. Contact support.\n\nSupport for Windows 11 ends next year.\nSupport for release 1.2.3.4.5 ends next year.\n\nIT Support USA: +1 858 436 3350\n\n* Check back for updates.\n\n<script>not markup</script>"
+      }
+    });
+    expect(root.querySelectorAll("h2").map(element => element.textContent)).toEqual(["Symptoms", "2 possible resolutions"]);
+    expect(root.querySelectorAll("ol")).toHaveLength(1);
+    expect(root.querySelectorAll("li").map(element => element.textContent)).toEqual(["Wait 30 minutes.", "Contact support."]);
+    expect(root.querySelectorAll("li").map(element => element.value)).toEqual([2, 4]);
+    expect(root.querySelectorAll(".article-contact").map(element => element.textContent)).toEqual(["IT Support USA: +1 858 436 3350"]);
+    expect(root.querySelectorAll(".article-note").map(element => element.textContent)).toEqual(["Check back for updates."]);
+    expect(root.textContent).toContain("Support for Windows 11 ends next year.");
+    expect(root.textContent).toContain("Support for release 1.2.3.4.5 ends next year.");
+    expect(root.textContent).toContain("<script>not markup</script>");
+    expect(root.querySelectorAll(".source-item")).toHaveLength(3);
+    expect(html).not.toContain("content.innerHTML");
+  });
+
+  it("labels a shortened article preview instead of silently clipping it", () => {
+    const root = mountWidget({
+      mode: "detail",
+      attempt: 1,
+      originalQuestion: "Long article",
+      triedArticles: [],
+      article: { title: "Long article", content: "word ".repeat(1100), sourceLink: "https://example.service-now.com/kb" }
+    });
+    expect(root.querySelectorAll(".preview-note").map(element => element.textContent)).toEqual([
+      "Preview shortened. Open the full article in ServiceNow for the remaining content."
+    ]);
+    expect(html).not.toContain("max-height: 420px");
+    expect(html).not.toContain("overflow: hidden; }\n  .content");
   });
 
   it("offers but never automatically creates an incident after attempt three", () => {

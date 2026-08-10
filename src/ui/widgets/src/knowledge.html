@@ -37,7 +37,15 @@
   .source-item { padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); }
   .source-label { font-weight: 600; color: var(--fg); }
   .article { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-  .content { margin-top: 12px; white-space: pre-wrap; font-size: 13px; line-height: 1.55; max-height: 320px; overflow: hidden; }
+  .content { font-size: 13px; line-height: 1.55; }
+  .content h2 { margin: 18px 0 6px; font-size: 14px; }
+  .content h2:first-child { margin-top: 0; }
+  .content p { margin: 0 0 12px; }
+  .content ol, .content ul { margin: 4px 0 16px; padding-left: 24px; }
+  .content li { margin: 0 0 8px; padding-left: 2px; }
+  .article-contact { padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); font-weight: 600; }
+  .article-note { padding: 8px 10px; border-radius: 4px; background: var(--warning-bg); color: var(--fg); }
+  .preview-note { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
   .notice { margin-top: 14px; padding: 12px; border: 1px solid var(--warning); border-radius: 8px; background: var(--warning-bg); font-size: 13px; line-height: 1.45; }
   .error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
   .success { color: var(--fg); background: var(--success-bg); border-color: var(--success); }
@@ -79,6 +87,43 @@
       var item = make("span", "source-item source-" + entry[0]); item.appendChild(make("span", "source-label", entry[1] + ": ")); item.appendChild(document.createTextNode(text(entry[2]))); source.appendChild(item);
     });
     if (source.childNodes.length > 0) parent.appendChild(source);
+  }
+  function isSupportContact(line) {
+    if (!/^(?:IT\s+)?Support\b/i.test(line)) return false;
+    if (/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(line)) return true;
+    var candidates = line.match(/\+?\d[\d\s().-]*\d/g) || [];
+    return candidates.some(function (candidate) { return (candidate.match(/\d/g) || []).length >= 8; });
+  }
+  function renderArticleContent(value) {
+    var content = make("div", "content");
+    var rawContent = text(value).replace(/\r/g, "");
+    var shortened = rawContent.length > 5000;
+    var preview = shortened ? rawContent.slice(0, 5000).replace(/\s+\S*$/, "") : rawContent;
+    var lines = preview.split("\n");
+    var list = null; var listType = "";
+    function closeList() { list = null; listType = ""; }
+    lines.forEach(function (rawLine) {
+      var line = rawLine.trim();
+      if (!line) { closeList(); return; }
+      var numbered = /^(\d+)[.)]\s+(.+)$/.exec(line);
+      var bulleted = /^[•-]\s+(.+)$/.exec(line);
+      if (numbered || bulleted) {
+        var nextType = numbered ? "ol" : "ul";
+        if (!list || listType !== nextType) { list = make(nextType, "article-list"); listType = nextType; content.appendChild(list); }
+        var listItem = make("li", "", numbered ? numbered[2] : bulleted[1]);
+        if (numbered) listItem.value = Number(numbered[1]);
+        list.appendChild(listItem);
+        return;
+      }
+      closeList();
+      var heading = line.length <= 80 && (/^(symptoms?|causes?|resolutions?|steps?|instructions?|requirements?|notes?|overview)\s*:?[\s]*$/i.test(line) || /^(?:\d+\s+)?[\w][\w /&()'-]{1,60}:$/.test(line));
+      if (heading) { content.appendChild(make("h2", "", line.replace(/\s*:\s*$/, ""))); return; }
+      if (isSupportContact(line)) { content.appendChild(make("p", "article-contact", line)); return; }
+      if (/^\*\s+/.test(line)) { content.appendChild(make("p", "article-note", line.replace(/^\*\s+/, ""))); return; }
+      content.appendChild(make("p", "", line));
+    });
+    if (content.childNodes.length === 0) content.appendChild(make("p", "empty", "No article content is available."));
+    return { element: content, shortened: shortened };
   }
 
   var root = document.getElementById("root");
@@ -199,8 +244,12 @@
   function renderDetail(data) {
     var article = data.article || {};
     root.appendChild(make("h1", "", text(article.title) || "Knowledge article"));
-    root.appendChild(make("div", "meta", [article.number, article.knowledgeBase, article.category].filter(Boolean).join(" | ")));
-    var card = make("article", "article"); card.appendChild(make("div", "content", text(article.content).slice(0, 5000))); root.appendChild(card);
+    if (article.number) root.appendChild(make("div", "meta", text(article.number)));
+    addSourceMetadata(root, article);
+    var formatted = renderArticleContent(article.content);
+    var card = make("article", "article"); card.appendChild(formatted.element);
+    if (formatted.shortened) card.appendChild(make("p", "preview-note", article.sourceLink ? "Preview shortened. Open the full article in ServiceNow for the remaining content." : "Preview shortened. Ask Copilot for the remaining article content."));
+    root.appendChild(card);
     if (article.sourceLink) { var source = make("a", "source-link", "View full article in ServiceNow"); source.href = article.sourceLink; source.addEventListener("click", function (event) { event.preventDefault(); if (!openExternal(article.sourceLink)) showStatus("The ServiceNow source could not be opened.", true); }); root.appendChild(source); }
     if (data.offerIncident) root.appendChild(make("div", "notice", "If this still does not solve the issue, I can create an incident with the Knowledge history after you confirm."));
     var actions = make("div", "actions");
