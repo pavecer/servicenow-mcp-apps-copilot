@@ -65,6 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Security hardening.** Updated vulnerable transitive dependencies
+  `@hono/node-server` and `ip-address`, and stopped development scripts from
+  logging environment-derived identities and ServiceNow configuration values.
 - **Organizational MCP action discovery.** Switched the declarative agent's
   bundled `RemoteMCPServer` action from a pinned 23-tool package snapshot to
   Microsoft 365 Agents Toolkit's current dynamic-discovery pattern

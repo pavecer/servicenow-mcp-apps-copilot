@@ -34,12 +34,6 @@ function loadConfig() {
   return env;
 }
 
-function mask(value) {
-  if (!value) return "(missing)";
-  if (value.length <= 8) return "********";
-  return `${value.slice(0, 4)}...${value.slice(-4)}`;
-}
-
 async function getToken(baseUrl, cfg) {
   const payload = new URLSearchParams({
     grant_type: "password",
@@ -98,9 +92,7 @@ async function main() {
   }
 
   const baseUrl = cfg.SERVICENOW_INSTANCE_URL.replace(/\/$/, "");
-  console.error("[preflight] Instance:", baseUrl);
-  console.error("[preflight] Client ID:", mask(cfg.SERVICENOW_CLIENT_ID));
-  console.error("[preflight] Username:", cfg.SERVICENOW_USERNAME);
+  console.error("[preflight] ServiceNow configuration loaded.");
 
   let token;
   try {
