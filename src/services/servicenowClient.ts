@@ -276,9 +276,36 @@ export function parseCommentJournal(field: unknown): ServiceNowIncidentComment[]
   return entries;
 }
 
+function readServiceNowFieldValue(field: unknown): string {
+  if (typeof field === "string") {
+    return field;
+  }
+  if (field && typeof field === "object") {
+    const value = (field as { value?: unknown }).value;
+    return value == null ? "" : String(value);
+  }
+  return field == null ? "" : String(field);
+}
+
+function normalizeServiceNowChoice(field: unknown): string {
+  const raw = typeof field === "object" && field
+    ? (field as { display_value?: unknown; value?: unknown }).display_value
+      ?? (field as { value?: unknown }).value
+    : field;
+  return String(raw ?? "").toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function requireServiceNowSysId(value: string, label: string): string {
+  if (!/^[0-9a-f]{32}$/i.test(value)) {
+    throw new Error(`${label} must be a 32-character ServiceNow sys_id.`);
+  }
+  return value;
+}
+
 export class ServiceNowClient {
   private readonly tokenManager: TokenManager;
   private readonly httpClient: AxiosInstance;
+  private readonly approvalDecisionLocks = new Map<string, Promise<void>>();
 
   constructor(tokenManager?: TokenManager) {
     this.tokenManager = tokenManager ?? new TokenManager();
@@ -494,6 +521,71 @@ export class ServiceNowClient {
     }
 
     return [...new Set(values)];
+  }
+
+  private async resolveCurrentCallerSysId(client: AxiosInstance): Promise<string | undefined> {
+    const callerValues = this.getCallerValues();
+    const lookupFields = this.getRequestedForLookupFields();
+    if (callerValues.length === 0 || lookupFields.length === 0) {
+      return undefined;
+    }
+    try {
+      return (await this.lookupServiceNowUser(client, callerValues, lookupFields)).sysId;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async assertOrderAccess(
+    client: AxiosInstance,
+    requestSysId: string,
+    order: Record<string, unknown>,
+    options?: { allowApprover?: boolean; callerSysId?: string }
+  ): Promise<string> {
+    const callerSysId = options?.callerSysId ?? await this.resolveCurrentCallerSysId(client);
+    if (!callerSysId) {
+      throw new Error("Unable to verify access to this order for the current caller.");
+    }
+
+    const ownerFields = [order.requested_for, order.opened_by, order.requested_by];
+    if (ownerFields.some(field => readServiceNowFieldValue(field) === callerSysId)) {
+      return callerSysId;
+    }
+
+    if (options?.allowApprover) {
+      const response = await client.get<{ result?: Array<Record<string, unknown>> }>(
+        "/api/now/table/sysapproval_approver",
+        {
+          params: {
+            sysparm_query: `sysapproval=${requestSysId}^approver=${callerSysId}`,
+            sysparm_fields: "sys_id",
+            sysparm_limit: 1
+          }
+        }
+      );
+      if ((response.data.result ?? []).length > 0) {
+        return callerSysId;
+      }
+    }
+
+    throw new Error("You do not have access to this order.");
+  }
+
+  private async withApprovalDecisionLock<T>(approvalSysId: string, action: () => Promise<T>): Promise<T> {
+    const previous = this.approvalDecisionLocks.get(approvalSysId) ?? Promise.resolve();
+    let release: () => void = () => {};
+    const current = new Promise<void>(resolve => { release = resolve; });
+    const tail = previous.then(() => current);
+    this.approvalDecisionLocks.set(approvalSysId, tail);
+    await previous;
+    try {
+      return await action();
+    } finally {
+      release();
+      if (this.approvalDecisionLocks.get(approvalSysId) === tail) {
+        this.approvalDecisionLocks.delete(approvalSysId);
+      }
+    }
   }
 
   private async resolveRequestedFor(client: AxiosInstance, explicitRequestedFor?: string): Promise<RequestedForResolution> {
@@ -1156,9 +1248,25 @@ export class ServiceNowClient {
     requestSysId: string,
     updates: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
+    requireServiceNowSysId(requestSysId, "Order sys_id");
     const client = await this.getClient();
 
     try {
+      const detail = await client.get<{ result?: Record<string, unknown> }>(
+        `/api/now/table/sc_request/${requestSysId}`,
+        {
+          params: {
+            sysparm_fields: "sys_id,requested_for,opened_by,requested_by",
+            sysparm_display_value: "all"
+          }
+        }
+      );
+      const order = detail.data.result;
+      if (!order) {
+        throw new Error(`ServiceNow request ${requestSysId} not found`);
+      }
+      await this.assertOrderAccess(client, requestSysId, order);
+
       const response = await client.patch<{ result: Record<string, unknown> }>(
         `/api/now/table/sc_request/${requestSysId}`,
         updates
@@ -1268,6 +1376,20 @@ export class ServiceNowClient {
     decision: "approved" | "rejected",
     options?: { comment?: string; requestSysId?: string }
   ): Promise<Record<string, unknown>> {
+    requireServiceNowSysId(approvalSysId, "Approval sys_id");
+    if (options?.requestSysId) {
+      requireServiceNowSysId(options.requestSysId, "Order sys_id");
+    }
+    return this.withApprovalDecisionLock(approvalSysId, () =>
+      this.decideOrderApprovalUnlocked(approvalSysId, decision, options)
+    );
+  }
+
+  private async decideOrderApprovalUnlocked(
+    approvalSysId: string,
+    decision: "approved" | "rejected",
+    options?: { comment?: string; requestSysId?: string }
+  ): Promise<Record<string, unknown>> {
     const client = await this.getClient();
 
     try {
@@ -1275,7 +1397,8 @@ export class ServiceNowClient {
         `/api/now/table/sysapproval_approver/${approvalSysId}`,
         {
           params: {
-            sysparm_fields: "sys_id,sysapproval,state"
+            sysparm_fields: "sys_id,sysapproval,state,approver",
+            sysparm_display_value: "all"
           }
         }
       );
@@ -1286,15 +1409,22 @@ export class ServiceNowClient {
       }
 
       if (options?.requestSysId) {
-        const sysapproval = row.sysapproval;
-        const rowRequestSysId =
-          sysapproval && typeof sysapproval === "object"
-            ? String((sysapproval as { value?: string }).value ?? "")
-            : String(sysapproval ?? "");
+        const rowRequestSysId = readServiceNowFieldValue(row.sysapproval);
 
         if (!rowRequestSysId || rowRequestSysId !== options.requestSysId) {
           throw new Error("Approval row does not belong to the specified order.");
         }
+      }
+
+      const approvalState = normalizeServiceNowChoice(row.state);
+      if (!["requested", "pending", "awaiting approval", "approval requested"].includes(approvalState)) {
+        throw new Error("Approval is no longer pending.");
+      }
+
+      const callerSysId = await this.resolveCurrentCallerSysId(client);
+      const approverSysId = readServiceNowFieldValue(row.approver);
+      if (!callerSysId || !approverSysId || callerSysId !== approverSysId) {
+        throw new Error("Only the assigned approver can decide this approval.");
       }
 
       const payload: Record<string, unknown> = { state: decision };
@@ -1341,6 +1471,7 @@ export class ServiceNowClient {
     items: Array<Record<string, unknown>>;
     approvals: Array<Record<string, unknown>>;
   }> {
+    requireServiceNowSysId(requestSysId, "Order sys_id");
     const client = await this.getClient();
     const itemsLimit = options?.itemsLimit ?? 50;
     const includeApprovals = options?.includeApprovals !== false;
@@ -1359,6 +1490,7 @@ export class ServiceNowClient {
         "assigned_to",
         "assignment_group",
         "opened_by",
+        "requested_by",
         "opened_at",
         "created_on",
         "updated_on",
@@ -1375,6 +1507,11 @@ export class ServiceNowClient {
       if (!order) {
         throw new Error(`ServiceNow request ${requestSysId} not found`);
       }
+      const callerSysId = await this.resolveCurrentCallerSysId(client);
+      await this.assertOrderAccess(client, requestSysId, order, {
+        allowApprover: true,
+        callerSysId
+      });
 
       const itemsResponse = await client.get<{ result: Array<Record<string, unknown>> }>(
         "/api/now/table/sc_req_item",
@@ -1441,6 +1578,16 @@ export class ServiceNowClient {
             }
           );
           approvals = approvalsResponse.data.result ?? [];
+          approvals = approvals.map(approval => ({
+            ...approval,
+            can_decide: Boolean(
+              callerSysId
+              && callerSysId === readServiceNowFieldValue(approval.approver)
+              && ["requested", "pending", "awaiting approval", "approval requested"].includes(
+                normalizeServiceNowChoice(approval.state)
+              )
+            )
+          }));
         } catch (error) {
           Logger.warn("Failed to fetch approvals for order", {
             operation: "orders.detail_approvals_failed",
