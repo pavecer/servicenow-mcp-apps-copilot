@@ -41,7 +41,7 @@ describe("update_order tool", () => {
   });
 
   it("forwards only allowlisted fields to the ServiceNow client", async () => {
-    await registered.handler({
+    const result = await registered.handler({
       orderSysId: "abc",
       updates: {
         short_description: "new desc",
@@ -54,6 +54,10 @@ describe("update_order tool", () => {
       short_description: "new desc",
       comments: "please expedite"
     });
+    expect((result as { structuredContent?: Record<string, unknown> }).structuredContent).toMatchObject({
+      success: true,
+      updatedFields: ["short_description", "comments"]
+    });
   });
 
   it("returns a structured failure when no allowed field is provided", async () => {
@@ -63,9 +67,11 @@ describe("update_order tool", () => {
     }) as { content: Array<{ type: string; text: string }> };
 
     expect(updateOrderMock).not.toHaveBeenCalled();
-    const payload = JSON.parse(result.content[0].text) as Record<string, unknown>;
-    expect(payload.success).toBe(false);
-    expect(String(payload.error)).toMatch(/no allowed fields/i);
+    expect(result.content[0].text).toMatch(/specify at least one/i);
+    expect((result as { structuredContent?: Record<string, unknown> }).structuredContent).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/no allowed fields/i)
+    });
   });
 
   it("returns a structured failure response when ServiceNow update throws", async () => {
@@ -75,9 +81,11 @@ describe("update_order tool", () => {
       updates: { short_description: "x" }
     }) as { content: Array<{ type: string; text: string }> };
 
-    const payload = JSON.parse(result.content[0].text) as Record<string, unknown>;
-    expect(payload.success).toBe(false);
-    expect(payload.error).toBe("boom");
-    expect(payload.orderSysId).toBe("abc");
+    expect(result.content[0].text).toContain("boom");
+    expect((result as { structuredContent?: Record<string, unknown> }).structuredContent).toMatchObject({
+      success: false,
+      error: "boom",
+      orderSysId: "abc"
+    });
   });
 });

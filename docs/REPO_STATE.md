@@ -1,6 +1,6 @@
 # Repository State
 
-Last updated: 2026-08-06
+Last updated: 2026-08-10
 
 This file is the tracked handover for future agents and cloud Copilot sessions.
 It records the latest verified runtime state, active deployment assumptions, and
@@ -18,19 +18,32 @@ the shortest path to resume work safely.
   `https://dev351709.service-now.com`
 - Current integration identity: `mcp_integration`
 
+## Human-validated order-detail release
+
+- The order-detail MCP App redesign was deployed from commit `aad13a1` to
+  `snowmcpwidg-dev` and the developer/test M365 app. It adds a prominent
+  lifecycle panel and next step, Approval → Queued → Underway → Complete
+  progress, responsive light/dark layouts, and accessible
+  approval/error/busy states.
+- The backend now derives `can_decide` from the current ServiceNow caller,
+  enforces requestor/approver ownership on detail and update paths, rejects
+  malformed non-32-hex ServiceNow `sys_id` values, serializes same-instance
+  concurrent decisions for one approval, and keeps mutation success truthful
+  when only the detail refresh fails.
+- Validation on 2026-08-10: `npm run build && npm test` passed with 35 test
+  files and 299 tests; live validation passed all 23 tools; storage public
+  access was restored to `Disabled`; and no temporary policy exemption
+  remained. The user then tested the deployed MCP App in the test tenant and
+  explicitly confirmed that it works as intended.
+- The validated code is being published through a fresh PR after the earlier
+  premature merge was fully reverted. Do not bypass the human-validation gate
+  for future behavioral changes.
+
 ## Operational checkpoint
 
-- As of 2026-08-07, Function App `func-yj453fjwuhph4` is externally blocked in
-  ARM state `AdminDisabled` because the Azure subscription was disabled. The
-  Azure CLI subscription object can still report `Enabled` while App Service
-  enforces the administrative stop. This is an Azure subscription/billing state,
-  not an MCP, OAuth, Key Vault, or code regression.
-- The last live check before the administrative stop passed OBO, ServiceNow
-  catalog list/detail (HTTP 200), and a five-result laptop search. After the
-  subscription is reactivated, start the Function App if needed and rerun
-  `npm run validate:live -- --endpoint
-  https://func-yj453fjwuhph4.azurewebsites.net/mcp`, followed by the delegated
-  `validate_servicenow_config` and `search_catalog_items` checks.
+- As of 2026-08-10, Function App `func-yj453fjwuhph4` is running and the Azure
+  subscription is enabled. The live MCP endpoint exposes all 23 tools and is
+  ready for M365 prompt testing.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).
 - Deployed Function App has been migrated to `dev351709` and validated live.

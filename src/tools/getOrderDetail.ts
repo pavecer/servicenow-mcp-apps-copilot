@@ -88,16 +88,18 @@ export function registerGetOrderDetailTool(server: McpServer, client: ServiceNow
         return await buildOrderDetailResult(client, orderSysId, { includeApprovals });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
+        const failure = {
+          success: false,
+          error: errorMessage,
+          message: "Failed to retrieve order detail",
+          orderSysId
+        };
         return {
+          structuredContent: failure,
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({
-                success: false,
-                error: errorMessage,
-                message: "Failed to retrieve order detail",
-                orderSysId
-              }, null, 2)
+              text: `Could not retrieve order ${orderSysId}: ${errorMessage}`
             }
           ]
         };
