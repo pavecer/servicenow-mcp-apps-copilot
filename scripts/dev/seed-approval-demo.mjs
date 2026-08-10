@@ -416,12 +416,12 @@ async function main() {
     throw new Error("Usage: seed-approval-demo.mjs <seed|verify|cleanup> [--confirm]");
   }
 
-  const { baseUrl, api } = await createClient();
+  const { api } = await createClient();
   const users = await resolveUsers(api);
 
   if (command === "cleanup") {
     const deleted = await cleanup(api);
-    console.log(JSON.stringify({ instance: baseUrl, command, deleted }, null, 2));
+    console.log(JSON.stringify({ command, deleted }, null, 2));
     return;
   }
 
@@ -431,7 +431,6 @@ async function main() {
     : await verify(api, users);
 
   console.log(JSON.stringify({
-    instance: baseUrl,
     command,
     users: summarizeUsers(users),
     catalogItem: {
