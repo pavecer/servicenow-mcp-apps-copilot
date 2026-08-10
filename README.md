@@ -151,8 +151,11 @@ where policy disables deployment-storage public access, it creates a narrow,
 two-hour exemption for that one policy rule and storage account, then removes
 the exemption and restores disabled access immediately after deployment.
 
-When tool schemas change, bump `m365-agent/appPackage/manifest.json` before
-running the command so Copilot receives a new cached package version.
+When a release needs a new package version, use `npm run release:prepare` so
+Copilot receives a new cached package and npm/M365 versions remain synchronized.
+Use `npm run release:check` and follow the
+[release plan](docs/RELEASE_PLAN.md) rather than editing one version source
+independently.
 
 To submit the validated package to the tenant organizational catalog instead
 of only provisioning the developer copy, run:

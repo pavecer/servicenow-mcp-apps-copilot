@@ -395,8 +395,9 @@ issued token is accepted.
 **Cause:** Copilot caches the agent's plugin manifest by **version**. Without a
 version bump it keeps serving the cached snapshot.
 
-**Solution:** Bump `version` in `manifest.json`, re-provision, and use a fresh chat
-(remove/re-add the agent if needed).
+**Solution:** Prepare a synchronized project/package version using the
+[release plan](RELEASE_PLAN.md), re-provision, and use a fresh chat
+(remove/re-add the agent if needed). Never bump only `manifest.json`.
 
 ---
 

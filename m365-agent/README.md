@@ -106,14 +106,15 @@ to this tenant. Do not remove these lifecycle actions during release.
 > and widgets render `WIDGET_ERROR` / "Tool response was null". Set them to your real
 > Function App, then re-provision.
 
-### Publishing changes (bump the version!)
+### Publishing versioned changes
 
 Microsoft 365 Copilot caches the agent's plugin manifest **by version**. This
 package uses dynamic MCP tool discovery, so tool schemas and annotations come
 from the live server's `tools/list` response rather than a pinned package
 snapshot. When the agent package itself changes:
 
-1. Bump `version` in `appPackage/manifest.json` (e.g. `1.1.2` → `1.1.3`).
+1. From the repository root, use `npm run release:prepare -- --type
+    <patch|minor|major>` so npm and M365 versions stay synchronized.
 2. Re-provision: `atk provision --env <env>`.
 3. In Copilot, remove the old agent, re-add the freshly published one, and start a
    **new chat** (the snapshot is cached per version / session).

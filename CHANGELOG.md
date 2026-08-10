@@ -1,11 +1,24 @@
 # Changelog
 
+<!-- markdownlint-disable MD024 -->
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+
+- Add enforceable release planning and version checks for contributors.
+<!-- release-impact: minor -->
+
+### Changed
+
+### Fixed
+
+## [1.1.6] - 2026-08-10
 
 ### Added
 
@@ -165,5 +178,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Azure infrastructure as Bicep, `azd` deployment, optional Azure Container
   Apps path, and the `m365-agent/` declarative-agent package.
 
-[Unreleased]: https://github.com/pavecer/servicenow-mcp-apps-copilot/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/v1.0.0
+[Unreleased]: https://github.com/pavecer/servicenow-mcp-apps-copilot/compare/d629c7ab1030a971658b69514b67a082ab43653a...HEAD
+[1.1.6]: https://github.com/pavecer/servicenow-mcp-apps-copilot/tree/d629c7ab1030a971658b69514b67a082ab43653a
+[1.0.0]: https://github.com/pavecer/servicenow-mcp-apps-copilot/tree/3504769e45422609c7274ce1da46a636a1db1797
