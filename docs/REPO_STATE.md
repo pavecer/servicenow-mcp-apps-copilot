@@ -1,6 +1,6 @@
 # Repository State
 
-Last updated: 2026-08-10
+Last updated: 2026-08-06
 
 This file is the tracked handover for future agents and cloud Copilot sessions.
 It records the latest verified runtime state, active deployment assumptions, and
@@ -17,25 +17,6 @@ the shortest path to resume work safely.
 - Current ServiceNow development instance:
   `https://dev351709.service-now.com`
 - Current integration identity: `mcp_integration`
-
-## Active feature branch
-
-- Branch `feat/order-detail-workflow-ui` contains a validated, not-yet-deployed
-  order-detail MCP App redesign. It adds a prominent lifecycle panel and next
-  step, Approval → Queued → Underway → Complete progress, responsive light/dark
-  layouts, and accessible approval/error/busy states.
-- The backend now derives `can_decide` from the current ServiceNow caller,
-  enforces requestor/approver ownership on detail and update paths, rejects
-  malformed non-32-hex ServiceNow `sys_id` values, serializes same-instance
-  concurrent decisions for one approval, and keeps mutation success truthful
-  when only the detail refresh fails.
-- Validation on 2026-08-10: `npm run build && npm test` passes with 35 test
-  files and 299 tests. Focused mounted-widget tests exercise eligibility, action
-  limits, rejection validation, cancellation deduplication, refresh fallback,
-  terminal states, and measured contrast. Approved and pending states were
-  visually checked at desktop and the responsive breakpoint in light/dark.
-- Delivery must continue through the branch PR; do not push this work directly
-  to `main`.
 
 ## Operational checkpoint
 

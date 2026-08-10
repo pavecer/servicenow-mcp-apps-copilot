@@ -10,133 +10,67 @@
     --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b;
     --border: #e0e0e0; --accent: #0078d4; --accent-fg: #ffffff;
     --chip-bg: #eef4fb; --chip-fg: #1c3c5e;
-    --surface: #f7f7f7; --success: #107c10; --success-bg: #f1faf1; --success-fg: #ffffff;
-    --warning: #8a5700; --warning-bg: #fff8e8; --warning-fg: #ffffff;
-    --danger: #c50f1f; --danger-bg: #fff1f2; --danger-fg: #ffffff;
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   }
   html[data-theme="dark"] {
     --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3;
-    --border: #3b3a39; --accent: #0f6cbd;
+    --border: #3b3a39; --accent: #2899f5;
     --chip-bg: #1c3c5e; --chip-fg: #cfe5fb;
-    --surface: #292929; --success: #0f6c0f; --success-bg: #193019; --success-fg: #ffffff;
-    --warning: #f3c363; --warning-bg: #382b12; --warning-fg: #201a0f;
-    --danger: #ff99a4; --danger-bg: #3b191d; --danger-fg: #2b1115;
   }
-  html { overflow-x: hidden; }
-  body { margin: 0; padding: 24px; box-sizing: border-box; width: 100%; overflow-x: hidden; background: var(--bg); color: var(--fg); }
-  h1 { font-size: 18px; margin: 0; line-height: 1.35; }
-  h2 { font-size: 14px; margin: 18px 0 8px; }
-  .order-head { margin-bottom: 14px; }
-  .eyebrow { color: var(--muted); font-size: 12px; margin-bottom: 3px; }
-  .meta { color: var(--muted); font-size: 13px; margin-top: 3px; }
-  .status-panel {
-    display: grid; grid-template-columns: 36px 1fr; gap: 12px;
-    border: 1px solid var(--border); border-left: 4px solid var(--accent);
-    border-radius: 8px; padding: 14px; background: var(--surface);
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .grid {
+    display: grid; grid-template-columns: max-content 1fr;
+    gap: 6px 12px; font-size: 13px; margin-bottom: 16px;
   }
-  .status-panel.success { border-left-color: var(--success); background: var(--success-bg); }
-  .status-panel.warning { border-left-color: var(--warning); background: var(--warning-bg); }
-  .status-panel.danger { border-left-color: var(--danger); background: var(--danger-bg); }
-  .status-panel > div:last-child { min-width: 0; }
-  .status-icon {
-    width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
-    background: var(--accent); color: #fff; font-size: 16px; font-weight: 700;
-  }
-  .success .status-icon { background: var(--success); }
-  .success .status-icon { color: var(--success-fg); }
-  .warning .status-icon { background: var(--warning); color: var(--warning-fg); }
-  .danger .status-icon { background: var(--danger); color: var(--danger-fg); }
-  .status-title-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .status-title { font-size: 16px; font-weight: 650; }
-  .status-copy { color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.45; overflow-wrap: anywhere; }
-  .next-step { font-size: 13px; margin-top: 8px; overflow-wrap: anywhere; }
-  .next-step strong { font-weight: 650; }
+  .grid .k { color: var(--muted); }
+  .grid .v { word-break: break-word; }
   .chip {
     display: inline-block; padding: 2px 8px; border-radius: 12px;
     background: var(--chip-bg); color: var(--chip-fg); font-size: 12px;
   }
-  .status-panel.success .chip { background: var(--success); color: var(--success-fg); }
-  .status-panel.warning .chip { background: var(--warning); color: var(--warning-fg); }
-  .status-panel.danger .chip { background: var(--danger); color: var(--danger-fg); }
-  .progress {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0; margin: 14px 0 4px;
+  h2 { font-size: 14px; margin: 16px 0 6px; }
+  .items, .approvals { display: flex; flex-direction: column; gap: 8px; }
+  .item, .approval {
+    border: 1px solid var(--border); border-radius: 6px; padding: 10px;
   }
-  .progress-step { position: relative; text-align: center; color: var(--muted); font-size: 11px; }
-  .progress-step::before {
-    content: ""; position: absolute; height: 2px; background: var(--border);
-    top: 9px; left: 0; right: 0;
-  }
-  .progress-step:first-child::before { left: 50%; }
-  .progress-step:last-child::before { right: 50%; }
-  .progress-dot {
-    position: relative; z-index: 1; display: grid; place-items: center;
-    width: 20px; height: 20px; margin: 0 auto 5px; border-radius: 50%;
-    border: 2px solid var(--border); background: var(--bg); box-sizing: border-box;
-  }
-  .progress-step.done { color: var(--fg); }
-  .progress-step.done::before { background: var(--success); }
-  .progress-step.done .progress-dot { background: var(--success); border-color: var(--success); color: #fff; }
-  .progress-step.current { color: var(--fg); font-weight: 600; }
-  .progress-step.current .progress-dot { border-color: var(--accent); box-shadow: inset 0 0 0 4px var(--bg); background: var(--accent); }
-  .facts {
-    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px; margin-top: 16px;
-  }
-  .fact { min-width: 0; }
-  .fact-label { color: var(--muted); font-size: 11px; margin-bottom: 2px; }
-  .fact-value { font-size: 13px; word-break: break-word; }
-  .items, .approvals { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .item, .approval { padding: 10px 12px; }
-  .item + .item, .approval + .approval { border-top: 1px solid var(--border); }
-  .item-row, .approval-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-  .item-row > :first-child, .approval-row > :first-child { min-width: 0; }
   .item .name { font-weight: 600; font-size: 13px; }
-  .item .desc, .approval-meta, .more { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .item-badges { display: flex; align-items: center; gap: 6px; flex: 0 1 45%; min-width: 0; }
-  .item-badges .chip { max-width: 100%; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .state-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
-  .state-dot.approved { background: var(--success); }
-  .state-dot.rejected { background: var(--danger); }
-  .decision {
-    margin-top: 12px; border: 1px solid var(--border); border-radius: 8px;
-    padding: 12px; background: var(--surface);
+  .item .desc { font-size: 12px; color: var(--muted); }
+  .item-controls {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;
   }
-  .decision-title { font-size: 13px; font-weight: 650; }
-  .decision-copy { color: var(--muted); font-size: 12px; margin-top: 3px; }
-  .decision input {
-    width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg);
-    border: 1px solid var(--border); border-radius: 4px; padding: 7px 8px;
-    font: inherit; margin-top: 10px;
+  .item-controls label { font-size: 12px; color: var(--muted); }
+  .qty-input {
+    width: 64px; box-sizing: border-box; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font: inherit;
   }
-  .notice { border-radius: 6px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
-  .notice.success { background: var(--success-bg); color: var(--fg); border: 1px solid var(--success); }
-  .notice.error { background: var(--danger-bg); color: var(--fg); border: 1px solid var(--danger); }
-  .busy-status { margin-top: 12px; color: var(--muted); font-size: 13px; }
-  .confirm { margin-top: 14px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-  .confirm strong { font-size: 13px; }
-  .confirm p { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
-  .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button.btn-danger { color: #b00020; border-color: #e0b4bb; }
+  html[data-theme="dark"] button.btn-danger { color: #ff8a9a; border-color: #5e2a33; }
+  button.btn-small { padding: 4px 10px; font-size: 12px; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
   button {
     border: 1px solid var(--border); background: var(--bg); color: var(--fg);
     padding: 6px 12px; border-radius: 4px; font: inherit; cursor: pointer;
   }
   button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-  button.danger { color: var(--danger); border-color: var(--danger); }
   button:disabled { opacity: 0.6; cursor: progress; }
   .btn-link {
     display: inline-block; text-decoration: none; border: 1px solid var(--border);
     padding: 6px 12px; border-radius: 4px; font: inherit; cursor: pointer;
   }
   .btn-link.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-  .empty { color: var(--muted); }
-  @media (max-width: 540px) {
-    body { padding: 18px; }
-    .facts { grid-template-columns: 1fr 1fr; }
-    .progress-step { font-size: 10px; }
-    .item-row, .approval-row { align-items: flex-start; }
+  .banner-ok {
+    background: #107c10; color: #fff; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
   }
+  html[data-theme="dark"] .banner-ok { background: #2ea043; }
+  textarea {
+    width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px; font: inherit;
+    min-height: 60px; margin-top: 8px;
+  }
+  .empty { color: var(--muted); }
 </style>
 <!-- MCP_HOST_BRIDGE -->
 </head>
@@ -161,13 +95,6 @@
     if (result && typeof result === "object") {
       if (result.structuredContent && typeof result.structuredContent === "object") {
         return result.structuredContent;
-      }
-      if (Array.isArray(result.content)) {
-        for (var i = 0; i < result.content.length; i++) {
-          if (result.content[i] && typeof result.content[i].text === "string") {
-            try { return JSON.parse(result.content[i].text); } catch (_) {}
-          }
-        }
       }
     }
     return result || {};
@@ -203,77 +130,9 @@
     return String(v);
   }
   function isPendingApprovalState(state) {
-    return classifyApprovalState(state) === "pending";
-  }
-
-  // Presentation-only lifecycle model. ServiceNow often leaves sc_request.state
-  // as "Open" after approval, so approval rows and requested-item stages are the
-  // authoritative signals for the human-facing next step.
-  function normalizeSignal(value) {
-    return readStr(value).toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-  }
-  function matchesAny(value, terms) {
-    var signal = normalizeSignal(value);
-    for (var i = 0; i < terms.length; i++) {
-      if (signal === terms[i]) return true;
-    }
-    return false;
-  }
-  function classifyApprovalState(value) {
-    if (matchesAny(value, ["rejected", "denied", "not approved"])) return "rejected";
-    if (matchesAny(value, ["approved", "not required"])) return "approved";
-    if (matchesAny(value, ["requested", "pending", "awaiting approval", "approval requested"])) return "pending";
-    return "unknown";
-  }
-  function derivePhase(order, items, approvals, submitted) {
-    var requestSignals = [order.state, order.request_status, order.stage];
-    var approvalStates = approvals.map(function (approval) { return classifyApprovalState(approval.state); });
-    var fallbackApproval = classifyApprovalState(order.approval);
-    var hasRejectedApproval = approvalStates.indexOf("rejected") >= 0 || fallbackApproval === "rejected";
-    var hasPendingApproval = approvalStates.indexOf("pending") >= 0 || (approvals.length === 0 && fallbackApproval === "pending");
-    var classifiedApprovals = approvalStates.filter(function (state) { return state !== "unknown"; });
-    var approvalsComplete = approvals.length > 0 && classifiedApprovals.length === approvals.length &&
-      classifiedApprovals.every(function (state) { return state === "approved"; });
-    if (approvals.length === 0 && fallbackApproval === "approved") approvalsComplete = true;
-
-    var canceled = requestSignals.some(function (signal) {
-      return matchesAny(signal, ["cancelled", "canceled", "closed cancelled", "closed canceled"]);
-    });
-    var rejected = hasRejectedApproval || requestSignals.some(function (signal) {
-      return matchesAny(signal, ["rejected", "denied", "not approved"]);
-    });
-    if (canceled) return { key: "canceled", badge: "Canceled", title: "Request canceled", tone: "danger", icon: "\u00d7", copy: "No further fulfillment is expected.", next: "No action is required." };
-    if (rejected) return { key: "rejected", badge: "Not approved", title: "Request rejected", tone: "danger", icon: "\u00d7", copy: "This request will not move to fulfillment.", next: "Review the decision in ServiceNow if more context is needed." };
-
-    var unsuccessfulTerms = ["incomplete", "closed incomplete", "closed skipped"];
-    var requestUnsuccessful = requestSignals.some(function (signal) { return matchesAny(signal, unsuccessfulTerms); });
-    if (requestUnsuccessful) {
-      return { key: "closed", badge: "Closed", title: "Request closed without completion", tone: "danger", icon: "!", copy: "ServiceNow closed this request before fulfillment completed.", next: "Open the request in ServiceNow for closure details or contact the service desk." };
-    }
-
-    var completeTerms = ["closed complete", "completed", "complete", "fulfilled", "delivered"];
-    var itemStages = items.map(function (item) { return item.stage || item.state; }).filter(function (value) { return !!readStr(value); });
-    var requestComplete = requestSignals.some(function (signal) { return matchesAny(signal, completeTerms); });
-    var allItemsComplete = itemStages.length > 0 && itemStages.every(function (signal) { return matchesAny(signal, completeTerms); });
-    if (requestComplete || (!hasPendingApproval && allItemsComplete)) {
-      return { key: "complete", badge: "Complete", title: "Request complete", tone: "success", icon: "\u2713", copy: "All fulfillment work is complete.", next: "No action is required." };
-    }
-    if (hasPendingApproval) {
-      return { key: "pending", badge: "Pending approval", title: "Waiting for approval", tone: "warning", icon: "!", copy: "Approval is required before fulfillment can begin.", next: "The assigned approver must approve or reject this request." };
-    }
-
-    var underwayTerms = ["fulfillment", "fulfilment", "delivery", "shipping", "work in progress", "in progress", "implementation", "processing"];
-    var underway = requestSignals.concat(itemStages).some(function (signal) { return matchesAny(signal, underwayTerms); });
-    if (underway) {
-      return { key: "underway", badge: approvalsComplete ? "Approved" : "In progress", title: "Delivery or work is underway", tone: "success", icon: "\u2192", copy: "The fulfillment team is delivering the item or completing the work.", next: "Wait for fulfillment to complete; ServiceNow will update this request." };
-    }
-    if (approvalsComplete) {
-      return { key: "approved", badge: "Approved", title: "Approved", tone: "success", icon: "\u2713", copy: "Approval is complete. This request is queued for fulfillment.", next: "The fulfillment team will begin delivery or complete the requested work." };
-    }
-    if (submitted) {
-      return { key: "submitted", badge: "Submitted", title: "Request received", tone: "", icon: "\u2713", copy: "ServiceNow received this request.", next: "Status details will appear as the request moves through its workflow." };
-    }
-    return { key: "unknown", badge: readStr(order.stage) || readStr(order.state) || "In progress", title: "Request in progress", tone: "", icon: "\u2022", copy: "ServiceNow is processing this request.", next: "Check back for approval or fulfillment updates." };
+    var s = String(state || "").toLowerCase();
+    if (!s) return false;
+    return s !== "approved" && s !== "rejected" && s !== "cancelled" && s !== "not required";
   }
 
   var root = document.getElementById("root");
@@ -283,8 +142,6 @@
   // order sys_id — used by the in-widget action handlers to re-render in place.
   var lastData = null;
   var pendingBanner = null;
-  var pendingError = null;
-  var interactionMode = null;
   var currentOrderSysId = "";
 
   function render(payload) {
@@ -293,14 +150,6 @@
     if (!data || typeof data !== "object") {
       var e = document.createElement("p"); e.className = "empty";
       e.textContent = "Order details unavailable."; root.appendChild(e); return;
-    }
-    if (data.success === false) {
-      if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
-      var failure = document.createElement("div"); failure.className = "notice error";
-      failure.setAttribute("role", "alert");
-      failure.textContent = data.error || data.message || "Order details are unavailable. Try again or open the request in ServiceNow.";
-      root.appendChild(failure);
-      return;
     }
     lastData = data;
     if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
@@ -311,209 +160,256 @@
     var number = readStr(order.number) || readStr(order.sys_id).slice(0, 8);
     var orderSysId = readStr(order.sys_id);
     currentOrderSysId = orderSysId;
+    var state = readStr(order.state) || readStr(order.request_status);
     var sd = readStr(order.short_description);
     var desc = readStr(order.description);
     var created = readStr(order.created_on) || readStr(order.sys_created_on);
     var updated = readStr(order.updated_on) || readStr(order.sys_updated_on);
 
+    // When this widget renders a freshly placed order (place_order), show a
+    // success banner up top so the user gets a clear "done" signal.
+    if (data.submitted) {
+      var banner = document.createElement("div"); banner.className = "banner-ok";
+      banner.textContent = "\u2713 Order " + (readStr(data.requestNumber) || number) + " submitted to ServiceNow";
+      root.appendChild(banner);
+    }
+
+    // One-shot banner from a just-completed in-widget action (comment posted,
+    // item updated/removed, cancellation requested).
     if (pendingBanner) {
-      var pb = document.createElement("div"); pb.className = "notice success";
-      pb.setAttribute("role", "status");
+      var pb = document.createElement("div"); pb.className = "banner-ok";
       pb.textContent = "\u2713 " + pendingBanner; root.appendChild(pb);
       pendingBanner = null;
     }
-    if (pendingError) {
-      var pe = document.createElement("div"); pe.className = "notice error";
-      pe.setAttribute("role", "alert");
-      pe.textContent = pendingError; root.appendChild(pe);
-      pendingError = null;
+
+    var h1 = document.createElement("h1"); h1.textContent = "Order " + number; root.appendChild(h1);
+    var meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = sd || "ServiceNow request"; root.appendChild(meta);
+
+    var grid = document.createElement("div"); grid.className = "grid";
+    function row(k, v) {
+      if (!v) return;
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = k;
+      var vEl = document.createElement("div"); vEl.className = "v"; vEl.textContent = v;
+      grid.appendChild(kEl); grid.appendChild(vEl);
     }
-
-    var head = document.createElement("div"); head.className = "order-head";
-    var eyebrow = document.createElement("div"); eyebrow.className = "eyebrow"; eyebrow.textContent = "ServiceNow request"; head.appendChild(eyebrow);
-    var h1 = document.createElement("h1"); h1.textContent = number; head.appendChild(h1);
-    var meta = document.createElement("div"); meta.className = "meta"; meta.textContent = sd || "Catalog request"; head.appendChild(meta);
-    root.appendChild(head);
-
-    var phase = derivePhase(order, items, approvals, !!data.submitted);
-    var statusPanel = document.createElement("section"); statusPanel.className = "status-panel " + phase.tone;
-    var statusIcon = document.createElement("div"); statusIcon.className = "status-icon"; statusIcon.setAttribute("aria-hidden", "true"); statusIcon.textContent = phase.icon; statusPanel.appendChild(statusIcon);
-    var statusBody = document.createElement("div");
-    var titleRow = document.createElement("div"); titleRow.className = "status-title-row";
-    var statusTitle = document.createElement("div"); statusTitle.className = "status-title"; statusTitle.textContent = phase.title; titleRow.appendChild(statusTitle);
-    var statusChip = document.createElement("span"); statusChip.className = "chip"; statusChip.textContent = phase.badge; titleRow.appendChild(statusChip);
-    statusBody.appendChild(titleRow);
-    var statusCopy = document.createElement("div"); statusCopy.className = "status-copy"; statusCopy.textContent = phase.copy; statusBody.appendChild(statusCopy);
-    var nextStep = document.createElement("div"); nextStep.className = "next-step";
-    var nextStrong = document.createElement("strong"); nextStrong.textContent = "Next: "; nextStep.appendChild(nextStrong);
-    nextStep.appendChild(document.createTextNode(phase.next)); statusBody.appendChild(nextStep);
-    statusPanel.appendChild(statusBody); root.appendChild(statusPanel);
-
-    var phaseIndex = { pending: 0, approved: 1, underway: 2, complete: 3 }[phase.key];
-    if (phaseIndex != null) {
-      var progress = document.createElement("div"); progress.className = "progress"; progress.setAttribute("aria-label", "Request progress"); progress.setAttribute("role", "list");
-      ["Approval", "Queued", "Underway", "Complete"].forEach(function (label, index) {
-        var step = document.createElement("div"); step.className = "progress-step " + (index < phaseIndex ? "done" : (index === phaseIndex ? "current" : ""));
-        step.setAttribute("role", "listitem");
-        if (index === phaseIndex) step.setAttribute("aria-current", "step");
-        var dot = document.createElement("div"); dot.className = "progress-dot"; dot.setAttribute("aria-hidden", "true"); dot.textContent = index < phaseIndex ? "\u2713" : ""; step.appendChild(dot);
-        var stepLabel = document.createElement("div"); stepLabel.textContent = label; step.appendChild(stepLabel); progress.appendChild(step);
-      });
-      root.appendChild(progress);
+    if (state) {
+      var kEl = document.createElement("div"); kEl.className = "k"; kEl.textContent = "State";
+      var vEl = document.createElement("div"); vEl.className = "v";
+      var chip = document.createElement("span"); chip.className = "chip"; chip.textContent = state;
+      vEl.appendChild(chip); grid.appendChild(kEl); grid.appendChild(vEl);
     }
-
-    var facts = document.createElement("div"); facts.className = "facts";
-    function fact(label, value) {
-      if (!value) return;
-      var wrapper = document.createElement("div"); wrapper.className = "fact";
-      var factLabel = document.createElement("div"); factLabel.className = "fact-label"; factLabel.textContent = label; wrapper.appendChild(factLabel);
-      var factValue = document.createElement("div"); factValue.className = "fact-value"; factValue.textContent = value; wrapper.appendChild(factValue);
-      facts.appendChild(wrapper);
-    }
-    fact("Requested for", readStr(order.requested_for));
-    fact("Submitted", created);
-    fact("Last updated", updated);
-    if (phase.key === "underway") fact("Assigned to", readStr(order.assigned_to) || readStr(order.assignment_group));
-    if (facts.childNodes.length) root.appendChild(facts);
+    row("Created", created);
+    row("Updated", updated);
+    row("Requested for", readStr(order.requested_for));
+    row("Assigned to", readStr(order.assigned_to));
+    if (desc && desc !== sd) row("Description", desc);
+    root.appendChild(grid);
 
     if (items.length > 0) {
-      var h2 = document.createElement("h2"); h2.textContent = items.length === 1 ? "Requested item" : "Requested items"; root.appendChild(h2);
+      var h2 = document.createElement("h2"); h2.textContent = "Items"; root.appendChild(h2);
       var list = document.createElement("div"); list.className = "items";
-      items.slice(0, 3).forEach(function (it) {
+      items.forEach(function (it) {
+        var itemSysId = readStr(it.sys_id);
         var card = document.createElement("div"); card.className = "item";
-        var itemRow = document.createElement("div"); itemRow.className = "item-row";
-        var itemText = document.createElement("div");
         var name = document.createElement("div"); name.className = "name";
         var catName = (it.catalogItem && (it.catalogItem.name || it.catalogItem.short_description)) || "";
         name.textContent = catName || readStr(it.short_description) || readStr(it.number);
-        itemText.appendChild(name);
+        card.appendChild(name);
         var d = readStr(it.short_description) || readStr(it.description);
         if (d && d !== name.textContent) {
-          var dd = document.createElement("div"); dd.className = "desc"; dd.textContent = d; itemText.appendChild(dd);
+          var dd = document.createElement("div"); dd.className = "desc"; dd.textContent = d; card.appendChild(dd);
         }
-        itemRow.appendChild(itemText);
-        var badges = document.createElement("div"); badges.className = "item-badges";
-        var qtyText = parseInt(readStr(it.quantity), 10);
-        if (qtyText > 1) { var qtyChip = document.createElement("span"); qtyChip.className = "chip"; qtyChip.textContent = "Qty " + qtyText; badges.appendChild(qtyChip); }
-        var itemStage = readStr(it.stage) || readStr(it.state);
-        if (itemStage) { var stageChip = document.createElement("span"); stageChip.className = "chip"; stageChip.textContent = itemStage; badges.appendChild(stageChip); }
-        if (badges.childNodes.length) itemRow.appendChild(badges);
-        card.appendChild(itemRow);
+
+        // Per-item edit/remove controls. Only shown when the item sys_id is
+        // known (so update_order_item / remove_order_item can target it). These
+        // call the tools via the host bridge and re-render THIS widget in place
+        // with the refreshed order, falling back to a chat follow-up if the
+        // host gates widget-initiated tools/call.
+        if (itemSysId) {
+          var ctrls = document.createElement("div"); ctrls.className = "item-controls";
+          var qtyLabel = document.createElement("label"); qtyLabel.textContent = "Qty"; ctrls.appendChild(qtyLabel);
+          var qty = document.createElement("input");
+          qty.className = "qty-input"; qty.type = "number"; qty.min = "1";
+          var qtyVal = parseInt(readStr(it.quantity), 10);
+          qty.value = (qtyVal > 0 ? qtyVal : 1);
+          ctrls.appendChild(qty);
+
+          var saveBtn = document.createElement("button");
+          saveBtn.className = "btn-small"; saveBtn.textContent = "Update";
+          (function (itemSysId, qty, card, name) {
+            saveBtn.addEventListener("click", function () {
+              var newQty = parseInt(qty.value, 10);
+              if (!(newQty > 0)) return;
+              setBusy(card, true);
+              applyOrderResult(
+                tryCall("update_order_item", { orderItemSysId: itemSysId, orderSysId: orderSysId, updates: { quantity: newQty } }),
+                "Item updated.",
+                function () {
+                  sendFollowUp("Update item " + (name.textContent || itemSysId) + " (sys_id " + itemSysId +
+                    ") on order " + number + " to quantity " + newQty + ".");
+                }
+              );
+            });
+          })(itemSysId, qty, card, name);
+          ctrls.appendChild(saveBtn);
+
+          var removeBtn = document.createElement("button");
+          removeBtn.className = "btn-small btn-danger"; removeBtn.textContent = "Remove";
+          (function (itemSysId, card, name) {
+            removeBtn.addEventListener("click", function () {
+              setBusy(card, true); removeBtn.textContent = "Removing\u2026";
+              applyOrderResult(
+                tryCall("remove_order_item", { orderItemSysId: itemSysId, orderSysId: orderSysId }),
+                "Item removed.",
+                function () {
+                  sendFollowUp("Remove item " + (name.textContent || itemSysId) + " (sys_id " + itemSysId +
+                    ") from order " + number + ".");
+                }
+              );
+            });
+          })(itemSysId, card, name);
+          ctrls.appendChild(removeBtn);
+
+          card.appendChild(ctrls);
+        }
         list.appendChild(card);
       });
-      if (items.length > 3) {
-        var more = document.createElement("div"); more.className = "item more"; more.textContent = "+ " + (items.length - 3) + " more items"; list.appendChild(more);
-      }
       root.appendChild(list);
     }
 
-    var firstPendingApproval = null;
-    var pendingCount = 0;
-    approvals.forEach(function (approval) {
-      if (approval.can_decide === true && readStr(approval.sys_id) && isPendingApprovalState(readStr(approval.state))) {
-        pendingCount += 1;
-        if (!firstPendingApproval) firstPendingApproval = approval;
-      }
-    });
     if (approvals.length > 0) {
-      var ah = document.createElement("h2"); ah.textContent = phase.key === "pending" ? "Approval required" : "Approval history"; root.appendChild(ah);
+      var ah = document.createElement("h2"); ah.textContent = "Approvals"; root.appendChild(ah);
       var alist = document.createElement("div"); alist.className = "approvals";
-      var visibleApprovals = firstPendingApproval ? [firstPendingApproval] : [];
-      approvals.forEach(function (approval) {
-        if (visibleApprovals.length >= 3 || approval === firstPendingApproval) return;
-        visibleApprovals.push(approval);
-      });
-      visibleApprovals.forEach(function (ap) {
-        var stateText = readStr(ap.state) || "Pending";
-        var approval = document.createElement("div"); approval.className = "approval";
-        var approvalRow = document.createElement("div"); approvalRow.className = "approval-row";
-        var approverWrap = document.createElement("div");
-        var approver = document.createElement("div"); approver.className = "name"; approver.textContent = readStr(ap.approver) || "Assigned approver"; approverWrap.appendChild(approver);
-        var approvalMeta = document.createElement("div"); approvalMeta.className = "approval-meta"; approvalMeta.textContent = stateText; approverWrap.appendChild(approvalMeta);
-        var dot = document.createElement("span"); dot.className = "state-dot " + (classifyApprovalState(stateText) === "approved" ? "approved" : (classifyApprovalState(stateText) === "rejected" ? "rejected" : "")); dot.setAttribute("aria-hidden", "true");
-        approvalRow.appendChild(approverWrap); approvalRow.appendChild(dot); approval.appendChild(approvalRow); alist.appendChild(approval);
+      approvals.forEach(function (ap) {
+        var a = document.createElement("div"); a.className = "approval";
+        var approvalSysId = readStr(ap.sys_id);
+        var approver = readStr(ap.approver) || approvalSysId;
+        var stateText = readStr(ap.state) || "pending";
+        a.textContent = approver + " \u2014 " + stateText;
+
+        if (approvalSysId && isPendingApprovalState(stateText)) {
+          var ctrls = document.createElement("div"); ctrls.className = "item-controls";
+          var note = document.createElement("input");
+          note.type = "text"; note.className = "qty-input";
+          note.style.width = "240px";
+          note.placeholder = "Optional note (required for Reject)";
+          ctrls.appendChild(note);
+
+          var approveBtn = document.createElement("button");
+          approveBtn.className = "btn-small";
+          approveBtn.textContent = "Approve";
+          (function (approvalSysId, a, note, approver) {
+            approveBtn.addEventListener("click", function () {
+              setBusy(a, true);
+              applyOrderResult(
+                tryCall("approve_order_approval", {
+                  orderSysId: orderSysId,
+                  approvalSysId: approvalSysId,
+                  comment: note.value && note.value.trim() ? note.value.trim() : undefined
+                }),
+                "Approval recorded.",
+                function () {
+                  var suffix = note.value && note.value.trim() ? (" Comment: " + note.value.trim()) : "";
+                  sendFollowUp("Approve pending approval " + approvalSysId + " for order " + number + "." + suffix);
+                }
+              );
+            });
+          })(approvalSysId, a, note, approver);
+          ctrls.appendChild(approveBtn);
+
+          var rejectBtn = document.createElement("button");
+          rejectBtn.className = "btn-small btn-danger";
+          rejectBtn.textContent = "Reject";
+          (function (approvalSysId, a, note, approver) {
+            rejectBtn.addEventListener("click", function () {
+              var reason = (note.value || "").trim();
+              if (!reason) {
+                note.focus();
+                note.placeholder = "Reason required for Reject";
+                return;
+              }
+              setBusy(a, true);
+              applyOrderResult(
+                tryCall("reject_order_approval", {
+                  orderSysId: orderSysId,
+                  approvalSysId: approvalSysId,
+                  reason: reason
+                }),
+                "Rejection recorded.",
+                function () {
+                  sendFollowUp("Reject pending approval " + approvalSysId + " for order " + number + ". Reason: " + reason);
+                }
+              );
+            });
+          })(approvalSysId, a, note, approver);
+          ctrls.appendChild(rejectBtn);
+
+          a.appendChild(ctrls);
+        }
+        alist.appendChild(a);
       });
       root.appendChild(alist);
     }
 
-    if (firstPendingApproval) {
-      var decision = document.createElement("div"); decision.className = "decision";
-      var decisionTitle = document.createElement("div"); decisionTitle.className = "decision-title"; decisionTitle.textContent = "Decision for " + (readStr(firstPendingApproval.approver) || "assigned approver"); decision.appendChild(decisionTitle);
-      var decisionCopy = document.createElement("div"); decisionCopy.className = "decision-copy"; decisionCopy.textContent = pendingCount > 1 ? (pendingCount + " approvals assigned to you are waiting.") : "Your decision will be recorded in ServiceNow. A reason is required to reject."; decision.appendChild(decisionCopy);
-      var noteLabel = document.createElement("label"); noteLabel.className = "decision-copy"; noteLabel.setAttribute("for", "approval-note"); noteLabel.textContent = "Approval note or rejection reason"; decision.appendChild(noteLabel);
-      var noteError = document.createElement("div"); noteError.className = "decision-copy"; noteError.id = "approval-note-error"; noteError.setAttribute("role", "alert"); noteError.hidden = true; decision.appendChild(noteError);
-      var note = document.createElement("input"); note.id = "approval-note"; note.type = "text"; note.placeholder = "Optional for approval"; note.setAttribute("aria-describedby", "approval-note-error"); decision.appendChild(note); root.appendChild(decision);
-
-      var decisionActions = document.createElement("div"); decisionActions.className = "actions";
-      var approveBtn = document.createElement("button"); approveBtn.className = "primary"; approveBtn.textContent = "Approve";
-      approveBtn.addEventListener("click", function () {
-        setBusy(root, true);
-        applyOrderResult(tryCall("approve_order_approval", { orderSysId: orderSysId, approvalSysId: readStr(firstPendingApproval.sys_id), comment: note.value.trim() || undefined }), "Approval recorded.", function () {
-          sendFollowUp("Approve pending approval " + readStr(firstPendingApproval.sys_id) + " for order " + number + (note.value.trim() ? (". Comment: " + note.value.trim()) : "."));
-        });
-      });
-      var rejectBtn = document.createElement("button"); rejectBtn.className = "danger"; rejectBtn.textContent = "Reject";
-      rejectBtn.addEventListener("click", function () {
-        var reason = note.value.trim();
-        if (!reason) { note.focus(); note.setAttribute("aria-invalid", "true"); noteError.hidden = false; noteError.textContent = "Enter a reason before rejecting."; return; }
-        setBusy(root, true);
-        applyOrderResult(tryCall("reject_order_approval", { orderSysId: orderSysId, approvalSysId: readStr(firstPendingApproval.sys_id), reason: reason }), "Rejection recorded.", function () {
-          sendFollowUp("Reject pending approval " + readStr(firstPendingApproval.sys_id) + " for order " + number + ". Reason: " + reason);
-        });
-      });
-      decisionActions.appendChild(approveBtn); decisionActions.appendChild(rejectBtn); root.appendChild(decisionActions);
-      return;
-    }
-
-    if (interactionMode === "cancel") {
-      var confirm = document.createElement("div"); confirm.className = "confirm";
-      var confirmTitle = document.createElement("strong"); confirmTitle.textContent = "Request cancellation?"; confirm.appendChild(confirmTitle);
-      var confirmCopy = document.createElement("p"); confirmCopy.textContent = "This asks the fulfillment team to cancel the request; it does not change the state immediately."; confirm.appendChild(confirmCopy); root.appendChild(confirm);
-      var confirmActions = document.createElement("div"); confirmActions.className = "actions";
-      var sendCancel = document.createElement("button"); sendCancel.className = "danger"; sendCancel.textContent = "Send request";
-      sendCancel.addEventListener("click", function () {
-        setBusy(root, true);
-        applyOrderResult(tryCall("update_order", { orderSysId: orderSysId, updates: { comments: "Cancellation requested by the requestor via Microsoft 365 Copilot." } }), "Cancellation requested.", function () {
-          sendFollowUp("Please request cancellation of order " + number + " (sys_id " + orderSysId + ").");
-        });
-      });
-      var back = document.createElement("button"); back.textContent = "Back"; back.addEventListener("click", function () { interactionMode = null; render(lastData); });
-      confirmActions.appendChild(sendCancel); confirmActions.appendChild(back); root.appendChild(confirmActions);
-      return;
-    }
+    var notesLabel = document.createElement("h2"); notesLabel.textContent = "Add a comment"; root.appendChild(notesLabel);
+    var ta = document.createElement("textarea");
+    ta.placeholder = "Comment (visible to the fulfilment team)";
+    root.appendChild(ta);
 
     var actions = document.createElement("div"); actions.className = "actions";
+
+    // "View in ServiceNow" — opens the request record. The host bridge prefers
+    // a real openExternal; otherwise the anchor's target=_blank is used.
     var snLink = readStr(data.link);
     if (snLink) {
-      var view = document.createElement("a"); view.className = "btn-link primary"; view.textContent = "View in ServiceNow";
+      var view = document.createElement("a");
+      view.className = "btn-link primary";
+      view.textContent = "View in ServiceNow";
       view.href = snLink; view.target = "_blank"; view.rel = "noopener noreferrer";
-      view.addEventListener("click", function (event) { event.preventDefault(); openExternal(snLink); }); actions.appendChild(view);
+      // Sandbox blocks the native navigation, so route through the host bridge.
+      view.addEventListener("click", function (ev) { ev.preventDefault(); openExternal(snLink); });
+      actions.appendChild(view);
     }
-    if (["approved", "underway", "submitted"].indexOf(phase.key) >= 0 && orderSysId) {
-      var cancelBtn = document.createElement("button"); cancelBtn.textContent = "Request cancellation";
-      cancelBtn.addEventListener("click", function () { interactionMode = "cancel"; render(lastData); }); actions.appendChild(cancelBtn);
-    }
-    if (actions.childNodes.length) root.appendChild(actions);
+
+    // Comment / cancel call the tools via the host bridge (the same vaulted
+    // OAuth token every tool shares — no fresh auth prompt) and re-render THIS
+    // widget in place. If the host gates widget-initiated tools/call we fall
+    // back to a chat follow-up so the already-authenticated agent runs it.
+    var commentBtn = document.createElement("button"); commentBtn.textContent = "Post comment";
+    commentBtn.addEventListener("click", function () {
+      var text = ta.value.trim(); if (!text) return;
+      commentBtn.disabled = true; commentBtn.textContent = "Posting\u2026";
+      applyOrderResult(
+        tryCall("update_order", { orderSysId: orderSysId, updates: { comments: text } }),
+        "Comment posted.",
+        function () {
+          sendFollowUp("Add this comment to order " + number + " (sys_id " + orderSysId + "): " + text);
+        }
+      );
+    });
+    var cancelBtn = document.createElement("button"); cancelBtn.textContent = "Request cancellation";
+    cancelBtn.title = "Asks fulfillment to cancel — does not change order state directly.";
+    cancelBtn.addEventListener("click", function () {
+      cancelBtn.disabled = true; cancelBtn.textContent = "Requesting\u2026";
+      applyOrderResult(
+        tryCall("update_order", { orderSysId: orderSysId, updates: { comments: "Cancellation requested by the requestor via Microsoft 365 Copilot." } }),
+        "Cancellation requested.",
+        function () {
+          sendFollowUp("Please request cancellation of order " + number + " (sys_id " + orderSysId + ").");
+        }
+      );
+    });
+    actions.appendChild(commentBtn);
+    actions.appendChild(cancelBtn);
+    root.appendChild(actions);
   }
 
   // --- In-widget action plumbing -------------------------------------------
   // Disable/enable all controls inside a card or the root while a tool runs.
   function setBusy(el, busy) {
-    var container = el || root;
-    var nodes = container.querySelectorAll("button, input, textarea");
+    var nodes = (el || root).querySelectorAll("button, input, textarea");
     for (var i = 0; i < nodes.length; i++) { nodes[i].disabled = !!busy; }
-    container.setAttribute("aria-busy", busy ? "true" : "false");
-    var status = container.querySelector(".busy-status");
-    if (busy && !status) {
-      status = document.createElement("div");
-      status.className = "busy-status";
-      status.setAttribute("role", "status");
-      status.setAttribute("aria-live", "polite");
-      status.textContent = "Working...";
-      container.appendChild(status);
-    } else if (!busy && status) {
-      status.remove();
-    }
   }
   function tryCall(name, args) {
     try { return callTool(name, args); }
@@ -537,31 +433,12 @@
     if (!p || typeof p.then !== "function") { if (fallbackFn) fallbackFn(); return; }
     p.then(function (result) {
       var detail = unwrapResult(result);
-      interactionMode = null;
       if (detail && detail.order) { pendingBanner = okMsg || null; render(detail); return; }
-      if (detail && detail.success === true) {
-        pendingBanner = okMsg || null;
-        if (detail.approvalRecorded && lastData && Array.isArray(lastData.approvals)) {
-          lastData.approvals.forEach(function (approval) {
-            if (readStr(approval.sys_id) === readStr(detail.approvalSysId)) {
-              approval.state = detail.decision;
-              approval.can_decide = false;
-            }
-          });
-          render(lastData);
-          return;
-        }
-        refreshDetail(currentOrderSysId);
-        return;
-      }
-      if (detail && detail.success === false) { pendingError = detail.error || detail.message || "The request could not be updated."; reRender(); return; }
-      if (fallbackFn) { pendingError = "This update will continue in Copilot."; fallbackFn(); reRender(); return; }
+      if (detail && detail.success === true) { pendingBanner = okMsg || null; refreshDetail(currentOrderSysId); return; }
+      if (fallbackFn) { fallbackFn(); return; }
       reRender();
     }).catch(function () {
-      interactionMode = null;
-      if (fallbackFn) { pendingError = "This update will continue in Copilot."; fallbackFn(); }
-      else { pendingError = "The request could not be updated. Try again or open it in ServiceNow."; }
-      reRender();
+      if (fallbackFn) { fallbackFn(); } else { reRender(); }
     });
   }
 
