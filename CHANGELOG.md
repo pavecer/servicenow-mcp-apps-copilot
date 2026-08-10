@@ -65,9 +65,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Runtime-aligned Node types.** Pinned `@types/node` to the current Node 20
-  line used by Azure Functions and configured Dependabot to ignore incompatible
-  major updates while continuing to propose Node 20 patches and minors.
+- **Runtime-aligned Node types.** Constrained `@types/node` to the current Node
+  20 line used by Azure Functions and configured Dependabot to ignore
+  incompatible major updates while continuing to propose Node 20 patches and
+  minors.
 - **Security hardening.** Updated vulnerable transitive dependencies
   `@hono/node-server` and `ip-address`, and stopped development scripts from
   logging environment-derived identities and ServiceNow configuration values.
