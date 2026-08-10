@@ -65,6 +65,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Order-detail lifecycle experience.** Reworked the order-detail MCP App into
+  a glanceable Approval → Queued → Underway → Complete view with prominent
+  phase guidance, explicit next steps, compact request facts and item stages,
+  accessible approval validation and busy/error states, and responsive
+  light/dark layouts. Approval actions now appear only when the server marks a
+  caller-owned pending approval as actionable; request reads, updates, and
+  approval decisions enforce caller ownership and strict ServiceNow `sys_id`
+  validation. Widget-backed update and approval tools return compact model text
+  with structured success/failure payloads.
 - **Runtime-aligned Node types.** Constrained `@types/node` to the current Node
   20 line used by Azure Functions and configured Dependabot to ignore
   incompatible major updates while continuing to propose Node 20 patches and

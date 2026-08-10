@@ -94,8 +94,29 @@ describe("order approval tools", () => {
       approvalSysId: "ap1"
     })) as { content: Array<{ text: string }> };
 
-    const payload = JSON.parse(result.content[0].text) as Record<string, unknown>;
-    expect(payload.success).toBe(false);
-    expect(payload.error).toBe("forbidden");
+    expect(result.content[0].text).toContain("forbidden");
+    expect((result as { structuredContent?: Record<string, unknown> }).structuredContent).toMatchObject({
+      success: false,
+      error: "forbidden"
+    });
+  });
+
+  it("reports a recorded approval as successful when detail refresh fails", async () => {
+    getOrderDetail.mockRejectedValueOnce(new Error("refresh unavailable"));
+    const fake = createFakeServer();
+    registerApproveOrderApprovalTool(fake.server as never, fakeClient);
+
+    const result = await fake.tools[0].handler({
+      orderSysId: "req1",
+      approvalSysId: "ap1"
+    }) as { structuredContent?: Record<string, unknown> };
+
+    expect(decideOrderApproval).toHaveBeenCalledTimes(1);
+    expect(result.structuredContent).toMatchObject({
+      success: true,
+      approvalRecorded: true,
+      approvalSysId: "ap1",
+      decision: "approved"
+    });
   });
 });
