@@ -35,6 +35,9 @@
     "serviceNowRequireCallerAccessToken": {
       "value": "${SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=false}"
     },
+    "serviceNowKnowledgeTableFallbackEnabled": {
+      "value": "${SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED=false}"
+    },
     "serviceNowRequestedForLookupFields": {
       "value": "${SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS=email,user_name}"
     },

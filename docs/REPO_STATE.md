@@ -74,9 +74,13 @@ the shortest path to resume work safely.
 - Current configured integration identity sees zero Knowledge rows; demo admin
   has demo articles. Deployment is blocked until dedicated Knowledge API and
   Alex/OBO article visibility are proven in the test tenant.
+- Delegated admin probe after deployment: dedicated `sn_km_api` returns 400
+  (endpoint unavailable), while caller-scoped `kb_knowledge` returns rows. An
+  opt-in caller-scoped Table API fallback is implemented; enable it only in the
+  demo environment, then validate Alex/OBO visibility before approval.
 - Durable implementation checklist and validation matrix:
   [KNOWLEDGE_RETRIEVAL_PLAN.md](KNOWLEDGE_RETRIEVAL_PLAN.md).
-- Local validation: 40 test files / 344 tests pass; backend and MCP Apps
+- Local validation: 40 test files / 347 tests pass; backend and MCP Apps
   specialist reviews APPROVE; search, attempt-3, and detail widget screenshots
   passed desktop/responsive light/dark inspection.
 - Minor release preparation synchronized npm/M365/changelog at `1.2.0`. No push,

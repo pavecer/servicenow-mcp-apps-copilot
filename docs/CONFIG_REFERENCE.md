@@ -50,6 +50,7 @@ All configuration is managed via environment variables. Secrets are stored in Az
 | `SERVICENOW_OAUTH_GRANT_TYPE` | `auto` | Override grant type: `password` or `client_credentials` |
 | `SERVICENOW_OAUTH_CLIENT_AUTH_STYLE` | `auto` | OAuth client auth style: `request_body` or `basic` |
 | `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN` | `false` | Require per-user ServiceNow access token on each request |
+| `SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED` | `false` | Opt in to caller-scoped `kb_knowledge` Table API fallback only when the dedicated Knowledge API is unavailable. Validate Knowledge user criteria before enabling. |
 | `SERVICENOW_ATTRIBUTE_OWNERSHIP_TO_CALLER` | `true` | Patch `opened_by`/`requested_by` with real user after order placement. Set `false` if integration user lacks write access. |
 | `SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS` | `email,user_name` | Comma-separated `sys_user` fields to search for caller identity |
 | `SERVICENOW_REQUESTED_FOR_CALLER_FIELDS` | `callerUpn` | Entra token claims to use for identity matching |

@@ -31,6 +31,11 @@ export const config = {
     // bearer token (x-servicenow-access-token). This enforces ServiceNow ACLs for
     // each end user and prevents fallback to a shared integration identity.
     requireCallerAccessToken: process.env.SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN === "true",
+    // Opt-in compatibility path for instances without the sn_km_api Knowledge
+    // REST endpoint. Calls remain caller/OBO-required and filter to published,
+    // active, non-expired kb_knowledge rows. Disabled by default because the
+    // dedicated Knowledge API is preferred for user-criteria enforcement.
+    knowledgeTableFallbackEnabled: process.env.SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED === "true",
     // When true (default), after an order is placed under the shared integration
     // identity the server patches `opened_by` and `requested_by` on the created
     // sc_request (and its sc_req_item rows) to the real ordering user. Without

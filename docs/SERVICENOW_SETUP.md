@@ -168,6 +168,7 @@ The MCP server calls these standard ServiceNow Service Catalog APIs:
 | `/api/now/attachment/file` | POST | Upload a file/screenshot to an incident |
 | `/api/sn_km_api/knowledge/articles` | GET | Search caller-visible published Knowledge articles |
 | `/api/sn_km_api/knowledge/articles/{sys_id}` | GET | Read one caller-visible Knowledge article |
+| `/api/now/table/kb_knowledge[/{sys_id}]` | GET | Optional caller-scoped fallback when the dedicated Knowledge API is unavailable and `SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED=true` |
 
 Ensure no firewall rules, IP allow-lists, or network policies block access from the Azure Function App to these endpoints.
 

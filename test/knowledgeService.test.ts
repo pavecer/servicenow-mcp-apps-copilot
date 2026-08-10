@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ServiceNowClient } from "../src/services/servicenowClient";
 import type { TokenManager } from "../src/services/tokenManager";
+import { config } from "../src/config";
 
 function makeClient(get: ReturnType<typeof vi.fn>): ServiceNowClient {
   const client = new ServiceNowClient({} as TokenManager);
@@ -85,5 +86,68 @@ describe("ServiceNowClient Knowledge methods", () => {
     const client = makeClient(get);
     await expect(client.searchKnowledgeArticles("vpn")).rejects.toThrow("Knowledge API unavailable");
     expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the opt-in caller-scoped Table API fallback only when the Knowledge endpoint is unavailable", async () => {
+    const previous = config.serviceNow.knowledgeTableFallbackEnabled;
+    (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = true;
+    const get = vi.fn()
+      .mockRejectedValueOnce({ response: { status: 400 } })
+      .mockResolvedValueOnce({
+        data: {
+          result: [
+            {
+              sys_id: "c".repeat(32), number: "KB3", short_description: "Reset password",
+              text: "Use the reset portal", active: "true", workflow_state: "published", valid_to: "2099-01-01"
+            },
+            {
+              sys_id: "d".repeat(32), number: "KB4", short_description: "Expired",
+              text: "Old steps", active: "true", workflow_state: "published", valid_to: "2020-01-01"
+            }
+          ]
+        }
+      });
+    try {
+      const client = makeClient(get);
+      const result = await client.searchKnowledgeArticles("password reset", { candidateLimit: 10 });
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(get.mock.calls[1][0]).toBe("/api/now/table/kb_knowledge");
+      expect(get.mock.calls[1][1]).toMatchObject({ __snRequireCallerIdentity: true });
+      expect(get.mock.calls[1][1].params.sysparm_query).toContain("123TEXTQUERY321=password reset");
+      expect(result.map(article => article.number)).toEqual(["KB3"]);
+    } finally {
+      (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = previous;
+    }
+  });
+
+  it("never falls back on authorization failures", async () => {
+    const previous = config.serviceNow.knowledgeTableFallbackEnabled;
+    (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = true;
+    const get = vi.fn().mockRejectedValue({ response: { status: 403 } });
+    try {
+      const client = makeClient(get);
+      await expect(client.searchKnowledgeArticles("password reset")).rejects.toMatchObject({ response: { status: 403 } });
+      expect(get).toHaveBeenCalledTimes(1);
+    } finally {
+      (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = previous;
+    }
+  });
+
+  it("uses the opt-in Table API fallback for published article detail", async () => {
+    const previous = config.serviceNow.knowledgeTableFallbackEnabled;
+    (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = true;
+    const get = vi.fn()
+      .mockRejectedValueOnce({ response: { status: 404 } })
+      .mockResolvedValueOnce({
+        data: { result: { sys_id: "e".repeat(32), number: "KB5", short_description: "VPN", text: "Steps", active: "true", workflow_state: "published" } }
+      });
+    try {
+      const client = makeClient(get);
+      const detail = await client.getKnowledgeArticle("e".repeat(32));
+      expect(get.mock.calls[1][0]).toBe(`/api/now/table/kb_knowledge/${"e".repeat(32)}`);
+      expect(detail).toMatchObject({ number: "KB5", content: "Steps" });
+    } finally {
+      (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = previous;
+    }
   });
 });

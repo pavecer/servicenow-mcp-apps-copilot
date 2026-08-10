@@ -361,6 +361,16 @@ function knowledgePlainText(value: string): string {
   return htmlToPlainText(stripKnowledgeExecutableBlocks(value));
 }
 
+function isVisiblePublishedKnowledgeRow(row: Record<string, unknown>): boolean {
+  const active = normalizeServiceNowChoice(row.active);
+  const workflowState = normalizeServiceNowChoice(row.workflow_state);
+  const validTo = readKnowledgeString(row, ["valid_to"]);
+  const today = new Date().toISOString().slice(0, 10);
+  return active !== "false"
+    && (!workflowState || workflowState === "published")
+    && (!validTo || validTo.slice(0, 10) >= today);
+}
+
 function normalizeKnowledgeCandidate(row: Record<string, unknown>, nativeRank: number): ServiceNowKnowledgeCandidate | undefined {
   const fields = row.fields && typeof row.fields === "object"
     ? row.fields as Record<string, unknown>
@@ -1735,9 +1745,51 @@ export class ServiceNowClient {
       });
       return candidates;
     } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (config.serviceNow.knowledgeTableFallbackEnabled && (status === 400 || status === 404)) {
+        return this.searchKnowledgeTable(client, normalizedQuery, candidateLimit, options.language);
+      }
       Logger.error("ServiceNow Knowledge search failed", { operation: "knowledge.search_failed" }, error);
       throw error;
     }
+  }
+
+  private async searchKnowledgeTable(
+    client: AxiosInstance,
+    query: string,
+    limit: number,
+    language?: string
+  ): Promise<ServiceNowKnowledgeCandidate[]> {
+    const safeQuery = this.sanitizeSysparmQueryValue(query);
+    const filters = [
+      "active=true",
+      "workflow_state=published",
+      `123TEXTQUERY321=${safeQuery}`
+    ];
+    if (language?.trim()) filters.push(`language=${this.sanitizeSysparmQueryValue(language.trim())}`);
+    const response = await client.get("/api/now/table/kb_knowledge", {
+      params: {
+        sysparm_query: filters.join("^"),
+        sysparm_limit: limit,
+        sysparm_fields: [
+          "sys_id", "number", "short_description", "description", "text", "meta",
+          "kb_knowledge_base", "kb_category", "language", "published", "valid_to",
+          "active", "workflow_state", "sys_updated_on"
+        ].join(","),
+        sysparm_display_value: "all"
+      },
+      __snRequireCallerIdentity: true
+    } as AxiosRequestConfig);
+    const candidates = knowledgeRows(response.data)
+      .filter(isVisiblePublishedKnowledgeRow)
+      .map((row, index) => normalizeKnowledgeCandidate(row, index + 1))
+      .filter((candidate): candidate is ServiceNowKnowledgeCandidate => Boolean(candidate));
+    Logger.info("ServiceNow Knowledge Table API fallback completed", {
+      operation: "knowledge.search_table_fallback",
+      candidateCount: candidates.length,
+      limit
+    });
+    return candidates;
   }
 
   async getKnowledgeArticle(articleSysId: string): Promise<KnowledgeArticleDetail> {
@@ -1758,12 +1810,43 @@ export class ServiceNowClient {
         sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
       };
     } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (config.serviceNow.knowledgeTableFallbackEnabled && (status === 400 || status === 404)) {
+        return this.getKnowledgeArticleFromTable(client, articleSysId);
+      }
       Logger.error("Failed to retrieve ServiceNow Knowledge article", {
         operation: "knowledge.detail_failed",
         articleSysId
       }, error);
       throw error;
     }
+  }
+
+  private async getKnowledgeArticleFromTable(client: AxiosInstance, articleSysId: string): Promise<KnowledgeArticleDetail> {
+    const response = await client.get(`/api/now/table/kb_knowledge/${articleSysId}`, {
+      params: {
+        sysparm_fields: [
+          "sys_id", "number", "short_description", "description", "text", "meta",
+          "kb_knowledge_base", "kb_category", "language", "published", "valid_to",
+          "active", "workflow_state", "sys_updated_on"
+        ].join(","),
+        sysparm_display_value: "all"
+      },
+      __snRequireCallerIdentity: true
+    } as AxiosRequestConfig);
+    const row = knowledgeRows(response.data)[0];
+    const candidate = row ? normalizeKnowledgeCandidate(row, 1) : undefined;
+    const active = normalizeServiceNowChoice(row?.active);
+    const workflowState = normalizeServiceNowChoice(row?.workflow_state);
+    if (!row || !candidate || !isVisiblePublishedKnowledgeRow(row) || active === "false" || (workflowState && workflowState !== "published")) {
+      throw new Error(`Knowledge article '${articleSysId}' was not found, published, or accessible.`);
+    }
+    return {
+      ...candidate,
+      content: knowledgePlainText(readKnowledgeString(row, ["text", "article_body", "content", "description"]))
+        .slice(0, 20_000),
+      sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
+    };
   }
 
   // ── Incident management (end-user "report a problem" flow) ──────────────────

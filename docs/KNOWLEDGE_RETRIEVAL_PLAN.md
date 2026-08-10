@@ -100,11 +100,19 @@ confirmation without a detail refetch.
   same as catalog and incident flows.
 - Primary endpoint: ServiceNow Knowledge API
   `/api/sn_km_api/knowledge/articles` and article detail by sys_id.
+- Optional compatibility endpoint: caller-scoped `kb_knowledge` Table API,
+   enabled only with `SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED=true`. It is
+   used only when the dedicated endpoint returns 400/404, never for auth errors,
+   and filters active/published/non-expired rows before ranking.
 - Normalize several documented/observed response envelopes, but do not silently
   fall back to an overprivileged admin view.
 - The current preflight confirms `kb_knowledge` and `kb_category` are reachable;
   the integration identity currently sees zero rows while admin has demo data.
   Human validation must prove Alex-visible results through OBO before release.
+- Live delegated admin probing confirmed this demo instance returns 400
+   `Requested URI does not represent any resource` for `sn_km_api`, while
+   caller-scoped `kb_knowledge` returns data. The demo environment therefore
+   requires the validated opt-in fallback; the default remains disabled.
 
 ## MCP App
 
@@ -150,7 +158,7 @@ loading/error states, and shows no more than two bottom actions.
 
 ## Local Validation Checkpoint
 
-- Full repository: 40 test files / 344 tests passed.
+- Full repository: 40 test files / 347 tests passed.
 - Backend and MCP Apps specialist reviews: APPROVE after all High/Medium
    findings were remediated.
 - Visual review passed for desktop search, responsive dark attempt 3, and

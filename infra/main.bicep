@@ -80,6 +80,7 @@ param corsAllowedOrigins string = ''
 @description('Require x-servicenow-access-token from caller (true/false). Disables fallback to integration user.')
 @allowed([ 'true', 'false' ])
 param serviceNowRequireCallerAccessToken string = 'false'
+param serviceNowKnowledgeTableFallbackEnabled string = 'false'
 
 @description('ServiceNow OAuth token endpoint path. Override only if your instance uses a non-standard path.')
 param serviceNowOauthTokenPath string = '/oauth_token.do'
@@ -462,6 +463,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           value: empty(serviceNowPassword) ? '' : '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/${serviceNowPasswordKeyVaultSecret!.name})'
         }
         { name: 'SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN', value: serviceNowRequireCallerAccessToken }
+        { name: 'SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED', value: serviceNowKnowledgeTableFallbackEnabled }
         { name: 'SERVICENOW_REQUESTED_FOR_LOOKUP_FIELDS', value: serviceNowRequestedForLookupFields }
         { name: 'SERVICENOW_REQUESTED_FOR_CALLER_FIELDS', value: serviceNowRequestedForCallerFields }
         { name: 'SERVICENOW_REQUESTED_FOR_FALLBACK_TO_CALLER_VALUE', value: serviceNowRequestedForFallbackToCallerValue }
