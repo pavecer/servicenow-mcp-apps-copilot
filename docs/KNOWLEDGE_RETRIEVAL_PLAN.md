@@ -137,7 +137,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Tool/widget lockstep manifests and exact-count tests
 - [x] Scenario, setup, configuration, and handover documentation
 - [x] Full local build/test/security review
-- [x] Deploy exact runtime commit `256f3a7` to `snowmcpwidg-dev`
+- [x] Deploy exact runtime commit `6b9a4a1` to `snowmcpwidg-dev`
 - [ ] Human validation as Alex and admin
 - [ ] Public PR only after explicit approval
 
@@ -158,16 +158,21 @@ loading/error states, and shows no more than two bottom actions.
 
 ## Local Validation Checkpoint
 
-- Full repository: 40 test files / 347 tests passed.
+- Full repository: 40 test files / 348 tests passed.
 - Backend and MCP Apps specialist reviews: APPROVE after all High/Medium
    findings were remediated.
-- Visual review passed for desktop search, responsive dark attempt 3, and
-   responsive article detail using the actual widget source.
+- Visual review passed for desktop search, responsive dark attempt 3,
+   responsive article detail, and the compact ranked-results update in desktop
+   light and narrow dark layouts using the actual widget source.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
-- Runtime commit `256f3a7` is deployed only to `snowmcpwidg-dev`; live MCP
+- Runtime commit `6b9a4a1` is deployed only to `snowmcpwidg-dev`; live MCP
    validation reports 26 tools, and the existing developer M365 app passed all
    61 package checks and was updated without organizational publication.
+- Ranked search now renders the top three compact previews so both actions stay
+   visible, labels Knowledge base/category/update metadata, retains category in
+   the narrow layout, and decodes decimal/hex numeric HTML entities before they
+   reach the widget.
 - Live delegated-admin validation returned five ranked articles, opened
    `KB0005012` with content and a ServiceNow source link, and confirmed that
    attempt 3 excludes the tried article and sets `offerIncident: true` without

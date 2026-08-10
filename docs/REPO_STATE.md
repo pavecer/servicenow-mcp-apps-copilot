@@ -82,14 +82,19 @@ the shortest path to resume work safely.
   demo environment, then validate Alex/OBO visibility before approval.
 - Durable implementation checklist and validation matrix:
   [KNOWLEDGE_RETRIEVAL_PLAN.md](KNOWLEDGE_RETRIEVAL_PLAN.md).
-- Local validation: 40 test files / 347 tests pass; backend and MCP Apps
+- Local validation: 40 test files / 348 tests pass; backend and MCP Apps
   specialist reviews APPROVE; search, attempt-3, and detail widget screenshots
-  passed desktop/responsive light/dark inspection.
+  passed desktop/responsive light/dark inspection. The ranked-list UX follow-up
+  also passed actual-source desktop light and narrow dark rendering.
 - Minor release preparation synchronized npm/M365/changelog at `1.2.0`.
-  Runtime commit `256f3a7` is deployed only to `snowmcpwidg-dev`; live validation
+  Runtime commit `6b9a4a1` is deployed only to `snowmcpwidg-dev`; live validation
   reports 26 tools. The existing developer app passed 61 package checks and was
   updated under title `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169` without catalog
   publication.
+- The deployed ranked list shows the top three compact previews with visible
+  bottom actions, labeled metadata, category-preserving narrow layout, and
+  numeric HTML entity decoding. Live search returned five results with no
+  numeric entity literals in title/snippet/category/base fields.
 - Live delegated-admin checks returned five ranked results for password reset,
   opened `KB0005012` with content and a source link, and confirmed attempt 3
   excludes the tried article and offers an incident without creating one. The
