@@ -11,8 +11,9 @@ are not catalog-ordering requests. Search must minimize ServiceNow calls,
 preserve caller visibility, rank the top three to five articles, and offer a
 consent-based incident after the third unresolved Knowledge attempt.
 
-Article authoring, feedback/rating writes, attachments, and knowledge analytics
-administration are out of scope.
+Article authoring, native feedback/rating writes, attachments, and knowledge
+analytics administration remain outside this candidate. The verified native
+feedback schema is recorded below for a follow-up implementation.
 
 ## User Journey
 
@@ -137,7 +138,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Tool/widget lockstep manifests and exact-count tests
 - [x] Scenario, setup, configuration, and handover documentation
 - [x] Full local build/test/security review
-- [x] Deploy exact runtime commit `6b9a4a1` to `snowmcpwidg-dev`
+- [x] Deploy exact runtime commit `e37f154` to `snowmcpwidg-dev`
 - [ ] Human validation as Alex and admin
 - [ ] Public PR only after explicit approval
 
@@ -158,21 +159,26 @@ loading/error states, and shows no more than two bottom actions.
 
 ## Local Validation Checkpoint
 
-- Full repository: 40 test files / 348 tests passed.
+- Full repository: 40 test files / 350 tests passed.
 - Backend and MCP Apps specialist reviews: APPROVE after all High/Medium
    findings were remediated.
 - Visual review passed for desktop search, responsive dark attempt 3,
-   responsive article detail, and the compact ranked-results update in desktop
-   light and narrow dark layouts using the actual widget source.
+   responsive article detail, the compact ranked-results update, and semantic
+   detail sections/lists/contact callouts/notes in desktop light and narrow dark
+   layouts using the actual widget source.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
-- Runtime commit `6b9a4a1` is deployed only to `snowmcpwidg-dev`; live MCP
+- Runtime commit `e37f154` is deployed only to `snowmcpwidg-dev`; live MCP
    validation reports 26 tools, and the existing developer M365 app passed all
    61 package checks and was updated without organizational publication.
 - Ranked search now renders the top three compact previews so both actions stay
    visible, labels Knowledge base/category/update metadata, retains category in
    the narrow layout, and decodes decimal/hex numeric HTML entities before they
    reach the widget.
+- Selected articles now render sanitized text as semantic sections, preserved
+   numbered/bulleted steps, support contact callouts, and notes. Long previews
+   are explicitly labeled and route to the full ServiceNow article instead of
+   being silently clipped.
 - Live delegated-admin validation returned five ranked articles, opened
    `KB0005012` with content and a ServiceNow source link, and confirmed that
    attempt 3 excludes the tried article and sets `offerIncident: true` without
@@ -181,3 +187,21 @@ loading/error states, and shows no more than two bottom actions.
 - No public push or PR has occurred. Alex and admin must still complete the
    human tenant journey, including explicit incident consent, before a Version
    release PR can be opened.
+
+## Verified Native Feedback Schema
+
+Read-only delegated-admin schema inspection on `dev351709` confirms that native
+ServiceNow Knowledge processing uses:
+
+- `kb_feedback.article` -> `kb_knowledge`, with `user`, `useful`, integer
+   `rating`, `comments`, `reason`, and `query` fields;
+- `kb_feedback_task.feedback` -> `kb_feedback` for downstream feedback work;
+- `m2m_kb_task.kb_knowledge` + `m2m_kb_task.task` for a native article-to-task
+   association; and
+- `kb_use` for native view/use analytics, protected by its own ACLs.
+
+The current `This solved it` / `Still need help` actions preserve conversation
+state but do not yet create `kb_feedback` records. Knowledge incident creation
+creates a real caller-attributed `incident` and records article sys_ids in its
+description, but does not yet insert `m2m_kb_task`. Native feedback and task
+linking must be added as an explicit mutating, caller-scoped follow-up slice.
