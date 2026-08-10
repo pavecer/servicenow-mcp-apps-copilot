@@ -82,8 +82,8 @@ const client = new ServiceNowClient(new TokenManager());
 const stamp = new Date().toISOString();
 const shortDescription = `[automated test] Incident flow smoke ${stamp}`;
 
-console.log(`\nLive incident-flow test against ${instanceUrl}`);
-console.log(`Caller attribution: ${callerUpn}\n`);
+console.log("\nLive incident-flow test");
+console.log("Caller attribution: configured\n");
 
 let createdSysId = "";
 let createdNumber = "";
@@ -157,7 +157,7 @@ if (createdSysId && !flags.keep) {
     console.log(`\n[note] Could not delete test incident ${createdNumber}: ${err?.message || err}`);
   }
 } else if (createdSysId) {
-  console.log(`\nKept test incident ${createdNumber} (${instanceUrl}/incident.do?sys_id=${createdSysId}).`);
+  console.log(`\nKept test incident ${createdNumber}.`);
 }
 
 console.log(`\nResult: ${passed} passed, ${failed} failed.`);
