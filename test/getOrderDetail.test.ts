@@ -73,9 +73,9 @@ describe("get_order_detail tool", () => {
     getOrderDetailMock.mockRejectedValueOnce(new Error("not found"));
     const result = await registered.handler({ orderSysId: "missing" }) as {
       content: Array<{ type: string; text: string }>;
-      structuredContent?: Record<string, unknown>;
     };
-    expect(result.content[0].text).toContain("not found");
-    expect(result.structuredContent).toMatchObject({ success: false, error: "not found" });
+    const payload = JSON.parse(result.content[0].text) as Record<string, unknown>;
+    expect(payload.success).toBe(false);
+    expect(payload.error).toBe("not found");
   });
 });

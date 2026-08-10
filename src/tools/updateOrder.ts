@@ -57,53 +57,47 @@ export function registerUpdateOrderTool(server: McpServer, client: ServiceNowCli
         }
 
         if (Object.keys(sanitizedUpdates).length === 0) {
-          const failure = {
-            success: false,
-            error: "No allowed fields provided for update",
-            message: `Specify at least one of: ${ALLOWED_UPDATE_FIELDS.join(", ")}`
-          };
           return {
-            structuredContent: failure,
             content: [
               {
                 type: "text" as const,
-                text: failure.message
+                text: JSON.stringify({
+                  success: false,
+                  error: "No allowed fields provided for update",
+                  message: `Specify at least one of: ${ALLOWED_UPDATE_FIELDS.join(", ")}`
+                }, null, 2)
               }
             ]
           };
         }
 
         const updatedOrder = await client.updateOrder(orderSysId, sanitizedUpdates);
-        const success = {
-          success: true,
-          message: "Order updated successfully",
-          updatedFields: Object.keys(sanitizedUpdates),
-          updatedOrder
-        };
 
         return {
-          structuredContent: success,
           content: [
             {
               type: "text" as const,
-              text: `Updated ${success.updatedFields.length} field(s) on order ${orderSysId}.`
+              text: JSON.stringify({
+                success: true,
+                message: "Order updated successfully",
+                updatedFields: Object.keys(sanitizedUpdates),
+                updatedOrder: updatedOrder
+              }, null, 2)
             }
           ]
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        const failure = {
-          success: false,
-          error: errorMessage,
-          message: "Failed to update order",
-          orderSysId
-        };
         return {
-          structuredContent: failure,
           content: [
             {
               type: "text" as const,
-              text: `Could not update order ${orderSysId}: ${errorMessage}`
+              text: JSON.stringify({
+                success: false,
+                error: errorMessage,
+                message: "Failed to update order",
+                orderSysId: orderSysId
+              }, null, 2)
             }
           ]
         };

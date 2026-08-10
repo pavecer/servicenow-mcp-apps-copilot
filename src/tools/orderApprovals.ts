@@ -15,27 +15,12 @@ async function decideAndRefresh(
     comment?: string;
   }
 ) {
-  const approval = await client.decideOrderApproval(input.approvalSysId, input.decision, {
+  await client.decideOrderApproval(input.approvalSysId, input.decision, {
     requestSysId: input.orderSysId,
     comment: input.comment
   });
 
-  try {
-    return await buildOrderDetailResult(client, input.orderSysId, { includeApprovals: true });
-  } catch {
-    const success = {
-      success: true,
-      approvalRecorded: true,
-      approvalSysId: input.approvalSysId,
-      decision: input.decision,
-      message: "Approval decision was recorded, but refreshed order details are temporarily unavailable.",
-      approval
-    };
-    return {
-      structuredContent: success,
-      content: [{ type: "text" as const, text: success.message }]
-    };
-  }
+  return buildOrderDetailResult(client, input.orderSysId, { includeApprovals: true });
 }
 
 export function registerApproveOrderApprovalTool(server: McpServer, client: ServiceNowClient): void {
@@ -76,19 +61,17 @@ export function registerApproveOrderApprovalTool(server: McpServer, client: Serv
           orderSysId,
           approvalSysId
         }, error);
-        const failure = {
-          success: false,
-          error: errorMessage,
-          message: "Failed to approve the order request",
-          orderSysId,
-          approvalSysId
-        };
         return {
-          structuredContent: failure,
           content: [
             {
               type: "text" as const,
-              text: `Could not approve order ${orderSysId}: ${errorMessage}`
+              text: JSON.stringify({
+                success: false,
+                error: errorMessage,
+                message: "Failed to approve the order request",
+                orderSysId,
+                approvalSysId
+              }, null, 2)
             }
           ]
         };
@@ -135,19 +118,17 @@ export function registerRejectOrderApprovalTool(server: McpServer, client: Servi
           orderSysId,
           approvalSysId
         }, error);
-        const failure = {
-          success: false,
-          error: errorMessage,
-          message: "Failed to reject the order request",
-          orderSysId,
-          approvalSysId
-        };
         return {
-          structuredContent: failure,
           content: [
             {
               type: "text" as const,
-              text: `Could not reject order ${orderSysId}: ${errorMessage}`
+              text: JSON.stringify({
+                success: false,
+                error: errorMessage,
+                message: "Failed to reject the order request",
+                orderSysId,
+                approvalSysId
+              }, null, 2)
             }
           ]
         };
