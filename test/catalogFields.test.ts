@@ -13,6 +13,8 @@ describe("htmlToPlainText", () => {
   it("decodes HTML entities to their literal characters", () => {
     expect(htmlToPlainText("27&quot; display")).toBe('27" display');
     expect(htmlToPlainText("R&amp;D &lt;tag&gt;")).toBe("R&D <tag>");
+    expect(htmlToPlainText("Click &#8461; then &#x2192;")).toBe("Click ℍ then →");
+    expect(htmlToPlainText("Invalid: &#0; &#xD800; &#1114112;")).toBe("Invalid: � � �");
   });
 
   it("strips HTML markup, including malformed/overlapping tags", () => {

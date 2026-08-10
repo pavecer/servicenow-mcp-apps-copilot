@@ -1,5 +1,13 @@
 import { ServiceNowVariable } from "../types/servicenow";
 
+function decodeCodePoint(value: string, radix: number): string {
+  const codePoint = Number.parseInt(value, radix);
+  if (!Number.isFinite(codePoint) || codePoint === 0 || codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff)) {
+    return "�";
+  }
+  return String.fromCodePoint(codePoint);
+}
+
 /**
  * ServiceNow catalog fields may contain HTML markup. The MCP Apps widgets
  * render plain text, so convert any HTML into readable plain text before it
@@ -36,6 +44,8 @@ export function htmlToPlainText(value?: string): string {
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
+    .replace(/&#(\d+);/g, (_, entity: string) => decodeCodePoint(entity, 10))
+    .replace(/&#x([\da-f]+);/gi, (_, entity: string) => decodeCodePoint(entity, 16))
     .replace(/&amp;/gi, "&");
 
   const normalized = text

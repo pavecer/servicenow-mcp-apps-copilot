@@ -23,6 +23,7 @@
   h1 { margin: 0; font-size: 18px; line-height: 1.3; }
   h2 { margin: 0; font-size: 15px; line-height: 1.35; }
   .meta { margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+  .result-count { margin-top: 8px; color: var(--muted); font-size: 12px; }
   .attempt { display: inline-block; margin-top: 10px; border-radius: 12px; padding: 2px 8px; background: var(--surface); font-size: 12px; }
   .results { display: grid; gap: 8px; margin-top: 14px; }
   .result { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; }
@@ -31,20 +32,26 @@
   .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .band { border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 600; background: #e8f3fc; color: #0f548c; }
   html[data-theme="dark"] .band { background: #143a56; color: #c7e7ff; }
-  .snippet { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
-  .source { margin-top: 6px; color: var(--muted); font-size: 11px; }
+  .snippet { display: -webkit-box; margin-top: 6px; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .source { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; color: var(--muted); font-size: 11px; }
+  .source-item { padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); }
+  .source-label { font-weight: 600; color: var(--fg); }
   .article { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
   .content { margin-top: 12px; white-space: pre-wrap; font-size: 13px; line-height: 1.55; max-height: 320px; overflow: hidden; }
   .notice { margin-top: 14px; padding: 12px; border: 1px solid var(--warning); border-radius: 8px; background: var(--warning-bg); font-size: 13px; line-height: 1.45; }
   .error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
   .success { color: var(--fg); background: var(--success-bg); border-color: var(--success); }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
   button, .button-link { border: 1px solid var(--border); border-radius: 4px; padding: 7px 12px; background: var(--bg); color: var(--fg); font: inherit; text-decoration: none; cursor: pointer; }
   button.primary { background: var(--accent-fill); color: var(--accent-fg); border-color: var(--accent-fill); }
   button:disabled { opacity: .6; cursor: progress; }
   .empty { color: var(--muted); font-size: 13px; }
   .source-link { display: inline-block; margin-top: 10px; color: var(--accent); font-size: 12px; }
-  @media (max-width: 520px) { .actions > * { flex: 1 1 auto; text-align: center; } }
+  @media (max-width: 520px) {
+    .snippet { -webkit-line-clamp: 1; }
+    .source-knowledge-base, .source-updated { display: none; }
+    .actions > * { flex: 1 1 auto; text-align: center; }
+  }
 </style>
 <!-- MCP_HOST_BRIDGE -->
 </head>
@@ -64,6 +71,15 @@
   function text(value) { return value == null ? "" : String(value); }
   function make(tag, className, value) { var el = document.createElement(tag); if (className) el.className = className; if (value != null) el.textContent = value; return el; }
   function bandLabel(value) { return value === "best" ? "Best match" : (value === "strong" ? "Strong match" : "Related"); }
+  function formatDate(value) { var raw = text(value).trim(); var match = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw); if (!match) return raw; var parsed = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))); return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }); }
+  function addSourceMetadata(parent, article) {
+    var source = make("div", "source");
+    [["knowledge-base", "Knowledge base", article.knowledgeBase], ["category", "Category", article.category], ["updated", "Updated", formatDate(article.updatedOn)]].forEach(function (entry) {
+      if (!entry[2]) return;
+      var item = make("span", "source-item source-" + entry[0]); item.appendChild(make("span", "source-label", entry[1] + ": ")); item.appendChild(document.createTextNode(text(entry[2]))); source.appendChild(item);
+    });
+    if (source.childNodes.length > 0) parent.appendChild(source);
+  }
 
   var root = document.getElementById("root");
   var lastData = null;
@@ -126,6 +142,7 @@
 
   function renderSearch(data) {
     var articles = Array.isArray(data.articles) ? data.articles : [];
+    var visibleArticles = articles.slice(0, 3);
     root.appendChild(make("h1", "", "ServiceNow Knowledge"));
     root.appendChild(make("div", "meta", text(data.query)));
     root.appendChild(make("span", "attempt", "Search attempt " + (Number(data.attempt) || 1) + " of 3"));
@@ -133,22 +150,23 @@
       root.appendChild(make("p", "empty", "No matching articles were found. Try describing the issue another way."));
     } else {
       var list = make("div", "results");
-      articles.forEach(function (article, index) {
+      visibleArticles.forEach(function (article, index) {
         var label = make("label", "result");
         var radio = document.createElement("input"); radio.type = "radio"; radio.name = "article"; radio.value = text(article.sysId); if (index === 0) radio.checked = true; label.appendChild(radio);
         var body = make("div", "");
         var row = make("div", "row"); row.appendChild(make("span", "band", bandLabel(article.relevanceBand))); row.appendChild(make("h2", "", (article.number ? article.number + " - " : "") + text(article.title))); body.appendChild(row);
         body.appendChild(make("div", "snippet", text(article.snippet || article.shortDescription)));
-        body.appendChild(make("div", "source", [article.knowledgeBase, article.category, article.updatedOn].filter(Boolean).join(" | ")));
+        addSourceMetadata(body, article);
         label.appendChild(body); list.appendChild(label);
       });
       root.appendChild(list);
+      if (articles.length > visibleArticles.length) root.appendChild(make("div", "result-count", "Showing the top " + visibleArticles.length + " of " + articles.length + " ranked matches."));
     }
     if (data.offerIncident) {
       root.appendChild(make("div", "notice", "Still not resolved? I can create a ServiceNow incident with your question and the Knowledge articles already tried. Nothing is submitted until you choose Create incident."));
     }
     var actions = make("div", "actions");
-    if (articles.length > 0) actions.appendChild(actionButton("Open selected", true, function () {
+    if (articles.length > 0) actions.appendChild(actionButton("Read selected article", true, function () {
       var selected = root.querySelector("input[name=article]:checked");
       var article = articles.find(function (item) { return text(item.sysId) === (selected ? selected.value : ""); });
       if (!article) return;

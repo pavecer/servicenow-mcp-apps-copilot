@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Keep Knowledge article actions visible with compact ranked previews, format
+  category metadata clearly, and decode numeric HTML entities in article text.
+<!-- release-impact: patch -->
+
 ## [1.2.0] - 2026-08-10
 
 ### Added
