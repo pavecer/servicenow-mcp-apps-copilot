@@ -39,6 +39,28 @@ the shortest path to resume work safely.
   earlier premature merge was fully reverted. Do not bypass the
   human-validation gate for future behavioral changes.
 
+## Active local release-governance change
+
+- Branch `feat/release-governance` contains a complete, local-only release
+  governance implementation. It has not been pushed or opened as a public PR.
+- The project version is reconciled to the existing M365 baseline `1.1.6`
+  across npm, the lockfile, and the app manifest. `CHANGELOG.md` now has an
+  explicit `1.1.6` historical baseline and a clean `Unreleased` queue.
+- PRs must select a release impact, PR kind, and truthful validation state.
+  CI validates new changelog-note provenance, queued impact markers, changed
+  surfaces, canonical version parity, and actual SemVer deltas for release PRs.
+- `release:plan` and `release:prepare` preview and create synchronized releases;
+  annotated `vX.Y.Z` tags on current `main` create GitHub Releases only after a
+  read-only build/test job succeeds. Microsoft 365 catalog publication remains
+  separate and manually approved.
+- Final local validation: 36 test files / 312 tests pass; `release:check`
+  reports `1.1.6`; a Minor preview reports required type `minor` and next
+  version `1.2.0`; editor diagnostics are clean; focused reviewer verdict is
+  APPROVE.
+- Publication gate: review this workflow with the maintainer before creating a
+  public PR. The intended PR kind is the one-time `Version baseline alignment`,
+  impact `Minor`, with `Completed maintainer workflow review` evidence.
+
 ## Operational checkpoint
 
 - As of 2026-08-10, Function App `func-yj453fjwuhph4` is running and the Azure
@@ -243,10 +265,11 @@ the shortest path to resume work safely.
   recreating ServiceNow auth objects.
 - If widget HTML changes, always run `npm run build` before `npm test` because
   generated widget resources are rebuilt during the build step.
-- For a test-tenant release, bump the M365 app patch version when tool schemas
-  or annotations change, run `npm run release:auto -- --environment
+- For a test-tenant release, follow [RELEASE_PLAN.md](RELEASE_PLAN.md) and keep
+  npm/M365 versions synchronized, run `npm run release:auto -- --environment
   snowmcpwidg-dev`, test the developer copy, then use `npm run release:publish
-  -- --environment snowmcpwidg-dev` for catalog submission.
+  -- --environment snowmcpwidg-dev` to submit only after separate publication
+  approval; Teams Admin Center approval follows the submission.
 - Read [AGENT_365_PUBLISHING.md](AGENT_365_PUBLISHING.md) before interpreting
   `Last published`, Entra Agent ID, Instructions, Environment, or tool-registry
   metadata in Microsoft 365 admin center.

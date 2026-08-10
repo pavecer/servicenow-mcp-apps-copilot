@@ -28,6 +28,8 @@ npm run build          # build-widgets.mjs (regenerates generated/) THEN tsc
 npm test               # vitest — full suite (exact-count manifest/widget tests)
 npm run release:auto -- --environment snowmcpwidg-dev # deploy through M365 prompt-test readiness
 npm run release:publish -- --environment snowmcpwidg-dev # submit catalog package for admin approval
+npm run release:check   # verify canonical version/changelog consistency
+npm run release:plan -- --type minor # preview next version + pending notes
 npm run demo:seed       # create/reset Alex + admin approval demo records
 npm run demo:verify     # inspect demo records without mutation
 npm run demo:cleanup    # remove only marker-owned demo records
@@ -76,6 +78,9 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
   configured production package. Never confuse the MCP OAuth app ID with an Entra
   Agent ID, and check for an existing Agent 365 MCP tool registration before
   submitting another one.
+- Public releases follow [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md). Every PR
+  selects one release impact and human-validation state; user-facing behavior
+  must be approved in the test tenant before the public PR is opened.
 
 ## Critical invariants (violating these breaks cold start or tests)
 

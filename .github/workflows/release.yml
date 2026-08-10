@@ -1,0 +1,80 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify annotated tag points at current main
+        run: |
+          git fetch --no-tags origin main
+          test "$(git cat-file -t "$GITHUB_REF_NAME")" = "tag"
+          test "$(git rev-parse "$GITHUB_REF_NAME^{}")" = "$(git rev-parse origin/main)"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate tag and synchronized versions
+        run: npm run release:check -- --tag "$GITHUB_REF_NAME"
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Extract curated release notes
+        run: node scripts/dev/release-governance.mjs notes --version "${GITHUB_REF_NAME#v}" > release-notes.md
+
+      - name: Upload validated release notes
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download validated release notes
+        uses: actions/download-artifact@v6
+        with:
+          name: release-notes
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md

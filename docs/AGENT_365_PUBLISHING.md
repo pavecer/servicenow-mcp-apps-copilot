@@ -36,7 +36,8 @@ npm run release:publish -- --environment snowmcpwidg-dev
 
 Use publication only after:
 
-1. The app manifest version is incremented.
+1. The canonical project/package version is incremented with
+  `npm run release:prepare` and `npm run release:check` passes.
 2. Local build and tests pass.
 3. The deployed MCP endpoint passes live validation.
 4. Prompt tests pass in the developer copy.

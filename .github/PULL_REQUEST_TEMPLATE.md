@@ -1,3 +1,5 @@
+# Pull Request
+
 <!-- Thanks for contributing! Please fill out the checklist below. -->
 
 ## Summary
@@ -14,20 +16,60 @@ Closes #<!-- issue number, if any -->
 - [ ] Refactor / chore
 - [ ] Tests
 
+## Release impact
+
+Select exactly one. See
+[the release plan](https://github.com/pavecer/servicenow-mcp-apps-copilot/blob/main/docs/RELEASE_PLAN.md).
+
+- [ ] None — docs, tests, dependencies, or internal maintenance only
+- [ ] Patch — backward-compatible bug fix or security correction
+- [ ] Minor — backward-compatible user-facing capability
+- [ ] Major — breaking API, configuration, behavior, or support change
+
+## PR kind
+
+Select exactly one.
+
+- [ ] Regular change
+- [ ] Version release — generated with `npm run release:prepare`
+- [ ] Version baseline alignment — one-time `1.0.0` → `1.1.6` reconciliation
+
+## Release note
+
+<!-- One user-facing sentence for Patch/Minor/Major. Write N/A for None. -->
+<!-- Also add &lt;!-- release-impact: patch|minor|major --&gt; beside its Unreleased changelog entry. -->
+
+## Human validation
+
+Select exactly one. User-facing behavior must be tested before this public PR
+is opened.
+
+- [ ] Not required — no user-facing behavior changed
+- [ ] Completed maintainer workflow review — release/CI tooling only
+- [ ] Completed in test tenant
+
+## Human validation evidence
+
+<!-- State what was tested and where, or why human validation is not required. -->
+
 ## Checklist
 
 - [ ] `npm run build && npm test` passes locally.
+- [ ] `npm run release:check` passes locally.
 - [ ] Tests added or updated where practical.
 - [ ] If a tool/widget was added or renamed, **all** lockstep locations were
       updated together (tool file + Zod schema, `src/tools/index.ts`,
       `registerTools()`, `src/ui/widgets.ts`, exact-count tests, and
-      `m365-agent/appPackage/` manifests). See [AGENTS.md](AGENTS.md).
+      `m365-agent/appPackage/` manifests). See
+      [AGENTS.md](https://github.com/pavecer/servicenow-mcp-apps-copilot/blob/main/AGENTS.md).
 - [ ] MCP Apps surface preserved: widget-backed tools emit compact
       `structuredContent` plus a concise, neutral `content` summary (no verbose
       JSON or Adaptive Card payloads in `content`).
 - [ ] Docs / environment-variable table updated for any config or behavior change.
 - [ ] No secrets, tokens, PII, or tenant-specific resource names were added.
-- [ ] Added an entry to [CHANGELOG.md](CHANGELOG.md) under *Unreleased*.
+- [ ] Added an entry to
+      [CHANGELOG.md](https://github.com/pavecer/servicenow-mcp-apps-copilot/blob/main/CHANGELOG.md)
+      under *Unreleased*.
 
 ## Notes for reviewers
 

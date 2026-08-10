@@ -65,6 +65,14 @@ Before opening a PR, make sure:
 - [ ] No secrets, tokens, PII, or tenant-specific resource names were added to
       code, docs, logs, or fixtures.
 - [ ] A line was added to [CHANGELOG.md](CHANGELOG.md) under *Unreleased*.
+- [ ] Exactly one SemVer impact and one human-validation state are selected in
+  the PR template.
+- [ ] The PR release note matches its `CHANGELOG.md` entry.
+- [ ] `npm run release:check` passes.
+
+See [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) for impact definitions, the
+mandatory test-tenant gate for behavioral changes, version preparation, tags,
+GitHub Releases, and the separate Microsoft 365 publication process.
 
 ## Coding conventions
 
