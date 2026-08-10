@@ -99,6 +99,18 @@
     {
       "name": "remove_incident_attachment",
       "description": "Remove a file previously attached to one of the user's ServiceNow incidents."
+    },
+    {
+      "name": "search_knowledge",
+      "description": "Search caller-visible ServiceNow Knowledge articles for an informational question."
+    },
+    {
+      "name": "get_knowledge_article",
+      "description": "Retrieve one selected caller-visible ServiceNow Knowledge article."
+    },
+    {
+      "name": "create_incident_from_knowledge",
+      "description": "Create a flagged incident after the user confirms Knowledge did not resolve the question."
     }
   ]
 }

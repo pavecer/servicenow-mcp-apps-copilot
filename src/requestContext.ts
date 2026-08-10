@@ -12,6 +12,8 @@ export interface RequestContext {
    * token whose audience ServiceNow accepts. Never logged.
    */
   callerEntraAccessToken?: string;
+  /** Require caller/OBO ServiceNow identity for every downstream call in this scope. */
+  serviceNowRequireCallerIdentity?: boolean;
   /**
    * Optional logging sink that wraps the active execution context (e.g. Azure
    * Functions InvocationContext.log/info/warn/error). When set, Logger writes

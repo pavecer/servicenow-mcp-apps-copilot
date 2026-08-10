@@ -1,6 +1,6 @@
 ﻿# ServiceNow MCP Server
 
-**Order from ServiceNow directly inside Microsoft 365 Copilot** — a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that brings ServiceNow Service Catalog to life in Microsoft 365 Copilot and Cowork via interactive MCP Apps widgets. Search, fill forms, place orders, track status, and manage your cart — all with natural language.
+**Find answers and use ServiceNow directly inside Microsoft 365 Copilot** — a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that brings ServiceNow Knowledge, Service Catalog, and incident self-service to Microsoft 365 Copilot and Cowork via interactive MCP Apps widgets.
 
 **Technical project site:** [pavecer.github.io/servicenow-mcp-apps-copilot](https://pavecer.github.io/servicenow-mcp-apps-copilot/)
 
@@ -9,17 +9,17 @@
 │ Microsoft 365       │        │ ServiceNow MCP       │        │ ServiceNow   │
 │ Copilot / Cowork    │────────│ Server (Azure Fn)    │────────│ Catalog      │
 │                     │        │                      │        │              │
-│ "Order a laptop"    │ OAuth  │ + 23 MCP Tools       │ OAuth  │ + Cart       │
-│ + 8 Widgets         │        │ + 8 SEP-1865 Widgets │        │ + Orders     │
+│ "How do I use VPN?"│ OAuth  │ + 26 MCP Tools       │ OAuth  │ + Knowledge  │
+│ + 9 Widgets         │        │ + 9 SEP-1865 Widgets │        │ + Catalog    │
 └─────────────────────┘        └──────────────────────┘        └──────────────┘
 ```
 
 **What you get:**
-- 23 MCP tools: search catalog, fetch forms, place/edit orders, manage cart, approve/reject request approvals, report & track incidents, add comments/attachments, validate config
-- 8 interactive widgets (SEP-1865): catalog browse, order form, cart, my orders, order detail, incident form, my incidents, incident detail
+- 26 MCP tools: ranked Knowledge search/detail, consent-based KB escalation, catalog ordering, cart/order management, approvals, and incident management
+- 9 interactive widgets (SEP-1865), including a shared ranked Knowledge results/article/escalation experience
 - Per-user authentication: orders and incidents stamped with the real user (not a service account)
 - Stateless, scalable: Flex Consumption Azure Functions + Node.js 20
-- Production-ready: 257 unit tests, secret management, audit logging, security guidelines
+- Production-ready: 300+ unit tests, secret management, audit logging, security guidelines
 
 **Quick facts:**
 | | |

@@ -456,7 +456,7 @@
             <div class="connector" aria-hidden="true"><span>→<small>OBO + REST</small></span></div>
             <div class="arch-node">
               <strong>ServiceNow</strong>
-              <span>Service Catalog, request approvals, and incidents</span>
+              <span>Knowledge, Service Catalog, request approvals, and incidents</span>
               <ul>
                 <li>Per-user ACL enforcement</li>
                 <li>Native workflow state</li>
@@ -465,9 +465,9 @@
             </div>
           </div>
           <div class="metrics" aria-label="Project inventory">
-            <div class="metric"><strong>23</strong><span>MCP tools</span></div>
-            <div class="metric"><strong>8</strong><span>Interactive widgets</span></div>
-            <div class="metric"><strong>257</strong><span>Automated tests</span></div>
+            <div class="metric"><strong>26</strong><span>MCP tools</span></div>
+            <div class="metric"><strong>9</strong><span>Interactive widgets</span></div>
+            <div class="metric"><strong>300+</strong><span>Automated tests</span></div>
             <div class="metric"><strong>2</strong><span>Identity boundaries</span></div>
           </div>
         </figure>
@@ -482,6 +482,16 @@
           <p>The model selects narrowly scoped tools. Each user-facing result carries structured data for a corresponding MCP App instead of verbose JSON or a replicated ServiceNow interface.</p>
         </div>
         <div class="grid">
+          <article class="card">
+            <span class="label">Knowledge</span>
+            <h3>Rank answers before tickets</h3>
+            <p>Search caller-visible articles once per attempt, open only the selected result, and offer a consent-based incident after three unresolved attempts.</p>
+            <ul class="tool-list">
+              <li><code>search_knowledge</code></li>
+              <li><code>get_knowledge_article</code></li>
+              <li><code>create_incident_from_knowledge</code></li>
+            </ul>
+          </article>
           <article class="card">
             <span class="label">Service Catalog</span>
             <h3>Discover and order</h3>
@@ -523,8 +533,8 @@
           </article>
           <article class="card">
             <span class="label">MCP Apps</span>
-            <h3>Eight inline experiences</h3>
-            <p>Catalog browse, order form, cart, order list/detail, incident form, incident list, and incident detail render natively in Copilot.</p>
+            <h3>Nine inline experiences</h3>
+            <p>Ranked Knowledge, catalog browse/order, cart, requests, and incident experiences render natively in Copilot.</p>
           </article>
           <article class="card">
             <span class="label">Operations</span>
@@ -632,10 +642,10 @@ npm run demo:verify</pre>
               <pre><span class="prompt">npm run build</span>
 <span class="prompt">npm test</span>
 
-<span class="comment"># Current verified result</span>
-30 test files
-257 tests passing
-23 tools · 8 widgets</pre>
+<span class="comment"># Knowledge feature branch result</span>
+40 test files
+344 tests passing
+26 tools · 9 widgets</pre>
             </div>
           </article>
         </div>

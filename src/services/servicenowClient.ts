@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import https from "node:https";
 import { config } from "../config";
 import {
@@ -16,12 +16,15 @@ import {
   ServiceNowIncidentComment,
   ServiceNowIncidentDetail,
   ServiceNowIncidentAttachment,
-  AddIncidentAttachmentInput
+  AddIncidentAttachmentInput,
+  KnowledgeArticleDetail,
+  ServiceNowKnowledgeCandidate
 } from "../types/servicenow";
 import { TokenManager } from "./tokenManager";
 import { getDownstreamTokenForCaller, isOboEnabled } from "./oboTokenService";
 import { getRequestContext } from "../requestContext";
 import Logger from "../utils/logger";
+import { htmlToPlainText } from "../utils/catalogFields";
 
 // Maximum number of concurrent ServiceNow REST calls per fan-out batch.
 // Keeps load on the ServiceNow instance bounded and avoids tripping per-user
@@ -302,6 +305,91 @@ function requireServiceNowSysId(value: string, label: string): string {
   return value;
 }
 
+function readKnowledgeString(record: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" || typeof value === "number") {
+      const text = String(value).trim();
+      if (text) return text;
+    }
+    if (value && typeof value === "object") {
+      const nested = value as { display_value?: unknown; value?: unknown; title?: unknown; name?: unknown };
+      for (const candidate of [nested.display_value, nested.title, nested.name, nested.value]) {
+        if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+      }
+    }
+  }
+  return "";
+}
+
+function knowledgeRows(payload: unknown): Array<Record<string, unknown>> {
+  if (!payload || typeof payload !== "object") return [];
+  const record = payload as Record<string, unknown>;
+  for (const value of [record.result, record.articles, record.items]) {
+    if (Array.isArray(value)) return value.filter(item => item && typeof item === "object") as Array<Record<string, unknown>>;
+    if (value && typeof value === "object") {
+      const nested = value as Record<string, unknown>;
+      for (const rows of [nested.articles, nested.items, nested.result]) {
+        if (Array.isArray(rows)) return rows.filter(item => item && typeof item === "object") as Array<Record<string, unknown>>;
+      }
+      if (readKnowledgeString(nested, ["sys_id", "article_id", "id"])) return [nested];
+    }
+  }
+  if (readKnowledgeString(record, ["sys_id", "article_id", "id"])) return [record];
+  return [];
+}
+
+function stripKnowledgeExecutableBlocks(value: string): string {
+  let output = value;
+  for (const tagName of ["script", "style", "noscript", "template"]) {
+    const openToken = `<${tagName}`;
+    const closeToken = `</${tagName}>`;
+    while (true) {
+      const lower = output.toLowerCase();
+      const start = lower.indexOf(openToken);
+      if (start < 0) break;
+      const close = lower.indexOf(closeToken, start + openToken.length);
+      output = close < 0
+        ? output.slice(0, start)
+        : `${output.slice(0, start)} ${output.slice(close + closeToken.length)}`;
+    }
+  }
+  return output;
+}
+
+function knowledgePlainText(value: string): string {
+  return htmlToPlainText(stripKnowledgeExecutableBlocks(value));
+}
+
+function normalizeKnowledgeCandidate(row: Record<string, unknown>, nativeRank: number): ServiceNowKnowledgeCandidate | undefined {
+  const fields = row.fields && typeof row.fields === "object"
+    ? row.fields as Record<string, unknown>
+    : {};
+  const normalizedRow = { ...fields, ...row };
+  const rawId = readKnowledgeString(normalizedRow, ["sys_id", "article_id", "id"]);
+  const sysId = rawId.includes(":") ? rawId.slice(rawId.lastIndexOf(":") + 1) : rawId;
+  if (!/^[0-9a-f]{32}$/i.test(sysId)) return undefined;
+  const rawScore = readKnowledgeString(normalizedRow, ["relevance_score", "search_score", "score"]);
+  const parsedScore = rawScore ? Number(rawScore) : undefined;
+  const rawRank = readKnowledgeString(normalizedRow, ["rank", "search_rank"]);
+  const parsedRank = rawRank ? Number(rawRank) : undefined;
+  return {
+    sysId,
+    number: readKnowledgeString(normalizedRow, ["number", "article_number"]),
+    title: knowledgePlainText(readKnowledgeString(normalizedRow, ["short_description", "title", "name"])),
+    shortDescription: knowledgePlainText(readKnowledgeString(normalizedRow, ["description", "short_description", "summary"])),
+    snippet: knowledgePlainText(readKnowledgeString(normalizedRow, ["snippet", "excerpt", "text"])).slice(0, 600),
+    keywords: knowledgePlainText(readKnowledgeString(normalizedRow, ["meta", "keywords"])),
+    knowledgeBase: readKnowledgeString(normalizedRow, ["kb_knowledge_base", "knowledge_base", "kb_base"]),
+    category: readKnowledgeString(normalizedRow, ["kb_category", "category"]),
+    language: readKnowledgeString(normalizedRow, ["language"]),
+    updatedOn: readKnowledgeString(normalizedRow, ["sys_updated_on", "updated_on", "updated"]),
+    publishedOn: readKnowledgeString(normalizedRow, ["published", "published_on"]),
+    ...(Number.isFinite(parsedScore) ? { nativeScore: parsedScore } : {}),
+    nativeRank: Number.isFinite(parsedRank) && (parsedRank as number) > 0 ? parsedRank as number : nativeRank
+  };
+}
+
 export class ServiceNowClient {
   private readonly tokenManager: TokenManager;
   private readonly httpClient: AxiosInstance;
@@ -339,6 +427,10 @@ export class ServiceNowClient {
       const callerSnToken = ctx?.serviceNowAccessToken;
       const callerEntraToken = ctx?.callerEntraAccessToken;
       const callerOid = ctx?.callerEntraObjectId;
+      const requireCallerIdentity = Boolean(
+        (request as { __snRequireCallerIdentity?: boolean }).__snRequireCallerIdentity
+        || ctx?.serviceNowRequireCallerIdentity
+      );
 
       let token: string | undefined = callerSnToken;
       let source: "caller_header" | "obo" | "integration_user" = "caller_header";
@@ -353,20 +445,22 @@ export class ServiceNowClient {
         } catch (err) {
           // When the caller is required to provide identity, do not fall back
           // silently — re-throw so the failure is surfaced to the client.
-          if (config.serviceNow.requireCallerAccessToken) {
+          if (config.serviceNow.requireCallerAccessToken || requireCallerIdentity) {
             throw err;
           }
           Logger.warn("ServiceNow OBO exchange failed; falling back to integration user", {
             operation: "obo.fallback_to_integration",
-            callerOid: callerOid ?? null
+            hasCallerObjectId: Boolean(callerOid)
           }, err);
         }
       }
 
       if (!token) {
-        if (config.serviceNow.requireCallerAccessToken) {
+        if (config.serviceNow.requireCallerAccessToken || requireCallerIdentity) {
           throw new Error(
-            "ServiceNow caller access token is required. Provide x-servicenow-access-token or enable ENTRA_OBO_ENABLED so ServiceNow ACLs are enforced per user."
+            config.serviceNow.requireCallerAccessToken
+              ? "ServiceNow caller access token is required. Provide x-servicenow-access-token or enable ENTRA_OBO_ENABLED so ServiceNow ACLs are enforced per user."
+              : "ServiceNow caller identity is required for this request. Provide x-servicenow-access-token or enable ENTRA_OBO_ENABLED so ServiceNow ACLs and user criteria are enforced per user."
           );
         }
         token = await this.tokenManager.getAccessToken();
@@ -1602,6 +1696,71 @@ export class ServiceNowClient {
       Logger.error("Failed to fetch order detail", {
         operation: "orders.detail_failed",
         requestSysId
+      }, error);
+      throw error;
+    }
+  }
+
+  // ── Knowledge retrieval (read-only employee self-service flow) ───────────
+
+  async searchKnowledgeArticles(
+    query: string,
+    options: { language?: string; candidateLimit?: number } = {}
+  ): Promise<ServiceNowKnowledgeCandidate[]> {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) throw new Error("Knowledge search query is required.");
+    const client = await this.getClient();
+    const candidateLimit = Math.max(5, Math.min(options.candidateLimit ?? 15, 20));
+    const params = new URLSearchParams();
+    params.set("query", normalizedQuery);
+    params.set("limit", String(candidateLimit));
+    for (const field of [
+      "sys_id", "number", "short_description", "description", "snippet",
+      "meta", "kb_knowledge_base", "kb_category", "language", "published",
+      "sys_updated_on", "relevance_score"
+    ]) params.append("fields", field);
+    if (options.language?.trim()) params.set("language", options.language.trim());
+
+    try {
+      const requestConfig = { params, __snRequireCallerIdentity: true } as AxiosRequestConfig;
+      const response = await client.get("/api/sn_km_api/knowledge/articles", requestConfig);
+      const candidates = knowledgeRows(response.data)
+        .map((row, index) => normalizeKnowledgeCandidate(row, index + 1))
+        .filter((candidate): candidate is ServiceNowKnowledgeCandidate => Boolean(candidate));
+      Logger.info("ServiceNow Knowledge search completed", {
+        operation: "knowledge.search",
+        candidateCount: candidates.length,
+        candidateLimit,
+        nativeScoreAvailable: candidates.some(candidate => candidate.nativeScore !== undefined)
+      });
+      return candidates;
+    } catch (error) {
+      Logger.error("ServiceNow Knowledge search failed", { operation: "knowledge.search_failed" }, error);
+      throw error;
+    }
+  }
+
+  async getKnowledgeArticle(articleSysId: string): Promise<KnowledgeArticleDetail> {
+    requireServiceNowSysId(articleSysId, "Knowledge article sys_id");
+    const client = await this.getClient();
+    try {
+      const response = await client.get(`/api/sn_km_api/knowledge/articles/${articleSysId}`, {
+        __snRequireCallerIdentity: true
+      } as AxiosRequestConfig);
+      const row = knowledgeRows(response.data)[0];
+      const candidate = row ? normalizeKnowledgeCandidate(row, 1) : undefined;
+      if (!row || !candidate) throw new Error(`Knowledge article '${articleSysId}' was not found or is not accessible.`);
+      const content = knowledgePlainText(readKnowledgeString(row, ["text", "article_body", "content", "description"]))
+        .slice(0, 20_000);
+      return {
+        ...candidate,
+        content,
+        sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
+      };
+    } catch (error) {
+      Logger.error("Failed to retrieve ServiceNow Knowledge article", {
+        operation: "knowledge.detail_failed",
+        articleSysId
       }, error);
       throw error;
     }

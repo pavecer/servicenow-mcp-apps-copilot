@@ -5,10 +5,11 @@ should read [README.md](README.md); this file is the fast path for agents.
 
 ## What this is
 
-A stateless **Model Context Protocol (MCP) server** for the ServiceNow Service
-Catalog, hosted on **Azure Functions** (Node.js 20, TypeScript). It delivers
-catalog ordering (search → form → order → track, plus a cart) to **Microsoft 365
-Copilot / Cowork** via **MCP Apps (SEP-1865)** interactive HTML widgets.
+A stateless **Model Context Protocol (MCP) server** for ServiceNow Knowledge,
+Service Catalog, and incident self-service, hosted on **Azure Functions**
+(Node.js 20, TypeScript). It delivers Knowledge retrieval, catalog ordering, and
+incident workflows to **Microsoft 365 Copilot / Cowork** via **MCP Apps
+(SEP-1865)** interactive HTML widgets.
 
 ## Resume here first
 

@@ -39,10 +39,10 @@ the shortest path to resume work safely.
   earlier premature merge was fully reverted. Do not bypass the
   human-validation gate for future behavioral changes.
 
-## Active local release-governance change
+## Release governance
 
-- Branch `feat/release-governance` contains a complete, local-only release
-  governance implementation. It has not been pushed or opened as a public PR.
+- Release governance was merged through PR #47 as commit `ad465e2` after
+  maintainer review, CI, and CodeQL validation.
 - The project version is reconciled to the existing M365 baseline `1.1.6`
   across npm, the lockfile, and the app manifest. `CHANGELOG.md` now has an
   explicit `1.1.6` historical baseline and a clean `Unreleased` queue.
@@ -58,14 +58,36 @@ the shortest path to resume work safely.
   reports `1.1.6`; a Minor preview reports required type `minor` and next
   version `1.2.0`; editor diagnostics are clean; focused reviewer verdict is
   APPROVE.
-- Publication gate: review this workflow with the maintainer before creating a
-  public PR. The intended PR kind is the one-time `Version baseline alignment`,
-  impact `Minor`, with `Completed maintainer workflow review` evidence.
+- The first CodeQL run found three parsing/escaping alerts; these were fixed
+  before merge with linear parsing and hostile-input tests.
+
+## Active Knowledge retrieval branch
+
+- Branch `feat/knowledge-retrieval` adds three tools and one shared MCP App,
+  moving the local branch inventory to 26 tools / 9 widgets. Public/deployed
+  inventory remains 23 / 8 until human validation and merge.
+- Implemented locally: deterministic native-score/lexical ranking, one-call
+  Knowledge API search, one-call article detail, executable-block stripping,
+  attempt/history state, third-attempt incident offer, explicit-consent incident
+  creation, standardized KB-not-helpful incident description, and agent intent
+  routing.
+- Current configured integration identity sees zero Knowledge rows; demo admin
+  has demo articles. Deployment is blocked until dedicated Knowledge API and
+  Alex/OBO article visibility are proven in the test tenant.
+- Durable implementation checklist and validation matrix:
+  [KNOWLEDGE_RETRIEVAL_PLAN.md](KNOWLEDGE_RETRIEVAL_PLAN.md).
+- Local validation: 40 test files / 344 tests pass; backend and MCP Apps
+  specialist reviews APPROVE; search, attempt-3, and detail widget screenshots
+  passed desktop/responsive light/dark inspection.
+- Minor release preparation synchronized npm/M365/changelog at `1.2.0`. No push,
+  public PR, deployment, or publication has occurred for this branch. Next:
+  commit the exact candidate, deploy only to `snowmcpwidg-dev`, and obtain
+  explicit Alex/admin human validation before a Version release PR.
 
 ## Operational checkpoint
 
 - As of 2026-08-10, Function App `func-yj453fjwuhph4` is running and the Azure
-  subscription is enabled. The live MCP endpoint exposes all 23 tools and is
+  subscription is enabled. The currently deployed MCP endpoint exposes all 23 tools and is
   ready for M365 prompt testing.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).

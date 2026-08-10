@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ServiceNow Knowledge</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1f1f1f; --muted: #616161; --border: #d1d1d1;
+    --surface: #f7f7f7; --accent: #0f6cbd; --accent-fill: #0f6cbd; --accent-fg: #ffffff;
+    --success: #107c10; --success-bg: #f1faf1; --warning: #8a5700; --warning-bg: #fff8e8;
+    --error: #c50f1f; --error-bg: #fff1f2;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  html[data-theme="dark"] {
+    --bg: #1f1f1f; --fg: #f3f2f1; --muted: #b3b3b3; --border: #484644;
+    --surface: #292929; --accent: #479ef5; --accent-fill: #0f6cbd; --success: #54b054; --success-bg: #193019;
+    --warning: #f3c363; --warning-bg: #382b12; --error: #ff99a4; --error-bg: #3b191d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--fg); overflow-wrap: anywhere; }
+  h1 { margin: 0; font-size: 18px; line-height: 1.3; }
+  h2 { margin: 0; font-size: 15px; line-height: 1.35; }
+  .meta { margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+  .attempt { display: inline-block; margin-top: 10px; border-radius: 12px; padding: 2px 8px; background: var(--surface); font-size: 12px; }
+  .results { display: grid; gap: 8px; margin-top: 14px; }
+  .result { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; }
+  .result:has(input:checked) { border-color: var(--accent); box-shadow: inset 3px 0 var(--accent); }
+  .result input { margin: 3px 0 0; accent-color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .band { border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 600; background: #e8f3fc; color: #0f548c; }
+  html[data-theme="dark"] .band { background: #143a56; color: #c7e7ff; }
+  .snippet { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .source { margin-top: 6px; color: var(--muted); font-size: 11px; }
+  .article { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .content { margin-top: 12px; white-space: pre-wrap; font-size: 13px; line-height: 1.55; max-height: 320px; overflow: hidden; }
+  .notice { margin-top: 14px; padding: 12px; border: 1px solid var(--warning); border-radius: 8px; background: var(--warning-bg); font-size: 13px; line-height: 1.45; }
+  .error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
+  .success { color: var(--fg); background: var(--success-bg); border-color: var(--success); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  button, .button-link { border: 1px solid var(--border); border-radius: 4px; padding: 7px 12px; background: var(--bg); color: var(--fg); font: inherit; text-decoration: none; cursor: pointer; }
+  button.primary { background: var(--accent-fill); color: var(--accent-fg); border-color: var(--accent-fill); }
+  button:disabled { opacity: .6; cursor: progress; }
+  .empty { color: var(--muted); font-size: 13px; }
+  .source-link { display: inline-block; margin-top: 10px; color: var(--accent); font-size: 12px; }
+  @media (max-width: 520px) { .actions > * { flex: 1 1 auto; text-align: center; } }
+</style>
+<!-- MCP_HOST_BRIDGE -->
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+  "use strict";
+  function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
+  function getData() { var h = host(); return h ? h.getData() : null; }
+  function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function callTool(name, args) { var h = host(); return h && h.callTool ? h.callTool(name, args || {}) : Promise.reject(new Error("Host bridge unavailable")); }
+  function sendFollowUp(text) { var h = host(); if (h && h.sendFollowUp) { try { return h.sendFollowUp(text); } catch (error) { return Promise.reject(error); } } return false; }
+  function openExternal(url) { var h = host(); if (h && h.openExternal) { try { return h.openExternal(url) !== false; } catch (_) {} } return false; }
+  function subscribe(cb) { var h = host(); if (h && h.onData) { h.onData(cb); return true; } return false; }
+  function unwrap(result) { return result && result.structuredContent ? result.structuredContent : (result && result.result && result.result.structuredContent ? result.result.structuredContent : result || {}); }
+  function text(value) { return value == null ? "" : String(value); }
+  function make(tag, className, value) { var el = document.createElement(tag); if (className) el.className = className; if (value != null) el.textContent = value; return el; }
+  function bandLabel(value) { return value === "best" ? "Best match" : (value === "strong" ? "Strong match" : "Related"); }
+
+  var root = document.getElementById("root");
+  var lastData = null;
+  applyTheme();
+
+  function loading(message) { root.innerHTML = ""; var status = make("p", "empty", message || "Loading..."); status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); root.appendChild(status); }
+  function renderError(data) {
+    root.innerHTML = ""; var box = make("div", "notice error", data.error || "Knowledge is unavailable. Please try again."); box.setAttribute("role", "alert"); root.appendChild(box);
+    if (data.originalQuestion) { var actions = make("div", "actions"); actions.appendChild(actionButton("Continue in chat", true, function (event) { continueInChat(event.currentTarget, "Continue helping with this ServiceNow Knowledge question: " + text(data.originalQuestion)); })); root.appendChild(actions); }
+  }
+  function actionButton(label, primary, handler) { var button = make("button", primary ? "primary" : "", label); button.type = "button"; button.addEventListener("click", handler); return button; }
+  function history(data) { return Array.isArray(data.triedArticles) ? data.triedArticles : []; }
+  function showStatus(message, isError) { var box = make("div", "notice" + (isError ? " error" : ""), message); box.setAttribute("role", isError ? "alert" : "status"); box.setAttribute("aria-live", "polite"); root.appendChild(box); return box; }
+  function continueInChat(button, prompt) {
+    var originalLabel = button ? button.textContent : "";
+    if (button) { button.disabled = true; button.textContent = "Continuing..."; }
+    var pending = sendFollowUp(prompt);
+    if (pending === false) {
+      if (button) { button.disabled = false; button.textContent = originalLabel || "Try again"; }
+      showStatus("Copilot could not continue this action. Try again from chat.", true);
+      return;
+    }
+    Promise.resolve(pending).then(function () {
+      showStatus("Continuing in Copilot...", false);
+    }).catch(function () {
+      if (button) { button.disabled = false; button.textContent = originalLabel || "Try again"; }
+      showStatus("Copilot could not continue this action. Try again from chat.", true);
+    });
+  }
+
+  function createIncident(data, button) {
+    button.disabled = true; button.textContent = "Creating...";
+    var tried = history(data).slice();
+    if (tried.length === 0 && Array.isArray(data.articles) && data.articles.length > 0) {
+      var selected = root.querySelector("input[name=article]:checked");
+      var current = data.articles.find(function (item) { return text(item.sysId) === (selected ? selected.value : ""); }) || data.articles[0];
+      tried.push({ sysId: current.sysId, number: current.number || "", title: current.title || "Knowledge result", rank: current.rank });
+    }
+    var args = {
+      userConfirmed: true,
+      originalQuestion: text(data.originalQuestion),
+      issueSummary: "Knowledge assistance did not resolve: " + text(data.originalQuestion),
+      attemptCount: 3,
+      triedArticles: tried, urgency: "2", impact: "3"
+    };
+    callTool("create_incident_from_knowledge", args).then(function (result) {
+      var next = unwrap(result);
+      if (next && next.success === false) { render(data); showStatus(next.error || "The incident could not be created. Try again.", true); return; }
+      render(next);
+    }).catch(function () {
+      render(data);
+      continueInChat(null, "Please create a ServiceNow incident because Knowledge did not resolve my question after three Knowledge attempts. Original question: " + text(data.originalQuestion) + ". Tried articles: " + JSON.stringify(history(data)));
+    });
+  }
+
+  function keepSearching(data, button) {
+    var excluded = history(data).map(function (item) { return item.sysId; }).filter(Boolean);
+    continueInChat(button, "Keep searching ServiceNow Knowledge without creating an incident. Use attempt=3, originalQuestion=" + JSON.stringify(text(data.originalQuestion)) + ", excludeArticleSysIds=" + JSON.stringify(excluded) + ", triedArticles=" + JSON.stringify(history(data)) + ".");
+  }
+
+  function renderSearch(data) {
+    var articles = Array.isArray(data.articles) ? data.articles : [];
+    root.appendChild(make("h1", "", "ServiceNow Knowledge"));
+    root.appendChild(make("div", "meta", text(data.query)));
+    root.appendChild(make("span", "attempt", "Search attempt " + (Number(data.attempt) || 1) + " of 3"));
+    if (articles.length === 0) {
+      root.appendChild(make("p", "empty", "No matching articles were found. Try describing the issue another way."));
+    } else {
+      var list = make("div", "results");
+      articles.forEach(function (article, index) {
+        var label = make("label", "result");
+        var radio = document.createElement("input"); radio.type = "radio"; radio.name = "article"; radio.value = text(article.sysId); if (index === 0) radio.checked = true; label.appendChild(radio);
+        var body = make("div", "");
+        var row = make("div", "row"); row.appendChild(make("span", "band", bandLabel(article.relevanceBand))); row.appendChild(make("h2", "", (article.number ? article.number + " - " : "") + text(article.title))); body.appendChild(row);
+        body.appendChild(make("div", "snippet", text(article.snippet || article.shortDescription)));
+        body.appendChild(make("div", "source", [article.knowledgeBase, article.category, article.updatedOn].filter(Boolean).join(" | ")));
+        label.appendChild(body); list.appendChild(label);
+      });
+      root.appendChild(list);
+    }
+    if (data.offerIncident) {
+      root.appendChild(make("div", "notice", "Still not resolved? I can create a ServiceNow incident with your question and the Knowledge articles already tried. Nothing is submitted until you choose Create incident."));
+    }
+    var actions = make("div", "actions");
+    if (articles.length > 0) actions.appendChild(actionButton("Open selected", true, function () {
+      var selected = root.querySelector("input[name=article]:checked");
+      var article = articles.find(function (item) { return text(item.sysId) === (selected ? selected.value : ""); });
+      if (!article) return;
+      loading("Opening article...");
+      var args = { articleSysId: article.sysId, originalQuestion: data.originalQuestion, attempt: data.attempt, triedArticles: history(data) };
+      callTool("get_knowledge_article", args)
+        .then(function (result) {
+          var next = unwrap(result);
+          if (next && next.success === false) {
+            render(data);
+            continueInChat(null, "Open the ServiceNow Knowledge article with exactly these arguments: " + JSON.stringify(args) + ".");
+            return;
+          }
+          render(next);
+        }).catch(function () {
+          render(data);
+          continueInChat(null, "Open the ServiceNow Knowledge article with exactly these arguments: " + JSON.stringify(args) + ".");
+        });
+    }));
+    if (data.offerIncident) {
+      var create = actionButton("Create incident", false, function () { createIncident(data, create); }); actions.appendChild(create);
+    } else {
+      actions.appendChild(actionButton("Still need help", false, function (event) {
+        continueInChat(event.currentTarget, "That Knowledge search did not resolve my question. Search again with attempt " + Math.min(3, (Number(data.attempt) || 1) + 1) + " for: " + text(data.originalQuestion) + ". Preserve triedArticles=" + JSON.stringify(history(data)) + ".");
+      }));
+    }
+    root.appendChild(actions);
+  }
+
+  function renderDetail(data) {
+    var article = data.article || {};
+    root.appendChild(make("h1", "", text(article.title) || "Knowledge article"));
+    root.appendChild(make("div", "meta", [article.number, article.knowledgeBase, article.category].filter(Boolean).join(" | ")));
+    var card = make("article", "article"); card.appendChild(make("div", "content", text(article.content).slice(0, 5000))); root.appendChild(card);
+    if (article.sourceLink) { var source = make("a", "source-link", "View full article in ServiceNow"); source.href = article.sourceLink; source.addEventListener("click", function (event) { event.preventDefault(); if (!openExternal(article.sourceLink)) showStatus("The ServiceNow source could not be opened.", true); }); root.appendChild(source); }
+    if (data.offerIncident) root.appendChild(make("div", "notice", "If this still does not solve the issue, I can create an incident with the Knowledge history after you confirm."));
+    var actions = make("div", "actions");
+    if (data.offerIncident) {
+      var create = actionButton("Create incident", true, function () { createIncident(data, create); }); actions.appendChild(create);
+      actions.appendChild(actionButton("Keep searching", false, function (event) { keepSearching(data, event.currentTarget); }));
+    } else {
+      actions.appendChild(actionButton("This solved it", true, function (event) { continueInChat(event.currentTarget, "The ServiceNow Knowledge article solved my question. No incident is needed."); }));
+      actions.appendChild(actionButton("Still need help", false, function (event) {
+        continueInChat(event.currentTarget, "This article did not resolve my question. Search ServiceNow Knowledge again with attempt " + Math.min(3, (Number(data.attempt) || 1) + 1) + ". Original question: " + text(data.originalQuestion) + ". Exclude article sys_ids: " + history(data).map(function (item) { return item.sysId; }).join(", ") + ". Preserve triedArticles=" + JSON.stringify(history(data)) + ".");
+      }));
+    }
+    root.appendChild(actions);
+  }
+
+  function renderConfirmation(data) {
+    root.appendChild(make("div", "notice success", "Incident " + text(data.number || (data.incident && data.incident.number)) + " created"));
+    root.appendChild(make("h1", "", "Knowledge did not resolve the issue"));
+    root.appendChild(make("div", "meta", "The incident includes your original question and the Knowledge articles already tried."));
+    var actions = make("div", "actions"); actions.appendChild(actionButton("Track incident", true, function (event) { continueInChat(event.currentTarget, "Show my ServiceNow incidents."); })); root.appendChild(actions);
+  }
+
+  function render(data) {
+    data = data || {}; lastData = data; root.innerHTML = "";
+    if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
+    if (data.success === false || data.mode === "error") return renderError(data);
+    if (data.mode === "detail") return renderDetail(data);
+    if (data.mode === "incident_confirmation") return renderConfirmation(data);
+    renderSearch(data);
+  }
+
+  loading("Searching ServiceNow Knowledge...");
+  if (!subscribe(render)) render(getData());
+})();
+</script>
+</body>
+</html>

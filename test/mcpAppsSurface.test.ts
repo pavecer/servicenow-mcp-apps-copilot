@@ -7,8 +7,8 @@ import { WIDGETS, getWidgetForTool } from "../src/ui/widgets";
 // the widget-resource registration are all wired up.
 
 describe("MCP Apps surface", () => {
-  it("WIDGETS registry exposes exactly eight widgets with ui:// URIs", () => {
-    expect(WIDGETS.length).toBe(8);
+  it("WIDGETS registry exposes exactly nine widgets with ui:// URIs", () => {
+    expect(WIDGETS.length).toBe(9);
     const toolNames = WIDGETS.map(w => w.toolName).sort();
     expect(toolNames).toEqual([
       "get_catalog_item_form",
@@ -18,6 +18,7 @@ describe("MCP Apps surface", () => {
       "list_user_incidents",
       "list_user_orders",
       "search_catalog_items",
+      "search_knowledge",
       "view_cart"
     ]);
     for (const w of WIDGETS) {
@@ -65,7 +66,10 @@ describe("MCP Apps surface", () => {
       ["report_incident", /incident-detail\.html$/],
       ["add_incident_comment", /incident-detail\.html$/],
       ["add_incident_attachment", /incident-detail\.html$/],
-      ["remove_incident_attachment", /incident-detail\.html$/]
+      ["remove_incident_attachment", /incident-detail\.html$/],
+      ["search_knowledge", /knowledge\.html$/],
+      ["get_knowledge_article", /knowledge\.html$/],
+      ["create_incident_from_knowledge", /knowledge\.html$/]
     ]);
     for (const def of defs) {
       const meta = (def as { _meta?: { ui?: { resourceUri?: string; visibility?: string[] } } })._meta;

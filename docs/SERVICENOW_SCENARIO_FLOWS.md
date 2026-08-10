@@ -53,6 +53,7 @@ fallback entirely, so a missing caller identity fails closed.
 | Add incident comment | `PATCH /api/now/table/incident/{id}` (`comments`) | `incident` |
 | Incident attachments | `GET /api/now/attachment` · `POST /api/now/attachment/file` · `DELETE /api/now/attachment/{id}` | `sys_attachment` |
 | Identity lookup | `GET /api/now/table/sys_user` | `sys_user` |
+| Knowledge search / detail | `GET /api/sn_km_api/knowledge/articles[/{id}]` | `kb_knowledge` |
 
 > Reference fields on read paths (`get_order_detail`, etc.) are fetched with
 > `sysparm_display_value=all`, so `requested_for`, `approver`, and similar render
@@ -383,6 +384,56 @@ sequenceDiagram
 
 ---
 
+## Scenario 12 — Search and rank Knowledge
+
+**Tool:** `search_knowledge` → **widget:** `knowledge`
+
+```mermaid
+sequenceDiagram
+    participant U as User (Copilot)
+    participant S as MCP server
+    participant SN as ServiceNow
+    U->>S: "How do I configure VPN?"
+    S->>SN: GET /api/sn_km_api/knowledge/articles (bounded candidates)
+    SN-->>S: caller-visible article snippets + optional relevance
+    S->>S: deterministic local reranking
+    S-->>U: top 3-5 ranked articles
+```
+
+- One ServiceNow call is made per search attempt. The server does not enumerate
+  knowledge bases or fetch every article body.
+- ServiceNow native relevance is fused with explainable weighted title,
+  keyword, summary, snippet, category, and knowledge-base matching.
+- Previously tried article sys_ids are excluded on later attempts.
+
+---
+
+## Scenario 13 — Open a Knowledge article
+
+**Tool:** `get_knowledge_article` → **widget:** `knowledge`
+
+- One selected article is fetched by sys_id through the caller-scoped Knowledge
+  API. Executable/style/template HTML blocks are removed and the remainder is
+  converted to bounded plain text.
+- The widget preserves the original question, attempt number, and compact tried
+  article history for the next conversational turn.
+
+---
+
+## Scenario 14 — Escalate unresolved Knowledge to an incident
+
+**Tool:** `create_incident_from_knowledge` → **widget:** `knowledge`
+
+- After the third unresolved Knowledge attempt, the widget always offers an
+  incident politely. It never submits until the user explicitly chooses
+  **Create incident**; the tool also requires `userConfirmed=true`.
+- The incident description records `Knowledge assistance outcome: Not helpful`,
+  attempt count, original question, issue summary, and tried article metadata.
+- The incident is created through the existing caller-attributed incident path
+  and returns a minimal confirmation without a detail refetch.
+
+---
+
 ## Tool → widget → ServiceNow quick reference
 
 | Tool | Widget | Primary ServiceNow call |
@@ -409,6 +460,9 @@ sequenceDiagram
 | `add_incident_comment` | incident-detail | `PATCH /table/incident/{id}` (comments) |
 | `add_incident_attachment` | incident-detail | `POST /api/now/attachment/file` |
 | `remove_incident_attachment` | incident-detail | `DELETE /api/now/attachment/{id}` |
+| `search_knowledge` | knowledge | `GET /api/sn_km_api/knowledge/articles` |
+| `get_knowledge_article` | knowledge | `GET /api/sn_km_api/knowledge/articles/{id}` |
+| `create_incident_from_knowledge` | knowledge | `POST /api/now/table/incident` |
 | `validate_servicenow_config` | — | `GET /servicecatalog/items` (probe) |
 
 > MCP Apps is always on: the cart, order-item, and incident tools (and all

@@ -174,3 +174,42 @@ export interface AddIncidentAttachmentInput {
   /** Raw file bytes. */
   data: Buffer;
 }
+
+// ── Knowledge retrieval (read-only employee self-service flow) ─────────────
+
+export interface ServiceNowKnowledgeCandidate {
+  sysId: string;
+  number: string;
+  title: string;
+  shortDescription: string;
+  snippet: string;
+  keywords: string;
+  knowledgeBase: string;
+  category: string;
+  language: string;
+  updatedOn: string;
+  publishedOn: string;
+  nativeScore?: number;
+  nativeRank: number;
+}
+
+export type KnowledgeRelevanceBand = "best" | "strong" | "related";
+
+export interface RankedKnowledgeArticle extends ServiceNowKnowledgeCandidate {
+  rank: number;
+  score: number;
+  relevanceBand: KnowledgeRelevanceBand;
+  matchReasons: string[];
+}
+
+export interface KnowledgeArticleDetail extends ServiceNowKnowledgeCandidate {
+  content: string;
+  sourceLink: string;
+}
+
+export interface KnowledgeArticleHistoryItem {
+  sysId: string;
+  number: string;
+  title: string;
+  rank?: number;
+}

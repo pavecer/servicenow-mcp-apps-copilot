@@ -53,7 +53,7 @@ describe("cart tool manifest", () => {
     expect(names).toContain("remove_order_item");
     expect(names).toContain("approve_order_approval");
     expect(names).toContain("reject_order_approval");
-    expect(names).toHaveLength(23);
+    expect(names).toHaveLength(26);
   });
 
   it("cart tools are decorated with their widget resourceUri", () => {

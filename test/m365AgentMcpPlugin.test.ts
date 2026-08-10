@@ -81,7 +81,8 @@ describe("Microsoft 365 declarative agent MCP plugin", () => {
     expect(releaseAutomation).not.toContain("Could not isolate oauth/register");
   });
 
-  it("publishes the dynamic-discovery change as version 1.1.6", () => {
-    expect(manifest.version).toBe("1.1.6");
+  it("keeps the M365 package version aligned with the canonical project version", () => {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")) as { version: string };
+    expect(manifest.version).toBe(packageJson.version);
   });
 });

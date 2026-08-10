@@ -7,7 +7,8 @@ import {
   ORDER_FORM_HTML,
   INCIDENT_FORM_HTML,
   MY_INCIDENTS_HTML,
-  INCIDENT_DETAIL_HTML
+  INCIDENT_DETAIL_HTML,
+  KNOWLEDGE_HTML
 } from "./widgets/generated";
 import Logger from "../utils/logger";
 
@@ -133,6 +134,15 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
     name: "cart",
     description: "Show the user's ServiceNow cart with quantity controls and a submit action.",
     html: CART_HTML,
+    permissions: ["clipboardWrite"]
+  },
+  {
+    toolName: "search_knowledge",
+    boundToolNames: ["get_knowledge_article", "create_incident_from_knowledge"],
+    uri: `${WIDGET_URI_NAMESPACE}/knowledge.html`,
+    name: "knowledge",
+    description: "Show ranked ServiceNow Knowledge results, article detail, and consent-based incident escalation.",
+    html: KNOWLEDGE_HTML,
     permissions: ["clipboardWrite"]
   },
   {

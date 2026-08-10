@@ -30,6 +30,11 @@ import { registerGetIncidentDetailTool } from "./getIncidentDetail";
 import { registerAddIncidentCommentTool } from "./addIncidentComment";
 import { registerAddIncidentAttachmentTool } from "./addIncidentAttachment";
 import { registerRemoveIncidentAttachmentTool } from "./removeIncidentAttachment";
+import {
+  registerCreateIncidentFromKnowledgeTool,
+  registerGetKnowledgeArticleTool,
+  registerSearchKnowledgeTool
+} from "./knowledge";
 import { getWidgetForTool, registerWidgetResources } from "../ui/widgets";
 /**
  * Single source of truth for the names of MCP tools this server exposes.
@@ -94,12 +99,19 @@ const INCIDENT_TOOL_NAMES = [
   "remove_incident_attachment"
 ] as const;
 
+const KNOWLEDGE_TOOL_NAMES = [
+  "search_knowledge",
+  "get_knowledge_article",
+  "create_incident_from_knowledge"
+] as const;
+
 export type RegisteredToolName =
   | (typeof BASE_TOOL_NAMES)[number]
   | (typeof CART_TOOL_NAMES)[number]
   | (typeof ORDER_ITEM_TOOL_NAMES)[number]
   | (typeof ORDER_APPROVAL_TOOL_NAMES)[number]
-  | (typeof INCIDENT_TOOL_NAMES)[number];
+  | (typeof INCIDENT_TOOL_NAMES)[number]
+  | (typeof KNOWLEDGE_TOOL_NAMES)[number];
 
 // The effective set of tool names this server exposes. The MCP Apps surface is
 // always on, so the base tools, cart/basket tools, order line-item tools, and
@@ -111,7 +123,8 @@ function effectiveToolNames(): string[] {
     ...CART_TOOL_NAMES,
     ...ORDER_ITEM_TOOL_NAMES,
     ...ORDER_APPROVAL_TOOL_NAMES,
-    ...INCIDENT_TOOL_NAMES
+    ...INCIDENT_TOOL_NAMES,
+    ...KNOWLEDGE_TOOL_NAMES
   ];
 }
 
@@ -656,6 +669,94 @@ export function getMinimalToolDefinitions() {
     }
   );
 
+  definitions.push(
+    {
+      name: "search_knowledge",
+      description: "Search caller-visible ServiceNow Knowledge articles and return locally ranked snippets for an informational question.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Current Knowledge search wording" },
+          originalQuestion: { type: "string", description: "The user's stable original question across attempts" },
+          attempt: { type: "integer", minimum: 1, maximum: 3, description: "Current unresolved Knowledge attempt (1-3)" },
+          excludeArticleSysIds: {
+            type: "array", items: { type: "string" },
+            description: "Previously tried Knowledge article sys_ids to exclude"
+          },
+          triedArticles: {
+            type: "array",
+            minItems: 0,
+            maxItems: 20,
+            items: {
+              type: "object",
+              properties: {
+                sysId: { type: "string" }, number: { type: "string" }, title: { type: "string" }, rank: { type: "integer" }
+              },
+              required: ["sysId", "number", "title"]
+            },
+            description: "Compact article history preserved across attempts"
+          },
+          language: { type: "string", description: "Optional article language/locale" },
+          limit: { type: "integer", minimum: 1, maximum: 5, description: "Maximum ranked results (default 5)" }
+        },
+        required: ["query", "originalQuestion"]
+      }
+    },
+    {
+      name: "get_knowledge_article",
+      description: "Retrieve one caller-visible ServiceNow Knowledge article while preserving the resolution journey.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {
+          articleSysId: { type: "string", description: "Selected Knowledge article sys_id" },
+          originalQuestion: { type: "string", description: "The user's stable original question" },
+          attempt: { type: "integer", minimum: 1, maximum: 3, description: "Current unresolved Knowledge attempt" },
+          triedArticles: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                sysId: { type: "string" }, number: { type: "string" }, title: { type: "string" }, rank: { type: "integer" }
+              },
+              required: ["sysId", "number", "title"]
+            }
+          }
+        },
+        required: ["articleSysId", "originalQuestion", "attempt"]
+      }
+    },
+    {
+      name: "create_incident_from_knowledge",
+      description: "Create a flagged ServiceNow incident after the user explicitly confirms that Knowledge did not resolve the question.",
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {
+          userConfirmed: { type: "boolean", enum: [true], description: "Must be true after explicit user consent" },
+          originalQuestion: { type: "string", description: "Original unresolved question" },
+          issueSummary: { type: "string", description: "One-line incident summary" },
+          attemptCount: { type: "integer", enum: [3], description: "Exactly three unresolved Knowledge attempts completed" },
+          triedArticles: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                sysId: { type: "string" }, number: { type: "string" }, title: { type: "string" }, rank: { type: "integer" }
+              },
+              required: ["sysId", "number", "title"]
+            }
+          },
+          category: { type: "string", description: "Optional incident category" },
+          urgency: { type: "string", enum: ["1", "2", "3"], description: "Optional urgency: 1 High, 2 Medium, 3 Low" },
+          impact: { type: "string", enum: ["1", "2", "3"], description: "Optional impact: 1 High, 2 Medium, 3 Low" }
+        },
+        required: ["userConfirmed", "originalQuestion", "issueSummary", "attemptCount", "triedArticles"]
+      }
+    }
+  );
+
   // Decorate widget-backed tools with `_meta.ui.resourceUri`. The matching
   // M365 Copilot host keys off this to mount the widget for a tool result.
   for (const definition of definitions) {
@@ -714,6 +815,11 @@ export function registerTools(
   registerAddIncidentCommentTool(server, client);
   registerAddIncidentAttachmentTool(server, client);
   registerRemoveIncidentAttachmentTool(server, client);
+
+  // Knowledge retrieval and consent-based incident escalation.
+  registerSearchKnowledgeTool(server, client);
+  registerGetKnowledgeArticleTool(server, client);
+  registerCreateIncidentFromKnowledgeTool(server, client);
 
   // SEP-1865 widget resources.
   registerWidgetResources(server);
