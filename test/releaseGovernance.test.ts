@@ -131,6 +131,31 @@ describe("release governance", () => {
     expect(provenanceResult.stderr).toMatch(/already existed in the base changelog/i);
   });
 
+  it("does not accept release-note text hidden inside HTML comments", () => {
+    const releaseNote = "Document a visible release-governance improvement for users.";
+    const hiddenRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hidden-note-"));
+    temporaryDirectories.push(hiddenRoot);
+    fs.copyFileSync(path.join(root, "package.json"), path.join(hiddenRoot, "package.json"));
+    fs.copyFileSync(path.join(root, "package-lock.json"), path.join(hiddenRoot, "package-lock.json"));
+    fs.mkdirSync(path.join(hiddenRoot, "m365-agent/appPackage"), { recursive: true });
+    fs.copyFileSync(path.join(root, "m365-agent/appPackage/manifest.json"), path.join(hiddenRoot, "m365-agent/appPackage/manifest.json"));
+    fs.mkdirSync(path.join(hiddenRoot, "scripts/dev"), { recursive: true });
+    fs.copyFileSync(script, path.join(hiddenRoot, "scripts/dev/release-governance.mjs"));
+    fs.writeFileSync(path.join(hiddenRoot, "CHANGELOG.md"), [
+      "# Changelog", "", "## [Unreleased]", "", `<!-- ${releaseNote} -->`,
+      "<!-- release-impact: minor -->", "", "## [1.1.6] - 2026-08-10", "", "Baseline.", ""
+    ].join("\n"));
+    const result = spawnSync("node", [
+      path.join(hiddenRoot, "scripts/dev/release-governance.mjs"), "pr-check",
+      "--body-file", temporaryFile(prBody(releaseNote)),
+      "--changed-files", temporaryFile("CHANGELOG.md\n"),
+      "--base-changelog", temporaryFile("# Changelog\n\n## [Unreleased]\n\n## [1.1.6] - 2026-08-10\n\nBaseline.\n"),
+      "--base-package", basePackage()
+    ], { cwd: hiddenRoot, encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/must also appear in CHANGELOG\.md/i);
+  });
+
   it("requires release impact and tenant validation for runtime changes", () => {
     const releaseNote = "Add enforceable release planning and version checks for contributors.";
     const base = temporaryFile("# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [1.1.6]\n\nBaseline.\n");

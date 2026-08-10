@@ -53,7 +53,8 @@ the shortest path to resume work safely.
   annotated `vX.Y.Z` tags on current `main` create GitHub Releases only after a
   read-only build/test job succeeds. Microsoft 365 catalog publication remains
   separate and manually approved.
-- Final local validation: 36 test files / 312 tests pass; `release:check`
+- Final local validation: 36 test files / 313 tests pass; 14 focused governance
+  tests pass; `release:check`
   reports `1.1.6`; a Minor preview reports required type `minor` and next
   version `1.2.0`; editor diagnostics are clean; focused reviewer verdict is
   APPROVE.

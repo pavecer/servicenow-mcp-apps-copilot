@@ -84,7 +84,7 @@ function getCanonicalVersion() {
 }
 
 function getSection(markdown, heading) {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = escapeRegExp(heading);
   const match = new RegExp(`^## ${escaped}(?:\\s+-\\s+\\d{4}-\\d{2}-\\d{2})?\\s*$`, "m").exec(markdown);
   if (!match) return "";
   const contentStart = match.index + match[0].length;
@@ -92,11 +92,39 @@ function getSection(markdown, heading) {
   return markdown.slice(contentStart, nextHeading < 0 ? markdown.length : nextHeading).trim();
 }
 
+function stripHtmlComments(value) {
+  let output = "";
+  let cursor = 0;
+  while (cursor < value.length) {
+    const start = value.indexOf("<!--", cursor);
+    if (start < 0) return output + value.slice(cursor);
+    output += value.slice(cursor, start);
+    const end = value.indexOf("-->", start + 4);
+    if (end < 0) return output;
+    cursor = end + 3;
+  }
+  return output;
+}
+
 function meaningfulSection(section) {
-  return section
-    .replace(/<!--[\s\S]*?-->/g, "")
+  return stripHtmlComments(section)
     .replace(/^\s*[-*]\s*$/gm, "")
     .trim();
+}
+
+function escapeRegExp(value) {
+  const special = new Set(["\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"]);
+  let escaped = "";
+  for (const character of value) escaped += special.has(character) ? `\\${character}` : character;
+  return escaped;
+}
+
+function hasDatedVersionHeading(changelog, version) {
+  const prefix = `## [${version}] - `;
+  return changelog.split(/\r?\n/).some(line => {
+    if (!line.startsWith(prefix)) return false;
+    return /^\d{4}-\d{2}-\d{2}$/.test(line.slice(prefix.length));
+  });
 }
 
 function normalizedText(value) {
@@ -282,7 +310,7 @@ function validatePr(args) {
       fail("A Version release PR requires a meaningful user-facing Release note.");
     }
     const changelog = fs.readFileSync(changelogPath, "utf8");
-    if (!new RegExp(`^## \\[${currentVersion.replace(/\./g, "\\.")}\\] - \\d{4}-\\d{2}-\\d{2}\\s*$`, "m").test(changelog)) {
+    if (!hasDatedVersionHeading(changelog, currentVersion)) {
       fail(`CHANGELOG.md section [${currentVersion}] must have a YYYY-MM-DD release date.`);
     }
     const releasedNotes = normalizedText(getSection(changelog, `[${currentVersion}]`));
@@ -357,7 +385,7 @@ function validateRepository(args) {
   if (!meaningfulSection(getSection(changelog, `[${version}]`))) {
     fail(`CHANGELOG.md must contain release notes for the canonical version ${version}.`);
   }
-  if (!new RegExp(`^## \\[${version.replace(/\./g, "\\.")}\\] - \\d{4}-\\d{2}-\\d{2}\\s*$`, "m").test(changelog)) {
+  if (!hasDatedVersionHeading(changelog, version)) {
     fail(`CHANGELOG.md section [${version}] must have a YYYY-MM-DD release date.`);
   }
   if (args.tag && args.tag !== `v${version}`) fail(`Tag '${args.tag}' does not match canonical version v${version}.`);
@@ -373,9 +401,12 @@ function updateChangelogLinks(changelog, version) {
   };
   let updated = changelog;
   for (const [label, url] of Object.entries(links)) {
-    const pattern = new RegExp(`^\\[${label.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\]:.*$`, "m");
-    if (pattern.test(updated)) updated = updated.replace(pattern, `[${label}]: ${url}`);
-    else updated = `${updated.trimEnd()}\n[${label}]: ${url}\n`;
+    const prefix = `[${label}]:`;
+    const lines = updated.split(/\r?\n/);
+    const index = lines.findIndex(line => line.startsWith(prefix));
+    if (index >= 0) lines[index] = `${prefix} ${url}`;
+    else lines.push(`${prefix} ${url}`);
+    updated = `${lines.join("\n").trimEnd()}\n`;
   }
   return updated;
 }
