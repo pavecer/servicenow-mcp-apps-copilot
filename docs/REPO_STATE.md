@@ -35,9 +35,9 @@ the shortest path to resume work safely.
   access was restored to `Disabled`; and no temporary policy exemption
   remained. The user then tested the deployed MCP App in the test tenant and
   explicitly confirmed that it works as intended.
-- The validated code is being published through a fresh PR after the earlier
-  premature merge was fully reverted. Do not bypass the human-validation gate
-  for future behavioral changes.
+- The validated code was published through PR #45 as commit `a2986f3` after the
+  earlier premature merge was fully reverted. Do not bypass the
+  human-validation gate for future behavioral changes.
 
 ## Operational checkpoint
 
