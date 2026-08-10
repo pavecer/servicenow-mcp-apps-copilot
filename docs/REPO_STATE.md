@@ -8,9 +8,11 @@ the shortest path to resume work safely.
 
 ## Current verified state
 
-- Repo: `servicenow-mcp-apps-copilot`, branch `main`.
+- Repo: `servicenow-mcp-apps-copilot`; public baseline is branch `main`, while
+  the active local candidate is on `feat/knowledge-retrieval`.
 - Surface: MCP Apps only.
-- Current inventory: 23 tools, 8 widgets.
+- Public inventory: 23 tools, 8 widgets. The test-only deployment currently
+  exposes the Knowledge candidate with 26 tools and 9 widgets.
 - Primary deployed endpoint:
   `https://func-yj453fjwuhph4.azurewebsites.net/mcp`
 - Primary Azure resource group: `rg-snowmcpwidg-dev`
@@ -64,16 +66,16 @@ the shortest path to resume work safely.
 ## Active Knowledge retrieval branch
 
 - Branch `feat/knowledge-retrieval` adds three tools and one shared MCP App,
-  moving the local branch inventory to 26 tools / 9 widgets. Public/deployed
-  inventory remains 23 / 8 until human validation and merge.
+  moving the local and test-deployed inventory to 26 tools / 9 widgets. Public
+  `main` remains 23 / 8 until human validation and merge.
 - Implemented locally: deterministic native-score/lexical ranking, one-call
   Knowledge API search, one-call article detail, executable-block stripping,
   attempt/history state, third-attempt incident offer, explicit-consent incident
   creation, standardized KB-not-helpful incident description, and agent intent
   routing.
-- Current configured integration identity sees zero Knowledge rows; demo admin
-  has demo articles. Deployment is blocked until dedicated Knowledge API and
-  Alex/OBO article visibility are proven in the test tenant.
+- The configured integration identity sees zero Knowledge rows; delegated demo
+  admin access sees demo articles. Alex/OBO article visibility must still be
+  proven through the test-tenant experience.
 - Delegated admin probe after deployment: dedicated `sn_km_api` returns 400
   (endpoint unavailable), while caller-scoped `kb_knowledge` returns rows. An
   opt-in caller-scoped Table API fallback is implemented; enable it only in the
@@ -83,16 +85,25 @@ the shortest path to resume work safely.
 - Local validation: 40 test files / 347 tests pass; backend and MCP Apps
   specialist reviews APPROVE; search, attempt-3, and detail widget screenshots
   passed desktop/responsive light/dark inspection.
-- Minor release preparation synchronized npm/M365/changelog at `1.2.0`. No push,
-  public PR, deployment, or publication has occurred for this branch. Next:
-  commit the exact candidate, deploy only to `snowmcpwidg-dev`, and obtain
-  explicit Alex/admin human validation before a Version release PR.
+- Minor release preparation synchronized npm/M365/changelog at `1.2.0`.
+  Runtime commit `256f3a7` is deployed only to `snowmcpwidg-dev`; live validation
+  reports 26 tools. The existing developer app passed 61 package checks and was
+  updated under title `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169` without catalog
+  publication.
+- Live delegated-admin checks returned five ranked results for password reset,
+  opened `KB0005012` with content and a source link, and confirmed attempt 3
+  excludes the tried article and offers an incident without creating one. The
+  demo fallback setting is enabled, storage public access is `Disabled`, and no
+  temporary exemption remains.
+- No public push or PR has occurred. Next: complete explicit Alex/admin human
+  validation, including the consented incident path, before opening a Version
+  release PR.
 
 ## Operational checkpoint
 
 - As of 2026-08-10, Function App `func-yj453fjwuhph4` is running and the Azure
-  subscription is enabled. The currently deployed MCP endpoint exposes all 23 tools and is
-  ready for M365 prompt testing.
+  subscription is enabled. The test endpoint exposes all 26 candidate tools and
+  is ready for M365 prompt testing; public `main` remains at 23 tools.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).
 - Deployed Function App has been migrated to `dev351709` and validated live.
@@ -101,9 +112,11 @@ the shortest path to resume work safely.
 - OBO is restored and enabled again on the deployed Function App.
 - Step 1 manager approval actions are deployed: `approve_order_approval` and
   `reject_order_approval` both render the order-detail widget.
-- The live endpoint exposes all 23 tools, including both approval actions.
-- M365 agent package `1.1.6` was validated and applied to the existing tenant
-  app `0d52a642-334e-4835-94b6-f6acc349569d`; OAuth registration was preserved.
+- The live test endpoint exposes all 26 tools, including the three Knowledge
+  tools and both approval actions.
+- Developer M365 agent package `1.2.0` was validated and applied to existing app
+  `0d52a642-334e-4835-94b6-f6acc349569d`; OAuth registration was preserved. The
+  organizationally published baseline remains `1.1.6`.
 - `npm run release:auto -- --environment snowmcpwidg-dev` is the verified
   automation path through the human M365 Copilot prompt-test boundary.
 - Tenant policy `MCAPSGovDeployPolicies / StorageAccount_PublicNetwork_Modify`

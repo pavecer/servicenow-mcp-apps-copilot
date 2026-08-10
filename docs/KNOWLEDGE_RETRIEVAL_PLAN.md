@@ -137,7 +137,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Tool/widget lockstep manifests and exact-count tests
 - [x] Scenario, setup, configuration, and handover documentation
 - [x] Full local build/test/security review
-- [ ] Deploy exact commit to `snowmcpwidg-dev`
+- [x] Deploy exact runtime commit `256f3a7` to `snowmcpwidg-dev`
 - [ ] Human validation as Alex and admin
 - [ ] Public PR only after explicit approval
 
@@ -165,6 +165,14 @@ loading/error states, and shows no more than two bottom actions.
    responsive article detail using the actual widget source.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
-- No public PR or deployment occurred at this checkpoint. The exact candidate
-   must be committed, deployed to `snowmcpwidg-dev`, and human-validated as Alex
-   and admin before a Version release PR can be opened.
+- Runtime commit `256f3a7` is deployed only to `snowmcpwidg-dev`; live MCP
+   validation reports 26 tools, and the existing developer M365 app passed all
+   61 package checks and was updated without organizational publication.
+- Live delegated-admin validation returned five ranked articles, opened
+   `KB0005012` with content and a ServiceNow source link, and confirmed that
+   attempt 3 excludes the tried article and sets `offerIncident: true` without
+   creating an incident. The demo-only Table API fallback is enabled, storage
+   public access is `Disabled`, and no deployment exemption remains.
+- No public push or PR has occurred. Alex and admin must still complete the
+   human tenant journey, including explicit incident consent, before a Version
+   release PR can be opened.
