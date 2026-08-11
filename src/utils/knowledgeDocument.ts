@@ -98,6 +98,41 @@ function findRawTextClose(input: string, start: number, tagName: string): number
   return -1;
 }
 
+function countOmittedImages(input: string): number {
+  let count = 0;
+  let cursor = 0;
+  let skipTag = "";
+  while (cursor < input.length && count < 99) {
+    if (skipTag) {
+      const close = findRawTextClose(input, cursor, skipTag);
+      if (close < 0) break;
+      const end = findTagEnd(input, close);
+      if (end < 0) break;
+      cursor = end + 1;
+      skipTag = "";
+      continue;
+    }
+    const open = input.indexOf("<", cursor);
+    if (open < 0) break;
+    if (input.startsWith("<!--", open)) {
+      const commentEnd = input.indexOf("-->", open + 4);
+      cursor = commentEnd < 0 ? input.length : commentEnd + 3;
+      continue;
+    }
+    const end = findTagEnd(input, open);
+    if (end < 0) break;
+    const parsed = readTag(input.slice(open + 1, end));
+    cursor = end + 1;
+    if (!parsed) continue;
+    if (executableTags.has(parsed.name) && !parsed.closing) {
+      skipTag = parsed.name;
+      continue;
+    }
+    if (parsed.name === "img" && !parsed.closing) count += 1;
+  }
+  return count;
+}
+
 export function parseKnowledgeDocument(rawHtml: string): KnowledgeContentDocument {
   const input = rawHtml.slice(0, MAX_INPUT_LENGTH);
   const root: KnowledgeContentNode[] = [];
@@ -183,6 +218,7 @@ export function parseKnowledgeDocument(rawHtml: string): KnowledgeContentDocumen
       skipTag = parsed.name;
       continue;
     }
+    if (parsed.name === "img" && !parsed.closing) continue;
 
     const tag = canonicalTag(parsed.name);
     if (!tag) continue;
@@ -208,7 +244,13 @@ export function parseKnowledgeDocument(rawHtml: string): KnowledgeContentDocumen
     if (tag !== "br" && !parsed.selfClosing) stack.push(node);
   }
 
-  return { version: 1, nodes: root, truncated };
+  const omittedImageCount = countOmittedImages(input);
+  return {
+    version: 1,
+    nodes: root,
+    truncated,
+    ...(omittedImageCount > 0 ? { omittedImageCount } : {})
+  };
 }
 
 function plainTextForNode(node: KnowledgeContentNode): string {

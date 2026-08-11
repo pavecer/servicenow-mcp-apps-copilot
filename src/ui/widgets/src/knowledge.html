@@ -52,6 +52,13 @@
   .article-contact { padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); font-weight: 600; }
   .article-note { padding: 8px 10px; border-radius: 4px; background: var(--warning-bg); color: var(--fg); }
   .preview-note { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+  .media-notice { margin-top: 14px; border-color: var(--accent); background: #f3f8fc; }
+  html[data-theme="dark"] .media-notice { background: #172b3a; }
+  .media-title { font-weight: 600; }
+  .media-summary { margin-top: 4px; color: var(--muted); }
+  .media-files { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; }
+  .media-file { color: var(--muted); font-size: 12px; }
+  .media-more { color: var(--muted); font-size: 12px; }
   .notice { margin-top: 14px; padding: 12px; border: 1px solid var(--warning); border-radius: 8px; background: var(--warning-bg); font-size: 13px; line-height: 1.45; }
   .error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
   .success { color: var(--fg); background: var(--success-bg); border-color: var(--success); }
@@ -152,6 +159,47 @@
     });
     if (content.childNodes.length === 0) content.appendChild(make("p", "empty", "No article content is available."));
     return { element: content, shortened: shortened };
+  }
+  function formatFileSize(value) {
+    var bytes = Number(value) || 0;
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0) + " MB";
+  }
+  function formatFileType(value) {
+    var type = text(value).toLowerCase();
+    var known = { "image/png": "PNG", "image/jpeg": "JPEG", "image/gif": "GIF", "image/webp": "WebP", "application/pdf": "PDF" };
+    return known[type] || text(value) || "File";
+  }
+  function sourceLink(article, label) {
+    if (!article.sourceLink) return null;
+    var source = make("a", "source-link", label || "View full article in ServiceNow");
+    source.href = article.sourceLink;
+    source.addEventListener("click", function (event) { event.preventDefault(); if (!openExternal(article.sourceLink)) showStatus("The ServiceNow source could not be opened.", true); });
+    return source;
+  }
+  function renderMediaHandoff(article) {
+    var media = article.media || {};
+    var imageCount = Math.max(0, Number(media.imageCount) || 0);
+    var attachments = Array.isArray(media.attachments) ? media.attachments : [];
+    if (imageCount === 0 && attachments.length === 0) return null;
+    var notice = make("aside", "notice media-notice"); notice.setAttribute("aria-label", "Article media available in ServiceNow");
+    notice.appendChild(make("div", "media-title", "Complete article has additional media"));
+    var parts = [];
+    if (imageCount > 0) parts.push(imageCount + " " + (imageCount === 1 ? "image" : "images"));
+    if (attachments.length > 0) parts.push(attachments.length + " " + (attachments.length === 1 ? "attachment" : "attachments"));
+    var mediaCount = imageCount + attachments.length;
+    notice.appendChild(make("div", "media-summary", "This article includes " + parts.join(" and ") + " that " + (mediaCount === 1 ? "is" : "are") + " not shown in this preview."));
+    if (attachments.length > 0) {
+      var files = make("ul", "media-files");
+      attachments.slice(0, 3).forEach(function (attachment) {
+        files.appendChild(make("li", "media-file", text(attachment.fileName || "attachment") + " · " + formatFileType(attachment.contentType) + " · " + formatFileSize(attachment.sizeBytes)));
+      });
+      if (attachments.length > 3) files.appendChild(make("li", "media-more", "+" + (attachments.length - 3) + " more attachments"));
+      notice.appendChild(files);
+    }
+    var link = sourceLink(article, "Open complete article in ServiceNow"); if (link) notice.appendChild(link);
+    return notice;
   }
 
   var root = document.getElementById("root");
@@ -274,11 +322,12 @@
     root.appendChild(make("h1", "", text(article.title) || "Knowledge article"));
     if (article.number) root.appendChild(make("div", "meta", text(article.number)));
     addSourceMetadata(root, article);
+    var mediaHandoff = renderMediaHandoff(article); if (mediaHandoff) root.appendChild(mediaHandoff);
     var formatted = renderArticleContent(article.content, article.contentDocument);
     var card = make("article", "article"); card.appendChild(formatted.element);
     if (formatted.shortened) card.appendChild(make("p", "preview-note", article.sourceLink ? "Preview shortened. Open the full article in ServiceNow for the remaining content." : "Preview shortened. Ask Copilot for the remaining article content."));
     root.appendChild(card);
-    if (article.sourceLink) { var source = make("a", "source-link", "View full article in ServiceNow"); source.href = article.sourceLink; source.addEventListener("click", function (event) { event.preventDefault(); if (!openExternal(article.sourceLink)) showStatus("The ServiceNow source could not be opened.", true); }); root.appendChild(source); }
+    if (!mediaHandoff) { var source = sourceLink(article); if (source) root.appendChild(source); }
     if (data.offerIncident) root.appendChild(make("div", "notice", "If this still does not solve the issue, I can create an incident with the Knowledge history after you confirm."));
     var actions = make("div", "actions");
     if (data.offerIncident) {

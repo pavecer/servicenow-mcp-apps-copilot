@@ -13,6 +13,7 @@ class TestElement {
   name = "";
   type = "";
   value: string | number = "";
+  attributes = new Map<string, string>();
   private ownText = "";
 
   constructor(readonly tagName: string) {}
@@ -22,7 +23,8 @@ class TestElement {
   set innerHTML(_value: string) { this.ownText = ""; this.children = []; }
   appendChild(child: TestElement) { this.children.push(child); return child; }
   addEventListener() {}
-  setAttribute() {}
+  setAttribute(name: string, value: string) { this.attributes.set(name, value); }
+  getAttribute(name: string) { return this.attributes.get(name) ?? null; }
   querySelectorAll(selector: string): TestElement[] {
     const found: TestElement[] = [];
     const visit = (element: TestElement) => {
@@ -34,7 +36,7 @@ class TestElement {
     visit(this);
     return found;
   }
-  querySelector() { return null; }
+  querySelector(selector: string) { return this.querySelectorAll(selector)[0] ?? null; }
 }
 
 function mountWidget(payload: Record<string, unknown>): TestElement {
@@ -218,6 +220,68 @@ describe("Knowledge MCP App", () => {
       "Preview shortened. Open the full article in ServiceNow for the remaining content."
     ]);
     expect(html).toContain('default: return ""');
+  });
+
+  it("hands articles with omitted media back to the canonical ServiceNow view", () => {
+    const root = mountWidget({
+      mode: "detail",
+      attempt: 1,
+      originalQuestion: "Illustrated setup",
+      triedArticles: [],
+      article: {
+        title: "Illustrated setup",
+        content: "Follow these steps.",
+        sourceLink: "https://example.service-now.com/kb_view.do?sys_kb_id=123",
+        media: {
+          imageCount: 3,
+          attachments: [
+            { fileName: "setup-guide.png", contentType: "image/png", sizeBytes: 77404 },
+            { fileName: "reference.pdf", contentType: "application/pdf", sizeBytes: 2097152 },
+            { fileName: "diagram.webp", contentType: "image/webp", sizeBytes: 4096 },
+            { fileName: "checklist.txt", contentType: "text/plain", sizeBytes: 512 },
+            { fileName: "notes.txt", contentType: "text/plain", sizeBytes: 128 }
+          ]
+        }
+      }
+    });
+    expect(root.querySelectorAll(".media-notice")).toHaveLength(1);
+    expect(root.textContent).toContain("3 images and 5 attachments");
+    expect(root.textContent).toContain("setup-guide.png · PNG · 76 KB");
+    expect(root.textContent).toContain("reference.pdf · PDF · 2.0 MB");
+    expect(root.textContent).toContain("+2 more attachments");
+    expect(root.textContent).not.toContain("checklist.txt");
+    expect(root.querySelector(".media-notice")?.getAttribute("aria-label")).toBe("Article media available in ServiceNow");
+    expect(root.querySelectorAll(".source-link").map(element => element.textContent)).toEqual(["Open complete article in ServiceNow"]);
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["This solved it", "Still need help"]);
+  });
+
+  it("keeps the standard source link for articles without omitted media", () => {
+    const root = mountWidget({
+      mode: "detail",
+      attempt: 1,
+      originalQuestion: "Text article",
+      triedArticles: [],
+      article: { title: "Text article", content: "Text only", sourceLink: "https://example.service-now.com/kb", media: { imageCount: 0, attachments: [] } }
+    });
+    expect(root.querySelectorAll(".media-notice")).toHaveLength(0);
+    expect(root.querySelectorAll(".source-link").map(element => element.textContent)).toEqual(["View full article in ServiceNow"]);
+  });
+
+  it("uses singular language for one ServiceNow attachment", () => {
+    const root = mountWidget({
+      mode: "detail",
+      attempt: 1,
+      originalQuestion: "Attachment article",
+      triedArticles: [],
+      article: {
+        title: "Attachment article",
+        content: "Text",
+        sourceLink: "https://example.service-now.com/kb",
+        media: { imageCount: 0, attachments: [{ fileName: "diagram.png", contentType: "image/png", sizeBytes: 1024 }] }
+      }
+    });
+    expect(root.textContent).toContain("1 attachment that is not shown in this preview");
+    expect(root.textContent).not.toContain("Open the complete article in ServiceNow to view");
   });
 
   it("offers but never automatically creates an incident after attempt three", () => {

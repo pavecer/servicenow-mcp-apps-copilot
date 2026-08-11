@@ -11,9 +11,10 @@ are not catalog-ordering requests. Search must minimize ServiceNow calls,
 preserve caller visibility, rank the top three to five articles, and offer a
 consent-based incident after the third unresolved Knowledge attempt.
 
-Article authoring, native feedback/rating writes, attachments, and knowledge
-analytics administration remain outside this candidate. The verified native
-feedback schema is recorded below for a follow-up implementation.
+Article authoring, native feedback/rating writes, attachment file rendering or
+download, and knowledge analytics administration remain outside this candidate.
+Caller-visible attachment metadata and canonical ServiceNow handoff are in
+scope. The verified native feedback schema is recorded below for a follow-up.
 
 ## User Journey
 
@@ -35,7 +36,7 @@ feedback schema is recorded below for a follow-up implementation.
 | Operation | ServiceNow calls |
 | --- | ---: |
 | Search attempt | 1 |
-| Open one article | 1 |
+| Open one article | 2: article detail + nonfatal attachment metadata |
 | Consented incident creation | Up to 2 identity lookups + 1 incident POST (existing incident path) |
 
 The implementation does not enumerate knowledge bases before each search and
@@ -121,6 +122,7 @@ One shared `knowledge` widget supports:
 
 - ranked search results,
 - article detail,
+- omitted-image and attachment handoff to the canonical ServiceNow article,
 - third-attempt incident offer,
 - incident confirmation.
 
@@ -133,6 +135,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] ServiceNow Knowledge search/detail client
 - [x] Search/detail MCP tools and schemas
 - [x] Shared Knowledge MCP App widget
+- [x] Caller-scoped media/attachment metadata and ServiceNow handoff
 - [x] Consent-based Knowledge incident tool and standardized incident flag
 - [x] Agent intent/attempt routing instructions
 - [x] Tool/widget lockstep manifests and exact-count tests
@@ -156,17 +159,24 @@ loading/error states, and shows no more than two bottom actions.
 - No incident without explicit consent
 - Standardized KB-not-helpful incident content
 - Light/dark and responsive widget rendering
+- Images after preview limits and executable-block exclusion
+- Attachment count/filename/type/size bounds with nonfatal ACL failures
+- No media URLs, attachment IDs, file bytes, or direct downloads in tool output
 - Existing catalog/order/incident tests remain unchanged and green
 
 ## Local Validation Checkpoint
 
-- Full repository: 41 test files / 360 tests passed.
+- Full repository: 41 test files / 366 tests passed.
 - Backend and MCP Apps specialist reviews: APPROVE after all High/Medium
    findings were remediated.
 - Visual review passed for desktop search, responsive dark attempt 3,
    responsive article detail, the compact ranked-results update, and preserved
    source headings/nested lists in desktop light and narrow dark layouts using
    the actual widget source.
+- Media handoff visual review passed for image-only desktop light and
+   attachment-only narrow dark states. The notice remains above article content,
+   lists at most three filenames plus a remainder count, and preserves the two
+   bottom resolution actions.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
 - Runtime commit `0dcfe4b` is deployed only to `snowmcpwidg-dev`; live MCP

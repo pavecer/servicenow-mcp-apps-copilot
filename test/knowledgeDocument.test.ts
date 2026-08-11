@@ -41,11 +41,12 @@ describe("parseKnowledgeDocument", () => {
   it("drops executable blocks, comments, unknown elements, and every attribute", () => {
     const document = parseKnowledgeDocument(
       '<!-- hidden --><script><h1>bad</h1></script><style>bad{}</style>' +
-      '<p onclick="bad()">Safe <a href="javascript:bad()"><strong>link text</strong></a></p>' +
+      '<p onclick="bad()">Safe <a href="javascript:bad()"><strong>link text</strong></a></p><img src="https://tracker.example/pixel.png" onerror="bad()">' +
       '<template><p>hidden</p></template><img src=x onerror=bad()>'
     );
 
     expect(JSON.stringify(document)).not.toMatch(/script|style|template|onclick|href|javascript|onerror|hidden|bad/);
+    expect(document).toMatchObject({ omittedImageCount: 2 });
     expect(document.nodes).toEqual([
       { type: "element", tag: "p", children: [
         { type: "text", text: "Safe " },
@@ -103,7 +104,7 @@ describe("parseKnowledgeDocument", () => {
   });
 
   it("never emits more than the structured node budget", () => {
-    const document = parseKnowledgeDocument(`${"<br>".repeat(749)}x<p>Later</p>`);
+    const document = parseKnowledgeDocument(`${"<br>".repeat(749)}x<p>Later</p><img src="after-limit.png">`);
     const countNodes = (nodes: typeof document.nodes): number => nodes.reduce(
       (total, node) => total + 1 + (node.type === "element" ? countNodes(node.children) : 0),
       0
@@ -111,6 +112,12 @@ describe("parseKnowledgeDocument", () => {
     expect(countNodes(document.nodes)).toBe(750);
     expect(document.truncated).toBe(true);
     expect(JSON.stringify(document)).not.toContain("Later");
+    expect(document.omittedImageCount).toBe(1);
+  });
+
+  it("caps omitted image counts and ignores images inside executable blocks", () => {
+    const document = parseKnowledgeDocument(`<script>${"<img>".repeat(5)}</script>${"<img>".repeat(120)}`);
+    expect(document.omittedImageCount).toBe(99);
   });
 
   it("derives readable headings and list markers from the sanitized tree", () => {

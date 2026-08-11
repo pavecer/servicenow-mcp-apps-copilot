@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   category metadata clearly, decode rich-text entities, and preserve bounded
   ServiceNow heading, nested-list, emphasis, code, and block structure through
   an attribute-free document model instead of article-specific text inference.
+  Articles with omitted images or attachments now show bounded metadata and a
+  clear handoff to the complete caller-authorized ServiceNow article.
 <!-- release-impact: patch -->
 
 ## [1.2.0] - 2026-08-10

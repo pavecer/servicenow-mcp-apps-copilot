@@ -215,11 +215,24 @@ export interface KnowledgeContentDocument {
   version: 1;
   nodes: KnowledgeContentNode[];
   truncated: boolean;
+  omittedImageCount?: number;
+}
+
+export interface KnowledgeAttachmentSummary {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+}
+
+export interface KnowledgeArticleMedia {
+  imageCount: number;
+  attachments: KnowledgeAttachmentSummary[];
 }
 
 export interface KnowledgeArticleDetail extends ServiceNowKnowledgeCandidate {
   content: string;
   contentDocument?: KnowledgeContentDocument;
+  media: KnowledgeArticleMedia;
   sourceLink: string;
 }
 

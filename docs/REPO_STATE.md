@@ -82,11 +82,16 @@ the shortest path to resume work safely.
   demo environment, then validate Alex/OBO visibility before approval.
 - Durable implementation checklist and validation matrix:
   [KNOWLEDGE_RETRIEVAL_PLAN.md](KNOWLEDGE_RETRIEVAL_PLAN.md).
-- Local validation: 41 test files / 360 tests pass; backend and MCP Apps
+- Local validation: 41 test files / 366 tests pass; backend and MCP Apps
   specialist reviews APPROVE; search, attempt-3, and detail widget screenshots
   passed desktop/responsive light/dark inspection. The ranked-list and
   source-structured article-detail follow-ups also passed actual-source desktop
   light and narrow dark rendering.
+- Local media-handoff follow-up counts omitted images across the full bounded
+  article and retrieves at most 20 caller-visible attachment summaries
+  (filename/type/size) with no IDs, URLs, or bytes. Image-only desktop light and
+  attachment-only narrow dark visual states passed; attachment metadata failure
+  is nonfatal.
 - Minor release preparation synchronized npm/M365/changelog at `1.2.0`.
   Runtime commit `0dcfe4b` is deployed only to `snowmcpwidg-dev`; live validation
   reports 26 tools. The existing developer app passed 61 package checks and was

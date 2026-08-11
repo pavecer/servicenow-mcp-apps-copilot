@@ -18,6 +18,7 @@ import {
   ServiceNowIncidentAttachment,
   AddIncidentAttachmentInput,
   KnowledgeArticleDetail,
+  KnowledgeAttachmentSummary,
   ServiceNowKnowledgeCandidate
 } from "../types/servicenow";
 import { TokenManager } from "./tokenManager";
@@ -350,6 +351,46 @@ function knowledgeArticleContent(row: Record<string, unknown>): Pick<KnowledgeAr
     content: knowledgeDocumentToPlainText(contentDocument).slice(0, 5_000),
     contentDocument
   };
+}
+
+async function listKnowledgeAttachments(
+  client: AxiosInstance,
+  articleSysId: string
+): Promise<KnowledgeAttachmentSummary[]> {
+  try {
+    const response = await client.get<{ result: Array<Record<string, unknown>> }>(
+      "/api/now/attachment",
+      {
+        params: {
+          sysparm_query: `table_name=kb_knowledge^table_sys_id=${articleSysId}^ORDERBYsys_created_on`,
+          sysparm_limit: 20,
+          sysparm_fields: ["file_name", "content_type", "size_bytes"].join(",")
+        },
+        __snRequireCallerIdentity: true
+      } as AxiosRequestConfig
+    );
+    const rows = Array.isArray(response.data.result) ? response.data.result.slice(0, 20) : [];
+    return rows.map(row => {
+      const rawSize = Number(row.size_bytes);
+      return {
+        fileName: String(row.file_name ?? "attachment")
+          .replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 180) || "attachment",
+        contentType: String(row.content_type ?? "").slice(0, 100),
+        sizeBytes: Number.isFinite(rawSize) && rawSize >= 0
+          ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(rawSize))
+          : 0
+      };
+    });
+  } catch (error) {
+    Logger.warn("Failed to list ServiceNow Knowledge attachments", {
+      operation: "knowledge.attachments_failed",
+      articleSysId
+    }, error);
+    return [];
+  }
 }
 
 function isVisiblePublishedKnowledgeRow(row: Record<string, unknown>): boolean {
@@ -1793,9 +1834,15 @@ export class ServiceNowClient {
       const row = knowledgeRows(response.data)[0];
       const candidate = row ? normalizeKnowledgeCandidate(row, 1) : undefined;
       if (!row || !candidate) throw new Error(`Knowledge article '${articleSysId}' was not found or is not accessible.`);
+      const articleContent = knowledgeArticleContent(row);
+      const attachments = await listKnowledgeAttachments(client, articleSysId);
       return {
         ...candidate,
-        ...knowledgeArticleContent(row),
+        ...articleContent,
+        media: {
+          imageCount: articleContent.contentDocument?.omittedImageCount ?? 0,
+          attachments
+        },
         sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
       };
     } catch (error) {
@@ -1830,9 +1877,15 @@ export class ServiceNowClient {
     if (!row || !candidate || !isVisiblePublishedKnowledgeRow(row) || active === "false" || (workflowState && workflowState !== "published")) {
       throw new Error(`Knowledge article '${articleSysId}' was not found, published, or accessible.`);
     }
+    const articleContent = knowledgeArticleContent(row);
+    const attachments = await listKnowledgeAttachments(client, articleSysId);
     return {
       ...candidate,
-      ...knowledgeArticleContent(row),
+      ...articleContent,
+      media: {
+        imageCount: articleContent.contentDocument?.omittedImageCount ?? 0,
+        attachments
+      },
       sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
     };
   }

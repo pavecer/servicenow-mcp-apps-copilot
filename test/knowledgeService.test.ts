@@ -52,22 +52,33 @@ describe("ServiceNowClient Knowledge methods", () => {
   });
 
   it("normalizes a direct article response and sanitizes its body", async () => {
-    const get = vi.fn().mockResolvedValue({
-      data: {
-        result: {
-          sys_id: "b".repeat(32),
-          number: "KB0010002",
-          short_description: "Configure VPN",
-          text: "<h3>Mac</h3><ul><li>Install <strong>the client</strong><ul><li>Verify enrollment</li></ul></li></ul><p>Run <code>check</code>.</p><script>alert(1)</script>"
+    const get = vi.fn()
+      .mockResolvedValueOnce({
+        data: {
+          result: {
+            sys_id: "b".repeat(32),
+            number: "KB0010002",
+            short_description: "Configure VPN",
+            text: "<h3>Mac</h3><img src='https://example.test/step.png'><ul><li>Install <strong>the client</strong><ul><li>Verify enrollment</li></ul></li></ul><p>Run <code>check</code>.</p><script>alert(1)</script>"
+          }
         }
-      }
-    });
+      })
+      .mockResolvedValueOnce({
+        data: { result: [{ file_name: "setup-guide.png", content_type: "image/png", size_bytes: "77404" }] }
+      });
     const client = makeClient(get);
 
     const result = await client.getKnowledgeArticle("b".repeat(32));
 
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledTimes(2);
     expect(get.mock.calls[0][1]).not.toHaveProperty("params");
+    expect(get.mock.calls[1][0]).toBe("/api/now/attachment");
+    expect(get.mock.calls[1][1]).toMatchObject({ __snRequireCallerIdentity: true });
+    expect(get.mock.calls[1][1].params).toEqual({
+      sysparm_query: `table_name=kb_knowledge^table_sys_id=${"b".repeat(32)}^ORDERBYsys_created_on`,
+      sysparm_limit: 20,
+      sysparm_fields: "file_name,content_type,size_bytes"
+    });
     expect(result.content).toContain("Install the client");
     expect(result.content).not.toContain("<script>");
     expect(result.content).not.toContain("alert(1)");
@@ -92,6 +103,10 @@ describe("ServiceNowClient Knowledge methods", () => {
     });
     expect(JSON.stringify(result.contentDocument)).not.toContain("alert(1)");
     expect(result.content.length).toBeLessThanOrEqual(5_000);
+    expect(result.media).toEqual({
+      imageCount: 1,
+      attachments: [{ fileName: "setup-guide.png", contentType: "image/png", sizeBytes: 77404 }]
+    });
     expect(result.sourceLink).toContain(`sys_kb_id=${"b".repeat(32)}`);
   });
 
@@ -161,7 +176,8 @@ describe("ServiceNowClient Knowledge methods", () => {
       .mockRejectedValueOnce({ response: { status: 404 } })
       .mockResolvedValueOnce({
         data: { result: { sys_id: "e".repeat(32), number: "KB5", short_description: "VPN", text: "Steps", active: "true", workflow_state: "published" } }
-      });
+      })
+      .mockResolvedValueOnce({ data: { result: [] } });
     try {
       const client = makeClient(get);
       const detail = await client.getKnowledgeArticle("e".repeat(32));
@@ -169,10 +185,45 @@ describe("ServiceNowClient Knowledge methods", () => {
       expect(detail).toMatchObject({
         number: "KB5",
         content: "Steps",
-        contentDocument: { version: 1, truncated: false, nodes: [{ type: "text", text: "Steps" }] }
+        contentDocument: { version: 1, truncated: false, nodes: [{ type: "text", text: "Steps" }] },
+        media: { imageCount: 0, attachments: [] }
       });
     } finally {
       (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = previous;
     }
+  });
+
+  it("keeps article detail available when attachment metadata is inaccessible", async () => {
+    const get = vi.fn()
+      .mockResolvedValueOnce({
+        data: { result: { sys_id: "f".repeat(32), number: "KB6", short_description: "Media article", text: "<p>Read this</p>" } }
+      })
+      .mockRejectedValueOnce({ response: { status: 403 } });
+    const client = makeClient(get);
+
+    const detail = await client.getKnowledgeArticle("f".repeat(32));
+
+    expect(detail).toMatchObject({ number: "KB6", content: "Read this", media: { imageCount: 0, attachments: [] } });
+  });
+
+  it("locally bounds and normalizes Knowledge attachment summaries", async () => {
+    const attachments = Array.from({ length: 25 }, (_, index) => ({
+      file_name: index === 0 ? "guide<draft>.pdf\u0000\u202e" : `file-${index}.bin`,
+      content_type: index === 0 ? "application/pdf" : "application/octet-stream",
+      size_bytes: index === 0 ? "Infinity" : index === 1 ? "-5" : "12.9"
+    }));
+    const get = vi.fn()
+      .mockResolvedValueOnce({
+        data: { result: { sys_id: "1".repeat(32), number: "KB7", short_description: "Files", text: "Read" } }
+      })
+      .mockResolvedValueOnce({ data: { result: attachments } });
+    const client = makeClient(get);
+
+    const detail = await client.getKnowledgeArticle("1".repeat(32));
+
+    expect(detail.media.attachments).toHaveLength(20);
+    expect(detail.media.attachments[0]).toEqual({ fileName: "guide<draft>.pdf", contentType: "application/pdf", sizeBytes: 0 });
+    expect(detail.media.attachments[1].sizeBytes).toBe(0);
+    expect(detail.media.attachments[2].sizeBytes).toBe(12);
   });
 });
