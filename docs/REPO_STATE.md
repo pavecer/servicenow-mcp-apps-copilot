@@ -112,6 +112,9 @@ the shortest path to resume work safely.
   one caller-visible PNG attachment (`300px-Windows_Vista.png`, 77,404 bytes).
   Both expose the canonical article link and no direct media URL, attachment ID,
   download URL, or file bytes.
+- Human media-handoff validation completed on 2026-08-11: the user tested the
+  deployed image and attachment states and confirmed that both worked as
+  described. This approves the media UX in runtime `cdf62b7`.
 - Enterprise policy blocks external npm downloads. No dependency or lockfile was
   added; the parser is a bounded state machine with hostile/malformed tests and
   does not render raw ServiceNow HTML.

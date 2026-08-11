@@ -143,6 +143,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Full local build/test/security review
 - [x] Deploy exact runtime commit `cdf62b7` to `snowmcpwidg-dev`
 - [x] Human visual validation of structured article detail
+- [x] Human validation of image and attachment ServiceNow handoff
 - [ ] Human validation as Alex and admin
 - [ ] Public PR only after explicit approval
 
@@ -203,6 +204,9 @@ loading/error states, and shows no more than two bottom actions.
 - Live deployed media validation reports 3 omitted images for KB0000003 and one
    caller-visible PNG attachment for KB0000018. Both return a canonical article
    link and no direct media URL, attachment ID, download URL, or file content.
+- Human media-handoff validation completed on 2026-08-11: the user tested the
+   deployed image and attachment article states and confirmed that both behaved
+   as described.
 - Human visual validation completed on 2026-08-11: the user opened the deployed
    Workstation Security Standard article and confirmed that the preserved source
    formatting "works much better" and is easier to read.
@@ -212,9 +216,9 @@ loading/error states, and shows no more than two bottom actions.
    creating an incident. The demo-only Table API fallback is enabled, storage
    public access is `Disabled`, and no deployment exemption remains.
 - No public push or PR has occurred. The article-formatting checkpoint is
-   approved, but Alex and admin must still complete the three-attempt tenant
-   journey, including explicit incident consent, before a Version release PR
-   can be opened.
+   approved and the media handoff is approved, but Alex and admin must still
+   complete the three-attempt tenant journey, including explicit incident
+   consent, before a Version release PR can be opened.
 
 ## Verified Native Feedback Schema
 
