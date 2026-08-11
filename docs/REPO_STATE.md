@@ -93,7 +93,7 @@ the shortest path to resume work safely.
   attachment-only narrow dark visual states passed; attachment metadata failure
   is nonfatal.
 - Minor release preparation synchronized npm/M365/changelog at `1.2.0`.
-  Runtime commit `0dcfe4b` is deployed only to `snowmcpwidg-dev`; live validation
+  Runtime commit `cdf62b7` is deployed only to `snowmcpwidg-dev`; live validation
   reports 26 tools. The existing developer app passed 61 package checks and was
   updated under title `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169` without catalog
   publication.
@@ -108,13 +108,18 @@ the shortest path to resume work safely.
 - Live KB0005001 detail exposes document v1 with 2 major headings, 10 subsection
   headings, 14 nested lists, 40 items, depth 5, and no truncation. VPN, cookie,
   and password source structures were also verified read-only.
+- Live media verification: KB0000003 reports 3 omitted images; KB0000018 reports
+  one caller-visible PNG attachment (`300px-Windows_Vista.png`, 77,404 bytes).
+  Both expose the canonical article link and no direct media URL, attachment ID,
+  download URL, or file bytes.
 - Enterprise policy blocks external npm downloads. No dependency or lockfile was
   added; the parser is a bounded state machine with hostile/malformed tests and
   does not render raw ServiceNow HTML.
 - Human visual validation completed on 2026-08-11: the user opened the deployed
   Workstation Security Standard article and confirmed that the source-structured
   view works much better and is easier to read. This approves the formatting
-  checkpoint for runtime commit `0dcfe4b`.
+  checkpoint originally validated at runtime commit `0dcfe4b`; the same
+  structured renderer is retained in media-aware runtime `cdf62b7`.
 - Native feedback is not yet written. Verified demo schema supports
   `kb_feedback` (`article`, `user`, `useful`, `rating`, `comments`, `reason`,
   `query`) and native article/task linkage through `m2m_kb_task`

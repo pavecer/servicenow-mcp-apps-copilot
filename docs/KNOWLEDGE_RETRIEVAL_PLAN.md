@@ -141,7 +141,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Tool/widget lockstep manifests and exact-count tests
 - [x] Scenario, setup, configuration, and handover documentation
 - [x] Full local build/test/security review
-- [x] Deploy exact runtime commit `0dcfe4b` to `snowmcpwidg-dev`
+- [x] Deploy exact runtime commit `cdf62b7` to `snowmcpwidg-dev`
 - [x] Human visual validation of structured article detail
 - [ ] Human validation as Alex and admin
 - [ ] Public PR only after explicit approval
@@ -179,7 +179,7 @@ loading/error states, and shows no more than two bottom actions.
    bottom resolution actions.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
-- Runtime commit `0dcfe4b` is deployed only to `snowmcpwidg-dev`; live MCP
+- Runtime commit `cdf62b7` is deployed only to `snowmcpwidg-dev`; live MCP
    validation reports 26 tools, and the existing developer M365 app passed all
    61 package checks and was updated without organizational publication.
 - Ranked search now renders the top three compact previews so both actions stay
@@ -200,6 +200,9 @@ loading/error states, and shows no more than two bottom actions.
    14 nested `ul`, 40 `li`, maximum depth 5, and no truncation. Read-only probes
    also preserved VPN ordered/nested lists and emphasis, cookie headings/code,
    and password paragraph/strong structure.
+- Live deployed media validation reports 3 omitted images for KB0000003 and one
+   caller-visible PNG attachment for KB0000018. Both return a canonical article
+   link and no direct media URL, attachment ID, download URL, or file content.
 - Human visual validation completed on 2026-08-11: the user opened the deployed
    Workstation Security Standard article and confirmed that the preserved source
    formatting "works much better" and is easier to read.
