@@ -18,7 +18,7 @@ this candidate. Binary useful feedback, optional native not-helpful reasons,
 and article-to-incident links are in scope.
 Caller-visible attachment metadata and canonical ServiceNow handoff are in
 scope. The verified native feedback and article-to-task schema is implemented
-in the local candidate and documented below.
+in the deployed candidate and documented below.
 
 ## User Journey
 
@@ -166,7 +166,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Scenario, setup, configuration, and handover documentation
 - [x] Earlier retrieval/formatting/media build, test, and security reviews
 - [x] Final full build/test/security review for the native-write candidate
-- [x] Deploy exact runtime commit `cdf62b7` to `snowmcpwidg-dev`
+- [x] Deploy runtime `b363012` plus package-guidance fix `1164751` to `snowmcpwidg-dev`
 - [x] Human visual validation of structured article detail
 - [x] Human validation of image and attachment ServiceNow handoff
 - [ ] Human validation as Alex and admin
@@ -215,9 +215,9 @@ loading/error states, and shows no more than two bottom actions.
    than two commands.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
-- Runtime commit `cdf62b7` remains deployed to `snowmcpwidg-dev` with 26 tools.
-   The local native-feedback candidate exposes 27 tools and has not yet been
-   deployed or human-validated.
+- Runtime `b363012` plus package-guidance fix `1164751` is deployed to
+   `snowmcpwidg-dev` with 27 tools. The existing developer M365 app passed all
+   61 package validations and retained title `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169`.
 - Ranked search now renders the top three compact previews so both actions stay
    visible, labels Knowledge base/category/update metadata, retains category in
    the narrow layout, and decodes decimal/hex numeric HTML entities before they
@@ -267,9 +267,16 @@ ServiceNow Knowledge processing uses:
    association; and
 - `kb_use` for native view/use analytics, protected by its own ACLs.
 
-The local candidate now writes `kb_feedback` using exact native `yes`/`no` and
+The deployed candidate now writes `kb_feedback` using exact native `yes`/`no` and
 reason values and links attempted caller-visible articles through `m2m_kb_task`
 after incident creation. Both writes fail closed on caller identity. Feedback
 failure remains visible and recoverable; task-link failure is nonfatal because
 the incident already exists and retains attempted article history in its
-description. Live tenant validation remains pending.
+description.
+
+Live delegated-admin validation created one uniquely marked native feedback row
+for KB0005001 (`useful=no`, reason `3`, caller populated), one caller-attributed
+incident, and one `m2m_kb_task` article link. The tool reported 1 requested / 1
+linked / 0 failed. All three marker-owned records were deleted with HTTP 204 and
+follow-up queries confirmed zero feedback/incident rows remain. Human widget
+validation as admin and Alex remains pending.

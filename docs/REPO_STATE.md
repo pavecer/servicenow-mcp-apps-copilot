@@ -12,7 +12,7 @@ the shortest path to resume work safely.
   the active local candidate is on `feat/knowledge-retrieval`.
 - Surface: MCP Apps only.
 - Public inventory: 23 tools, 8 widgets. The test-only deployment currently
-  exposes the Knowledge candidate with 26 tools and 9 widgets.
+  exposes the Knowledge candidate with 27 tools and 9 widgets.
 - Primary deployed endpoint:
   `https://func-yj453fjwuhph4.azurewebsites.net/mcp`
 - Primary Azure resource group: `rg-snowmcpwidg-dev`
@@ -65,9 +65,9 @@ the shortest path to resume work safely.
 
 ## Active Knowledge retrieval branch
 
-- Branch `feat/knowledge-retrieval` now adds four tools and one shared MCP App,
-  moving the local inventory to 27 tools / 9 widgets. The current test deployment
-  remains at media runtime `cdf62b7` with 26 / 9; public `main` remains 23 / 8.
+- Branch `feat/knowledge-retrieval` adds four tools and one shared MCP App,
+  moving the local and test-deployed inventory to 27 tools / 9 widgets. Public
+  `main` remains 23 / 8.
 - Implemented locally: deterministic native-score/lexical ranking, one-call
   Knowledge API search, one-call article detail, executable-block stripping,
   attempt/history state, third-attempt incident offer, explicit-consent incident
@@ -87,18 +87,17 @@ the shortest path to resume work safely.
   accessible two-stage feedback UX, and truthful best-effort task links. Full
   candidate validation passes 41 files / 395 tests; backend and MCP Apps
   reviewers APPROVE. Initial commands, narrow dark feedback form, saved outcome,
-  gated fallback, and attempt-three escalation visuals passed. Test-tenant
-  deployment is still pending.
+  gated fallback, and attempt-three escalation visuals passed.
 - Local media-handoff follow-up counts omitted images across the full bounded
   article and retrieves at most 20 caller-visible attachment summaries
   (filename/type/size) with no IDs, URLs, or bytes. Image-only desktop light and
   attachment-only narrow dark visual states passed; attachment metadata failure
   is nonfatal.
 - Minor release preparation synchronized npm/M365/changelog at `1.2.0`.
-  Runtime commit `cdf62b7` is deployed only to `snowmcpwidg-dev`; live validation
-  reports 26 tools. The existing developer app passed 61 package checks and was
-  updated under title `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169` without catalog
-  publication.
+  Runtime `b363012` plus package-guidance fix `1164751` is deployed only to
+  `snowmcpwidg-dev`; live validation reports 27 tools. The existing developer app
+  passed 61 package checks and was updated under title
+  `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169` without catalog publication.
 - The deployed ranked list shows the top three compact previews with visible
   bottom actions, labeled metadata, category-preserving narrow layout, and
   numeric HTML entity decoding. Live search returned five results with no
@@ -134,6 +133,11 @@ the shortest path to resume work safely.
   20 attempted articles and best-effort inserts `m2m_kb_task` links. Complete or
   partial linking failure never falsifies incident success; attempted history
   remains in `incident.description` and the confirmation reports diagnostics.
+- Live delegated-admin proof created one KB0005001 `kb_feedback` row
+  (`useful=no`, reason `3`, caller populated), caller-attributed incident
+  `INC0010015`, and one `m2m_kb_task` link. Tool diagnostics were 1 requested / 1
+  linked / 0 failed. Cleanup deleted link, feedback, and incident with HTTP 204;
+  zero marker-owned feedback/incident rows remained afterward.
 - Live delegated-admin checks returned five ranked results for password reset,
   opened `KB0005012` with content and a source link, and confirmed attempt 3
   excludes the tried article and offers an incident without creating one. The
@@ -147,8 +151,8 @@ the shortest path to resume work safely.
 ## Operational checkpoint
 
 - As of 2026-08-11, Function App `func-yj453fjwuhph4` is running and the Azure
-  subscription is enabled. The test endpoint currently exposes the approved
-  26-tool media runtime; the local native-feedback candidate exposes 27 tools.
+  subscription is enabled. The test endpoint exposes all 27 candidate tools;
+  public `main` remains at 23 tools.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).
 - Deployed Function App has been migrated to `dev351709` and validated live.
@@ -157,7 +161,7 @@ the shortest path to resume work safely.
 - OBO is restored and enabled again on the deployed Function App.
 - Step 1 manager approval actions are deployed: `approve_order_approval` and
   `reject_order_approval` both render the order-detail widget.
-- The live test endpoint exposes all 26 tools, including the three Knowledge
+- The live test endpoint exposes all 27 tools, including the four Knowledge
   tools and both approval actions.
 - Developer M365 agent package `1.2.0` was validated and applied to existing app
   `0d52a642-334e-4835-94b6-f6acc349569d`; OAuth registration was preserved. The
