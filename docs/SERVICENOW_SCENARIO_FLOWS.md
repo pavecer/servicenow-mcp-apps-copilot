@@ -420,7 +420,23 @@ sequenceDiagram
 
 ---
 
-## Scenario 14 — Escalate unresolved Knowledge to an incident
+## Scenario 14 — Save native Knowledge feedback
+
+**Tool:** `submit_knowledge_feedback` → **widget:** `knowledge`
+
+- The article view discloses that feedback is saved in ServiceNow and keeps two
+  commands: **Give feedback** and **Open in ServiceNow**.
+- The feedback form requires explicit solved/not-solved selection and offers the
+  native optional negative reasons: incomplete, incorrect, unclear, or other.
+- The tool verifies active/published/non-expired caller visibility, resolves the
+  caller's ServiceNow user, and inserts `kb_feedback` with native `yes`/`no`, the
+  original query, and optional reason.
+- A failed write remains visible with **Retry feedback** and a continue path;
+  assistance is never blocked by feedback persistence.
+
+---
+
+## Scenario 15 — Escalate unresolved Knowledge to an incident
 
 **Tool:** `create_incident_from_knowledge` → **widget:** `knowledge`
 
@@ -431,6 +447,10 @@ sequenceDiagram
   attempt count, original question, issue summary, and tried article metadata.
 - The incident is created through the existing caller-attributed incident path
   and returns a minimal confirmation without a detail refetch.
+- After creation, the server visibility-checks active/published/non-expired
+  attempted articles and best-effort inserts `m2m_kb_task` links. Complete or
+  partial link failure never changes incident success into failure; diagnostics
+  are returned and attempted history remains in the incident description.
 
 ---
 
@@ -462,7 +482,8 @@ sequenceDiagram
 | `remove_incident_attachment` | incident-detail | `DELETE /api/now/attachment/{id}` |
 | `search_knowledge` | knowledge | `GET /api/sn_km_api/knowledge/articles` |
 | `get_knowledge_article` | knowledge | `GET /api/sn_km_api/knowledge/articles/{id}` |
-| `create_incident_from_knowledge` | knowledge | `POST /api/now/table/incident` |
+| `submit_knowledge_feedback` | knowledge | `POST /api/now/table/kb_feedback` after article/user validation |
+| `create_incident_from_knowledge` | knowledge | `POST /api/now/table/incident`, then best-effort `POST /api/now/table/m2m_kb_task` |
 | `validate_servicenow_config` | — | `GET /servicecatalog/items` (probe) |
 
 > MCP Apps is always on: the cart, order-item, and incident tools (and all

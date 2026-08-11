@@ -73,6 +73,7 @@ describe("MCP tool manifest content parity (FU#8)", () => {
       "search_catalog_items",
       "search_knowledge",
       "submit_cart",
+      "submit_knowledge_feedback",
       "update_cart_item",
       "update_order",
       "update_order_item",

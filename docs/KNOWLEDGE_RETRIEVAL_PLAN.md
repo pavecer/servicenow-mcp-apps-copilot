@@ -6,15 +6,19 @@ Current public baseline: **23 tools / 8 widgets / version 1.1.6**
 
 ## Goal
 
-Add read-only ServiceNow Knowledge retrieval for informational questions that
-are not catalog-ordering requests. Search must minimize ServiceNow calls,
-preserve caller visibility, rank the top three to five articles, and offer a
-consent-based incident after the third unresolved Knowledge attempt.
+Add caller-visible ServiceNow Knowledge retrieval for informational questions
+that are not catalog-ordering requests. Search must minimize ServiceNow calls,
+preserve caller visibility, rank the top three to five articles, store explicit
+native feedback, and offer a consent-based incident after the third unresolved
+Knowledge attempt.
 
-Article authoring, native feedback/rating writes, attachment file rendering or
-download, and knowledge analytics administration remain outside this candidate.
+Article authoring, attachment file rendering or download, explicit star-rating
+and free-text feedback UI, and knowledge analytics administration remain outside
+this candidate. Binary useful feedback, optional native not-helpful reasons,
+and article-to-incident links are in scope.
 Caller-visible attachment metadata and canonical ServiceNow handoff are in
-scope. The verified native feedback schema is recorded below for a follow-up.
+scope. The verified native feedback and article-to-task schema is implemented
+in the local candidate and documented below.
 
 ## User Journey
 
@@ -23,13 +27,16 @@ scope. The verified native feedback schema is recorded below for a follow-up.
 2. Attempt 1 performs one caller-scoped ServiceNow search and returns up to five
    ranked snippets.
 3. Opening an article calls `get_knowledge_article` once for the full body.
-4. Explicit “not helpful” feedback increments `attempt`, preserves the original
+4. The user opens a feedback form that discloses ServiceNow persistence, records
+   `yes` or `no`, and optionally selects a native not-helpful reason.
+5. Explicit “not helpful” feedback increments `attempt`, preserves the original
    question, and excludes tried article IDs.
-5. On attempt 3, the widget always offers incident creation politely. It never
+6. On attempt 3, the widget offers incident creation after feedback. It never
    creates an incident without affirmative user consent.
-6. `create_incident_from_knowledge` creates one incident POST containing a
+7. `create_incident_from_knowledge` creates one incident POST containing a
    standardized, searchable “Knowledge assistance outcome: Not helpful” block
-   plus attempted article metadata.
+   plus attempted article metadata, then best-effort links visible articles
+   through `m2m_kb_task`.
 
 ## Call Budget
 
@@ -37,7 +44,8 @@ scope. The verified native feedback schema is recorded below for a follow-up.
 | --- | ---: |
 | Search attempt | 1 |
 | Open one article | 2: article detail + nonfatal attachment metadata |
-| Consented incident creation | Up to 2 identity lookups + 1 incident POST (existing incident path) |
+| Submit feedback | Article visibility + caller lookup + `kb_feedback` POST |
+| Consented incident creation | Existing identity lookups + incident POST + one bounded article visibility query + up to 20 best-effort `m2m_kb_task` POSTs |
 
 The implementation does not enumerate knowledge bases before each search and
 does not enrich every result with follow-up calls.
@@ -85,6 +93,18 @@ Returns ranked snippets, ranking source, carried attempt state, and
 
 Returns one sanitized plain-text article and preserves journey state.
 
+### `submit_knowledge_feedback`
+
+- `articleSysId`
+- `useful`: native `yes` or `no`
+- `originalQuestion`
+- optional native reason `1` incomplete, `2` incorrect, `3` unclear, `4` other
+- optional explicit rating 1–5 and comment for non-widget callers
+
+Requires caller identity, verifies the article is active/published/non-expired,
+resolves the ServiceNow user, and creates a native `kb_feedback` record. The
+widget currently exposes binary feedback plus the optional native reason.
+
 ### `create_incident_from_knowledge`
 
 - `originalQuestion`
@@ -94,7 +114,9 @@ Returns one sanitized plain-text article and preserves journey state.
 - optional category/urgency/impact
 
 Requires explicit consent at the agent/widget layer. Returns a minimal incident
-confirmation without a detail refetch.
+confirmation plus native-link diagnostics without a detail refetch. Link failure
+never changes a successfully created incident into a failed result; attempted
+article history remains in the incident description.
 
 ## Access and API Strategy
 
@@ -136,11 +158,14 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Search/detail MCP tools and schemas
 - [x] Shared Knowledge MCP App widget
 - [x] Caller-scoped media/attachment metadata and ServiceNow handoff
+- [x] Caller-scoped native `kb_feedback` writes and optional native reasons
+- [x] Best-effort native `m2m_kb_task` article-to-incident links
 - [x] Consent-based Knowledge incident tool and standardized incident flag
 - [x] Agent intent/attempt routing instructions
 - [x] Tool/widget lockstep manifests and exact-count tests
 - [x] Scenario, setup, configuration, and handover documentation
-- [x] Full local build/test/security review
+- [x] Earlier retrieval/formatting/media build, test, and security reviews
+- [x] Final full build/test/security review for the native-write candidate
 - [x] Deploy exact runtime commit `cdf62b7` to `snowmcpwidg-dev`
 - [x] Human visual validation of structured article detail
 - [x] Human validation of image and attachment ServiceNow handoff
@@ -158,6 +183,10 @@ loading/error states, and shows no more than two bottom actions.
 - Attempt 1, 2, and 3 state preservation
 - Incident offer on attempt 3 only
 - No incident without explicit consent
+- Feedback article state, caller attribution, native values, and write failures
+- Rapid contradictory feedback prevention and required-state accessibility
+- Attempt 1–2 explicit continuation and attempt-3 post-feedback escalation
+- Truthful incident success under complete or partial task-link failure
 - Standardized KB-not-helpful incident content
 - Light/dark and responsive widget rendering
 - Images after preview limits and executable-block exclusion
@@ -167,7 +196,9 @@ loading/error states, and shows no more than two bottom actions.
 
 ## Local Validation Checkpoint
 
-- Full repository: 41 test files / 366 tests passed.
+- Focused native-feedback/link validation: 7 test files / 130 tests passed.
+- Knowledge candidate: 41 test files / 395 tests passed; backend and MCP Apps
+   specialist verdicts APPROVE after all findings were remediated.
 - Backend and MCP Apps specialist reviews: APPROVE after all High/Medium
    findings were remediated.
 - Visual review passed for desktop search, responsive dark attempt 3,
@@ -178,11 +209,15 @@ loading/error states, and shows no more than two bottom actions.
    attachment-only narrow dark states. The notice remains above article content,
    lists at most three filenames plus a remainder count, and preserves the two
    bottom resolution actions.
+- Native feedback visual review passed for initial article commands, narrow dark
+   feedback form, saved not-helpful outcome, gated-host fallback, and
+   attempt-three escalation. Every state remains readable and exposes no more
+   than two commands.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
-- Runtime commit `cdf62b7` is deployed only to `snowmcpwidg-dev`; live MCP
-   validation reports 26 tools, and the existing developer M365 app passed all
-   61 package checks and was updated without organizational publication.
+- Runtime commit `cdf62b7` remains deployed to `snowmcpwidg-dev` with 26 tools.
+   The local native-feedback candidate exposes 27 tools and has not yet been
+   deployed or human-validated.
 - Ranked search now renders the top three compact previews so both actions stay
    visible, labels Knowledge base/category/update metadata, retains category in
    the narrow layout, and decodes decimal/hex numeric HTML entities before they
@@ -232,8 +267,9 @@ ServiceNow Knowledge processing uses:
    association; and
 - `kb_use` for native view/use analytics, protected by its own ACLs.
 
-The current `This solved it` / `Still need help` actions preserve conversation
-state but do not yet create `kb_feedback` records. Knowledge incident creation
-creates a real caller-attributed `incident` and records article sys_ids in its
-description, but does not yet insert `m2m_kb_task`. Native feedback and task
-linking must be added as an explicit mutating, caller-scoped follow-up slice.
+The local candidate now writes `kb_feedback` using exact native `yes`/`no` and
+reason values and links attempted caller-visible articles through `m2m_kb_task`
+after incident creation. Both writes fail closed on caller identity. Feedback
+failure remains visible and recoverable; task-link failure is nonfatal because
+the incident already exists and retains attempted article history in its
+description. Live tenant validation remains pending.

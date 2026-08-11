@@ -109,6 +109,10 @@
       "description": "Retrieve one selected caller-visible ServiceNow Knowledge article."
     },
     {
+      "name": "submit_knowledge_feedback",
+      "description": "Save the caller's explicit helpful or not-helpful response for a ServiceNow Knowledge article."
+    },
+    {
       "name": "create_incident_from_knowledge",
       "description": "Create a flagged incident after the user confirms Knowledge did not resolve the question."
     }

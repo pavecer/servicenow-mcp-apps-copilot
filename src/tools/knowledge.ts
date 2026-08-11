@@ -13,9 +13,10 @@ const articleHistorySchema = z.object({
   rank: z.number().int().min(1).max(20).optional()
 });
 
-function publicKnowledgeError(operation: "search" | "detail" | "incident") {
+function publicKnowledgeError(operation: "search" | "detail" | "feedback" | "incident") {
   if (operation === "search") return { code: "KNOWLEDGE_SEARCH_UNAVAILABLE", message: "ServiceNow Knowledge search is temporarily unavailable." };
   if (operation === "detail") return { code: "KNOWLEDGE_ARTICLE_UNAVAILABLE", message: "The selected Knowledge article is unavailable." };
+  if (operation === "feedback") return { code: "KNOWLEDGE_FEEDBACK_FAILED", message: "The Knowledge feedback could not be saved." };
   return { code: "KNOWLEDGE_INCIDENT_FAILED", message: "The incident could not be created." };
 }
 
@@ -141,6 +142,53 @@ export function registerGetKnowledgeArticleTool(server: McpServer, client: Servi
   );
 }
 
+export function registerSubmitKnowledgeFeedbackTool(server: McpServer, client: ServiceNowClient): void {
+  server.tool(
+    "submit_knowledge_feedback",
+    "Save the caller's explicit helpful or not-helpful response against one ServiceNow Knowledge article.",
+    {
+      articleSysId: z.string().regex(/^[0-9a-f]{32}$/i),
+      useful: z.enum(["yes", "no"]),
+      originalQuestion: z.string().min(2).max(1000),
+      reason: z.enum(["1", "2", "3", "4"]).optional(),
+      rating: z.number().int().min(1).max(5).optional(),
+      comments: z.string().max(1000).optional()
+    },
+    async ({ articleSysId, useful, originalQuestion, reason, rating, comments }) => {
+      try {
+        await runWithRequestContext(
+          { serviceNowRequireCallerIdentity: true },
+          () => client.submitKnowledgeFeedback({
+            articleSysId,
+            useful,
+            query: originalQuestion,
+            reason: useful === "no" ? reason : undefined,
+            rating,
+            comments
+          })
+        );
+        return {
+          content: [{ type: "text" as const, text: `ServiceNow Knowledge feedback saved as ${useful === "yes" ? "helpful" : "not helpful"}.` }],
+          structuredContent: {
+            success: true,
+            mode: "feedback_confirmation",
+            useful,
+            articleSysId,
+            originalQuestion
+          }
+        };
+      } catch (error) {
+        Logger.warn("submit_knowledge_feedback tool failed", { operation: "tool.submit_knowledge_feedback", articleSysId }, error);
+        const failure = publicKnowledgeError("feedback");
+        return {
+          content: [{ type: "text" as const, text: failure.message }],
+          structuredContent: { success: false, mode: "error", errorCode: failure.code, error: failure.message, articleSysId, originalQuestion }
+        };
+      }
+    }
+  );
+}
+
 export function registerCreateIncidentFromKnowledgeTool(server: McpServer, client: ServiceNowClient): void {
   server.tool(
     "create_incident_from_knowledge",
@@ -161,18 +209,37 @@ export function registerCreateIncidentFromKnowledgeTool(server: McpServer, clien
     },
     async ({ originalQuestion, issueSummary, attemptCount, triedArticles, category, urgency, impact }) => {
       try {
-        const incident = await runWithRequestContext(
+        const { incident, links } = await runWithRequestContext(
           { serviceNowRequireCallerIdentity: true },
-          () => client.createIncident({
-            shortDescription: issueSummary,
-            description: buildKnowledgeIncidentDescription({ originalQuestion, issueSummary, attemptCount, triedArticles }),
-            category: category || "inquiry",
-            urgency,
-            impact
-          })
+          async () => {
+            const createdIncident = await client.createIncident({
+              shortDescription: issueSummary,
+              description: buildKnowledgeIncidentDescription({ originalQuestion, issueSummary, attemptCount, triedArticles }),
+              category: category || "inquiry",
+              urgency,
+              impact
+            });
+            let linkResult = { requestedCount: triedArticles.length, linkedCount: 0, failedCount: triedArticles.length };
+            try {
+              linkResult = await client.linkKnowledgeArticlesToTask(
+                createdIncident.sys_id,
+                triedArticles.map(article => article.sysId)
+              );
+            } catch (error) {
+              Logger.warn("Knowledge incident created but native article linking failed", {
+                operation: "tool.knowledge_incident_linking_failed",
+                incidentSysId: createdIncident.sys_id,
+                requestedCount: triedArticles.length
+              }, error);
+            }
+            return { incident: createdIncident, links: linkResult };
+          }
         );
+        const linkNote = links.failedCount > 0
+          ? ` ${links.failedCount} Knowledge article link(s) could not be stored; the attempted article history remains in the incident description.`
+          : "";
         return {
-          content: [{ type: "text" as const, text: `Incident ${incident.number} created after Knowledge assistance.` }],
+          content: [{ type: "text" as const, text: `Incident ${incident.number} created after Knowledge assistance.${linkNote}` }],
           structuredContent: {
             success: true,
             mode: "incident_confirmation",
@@ -182,7 +249,8 @@ export function registerCreateIncidentFromKnowledgeTool(server: McpServer, clien
             number: incident.number,
             originalQuestion,
             attemptCount,
-            triedArticles
+            triedArticles,
+            knowledgeLinks: links
           }
         };
       } catch (error) {

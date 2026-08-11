@@ -3,7 +3,8 @@ import {
   buildKnowledgeIncidentDescription,
   registerCreateIncidentFromKnowledgeTool,
   registerGetKnowledgeArticleTool,
-  registerSearchKnowledgeTool
+  registerSearchKnowledgeTool,
+  registerSubmitKnowledgeFeedbackTool
 } from "../src/tools/knowledge";
 import type { ServiceNowClient } from "../src/services/servicenowClient";
 import { getRequestContext } from "../src/requestContext";
@@ -27,6 +28,8 @@ describe("Knowledge tools", () => {
   let searchKnowledgeArticles: ReturnType<typeof vi.fn>;
   let getKnowledgeArticle: ReturnType<typeof vi.fn>;
   let createIncident: ReturnType<typeof vi.fn>;
+  let submitKnowledgeFeedback: ReturnType<typeof vi.fn>;
+  let linkKnowledgeArticlesToTask: ReturnType<typeof vi.fn>;
   let client: ServiceNowClient;
 
   beforeEach(() => {
@@ -45,7 +48,11 @@ describe("Knowledge tools", () => {
       expect(getRequestContext()?.serviceNowRequireCallerIdentity).toBe(true);
       return { number: "INC0010001", sys_id: "b".repeat(32) };
     });
-    client = { searchKnowledgeArticles, getKnowledgeArticle, createIncident } as unknown as ServiceNowClient;
+    submitKnowledgeFeedback = vi.fn().mockImplementation(async () => {
+      expect(getRequestContext()?.serviceNowRequireCallerIdentity).toBe(true);
+    });
+    linkKnowledgeArticlesToTask = vi.fn().mockResolvedValue({ requestedCount: 1, linkedCount: 1, failedCount: 0 });
+    client = { searchKnowledgeArticles, getKnowledgeArticle, createIncident, submitKnowledgeFeedback, linkKnowledgeArticlesToTask } as unknown as ServiceNowClient;
   });
 
   it("searches once, ranks results, and offers an incident on attempt three", async () => {
@@ -85,12 +92,56 @@ describe("Knowledge tools", () => {
       impact: "3"
     }) as { structuredContent: Record<string, unknown> };
     expect(createIncident).toHaveBeenCalledTimes(1);
+    expect(linkKnowledgeArticlesToTask).toHaveBeenCalledWith("b".repeat(32), ["a".repeat(32)]);
     expect(createIncident).toHaveBeenCalledWith(expect.objectContaining({
       description: expect.stringContaining("Knowledge assistance outcome: Not helpful")
     }));
     expect(result.structuredContent).toMatchObject({
-      mode: "incident_confirmation", knowledgeEscalation: true, knowledgeOutcome: "not_helpful", number: "INC0010001"
+      mode: "incident_confirmation", knowledgeEscalation: true, knowledgeOutcome: "not_helpful", number: "INC0010001",
+      knowledgeLinks: { requestedCount: 1, linkedCount: 1, failedCount: 0 }
     });
+  });
+
+  it("returns truthful incident success when native Knowledge linking rejects", async () => {
+    linkKnowledgeArticlesToTask.mockRejectedValueOnce(new Error("link service unavailable"));
+    const fake = fakeServer();
+    registerCreateIncidentFromKnowledgeTool(fake.server as never, client);
+    const result = await fake.tools[0].handler({
+      userConfirmed: true,
+      originalQuestion: "How do I configure VPN?",
+      issueSummary: "VPN setup did not resolve the issue",
+      attemptCount: 3,
+      triedArticles: [{ sysId: "a".repeat(32), number: "KB1", title: "VPN setup" }],
+      urgency: "2", impact: "3"
+    }) as { content: Array<{ text: string }>; structuredContent: Record<string, unknown> };
+    expect(result.structuredContent).toMatchObject({
+      success: true,
+      mode: "incident_confirmation",
+      number: "INC0010001",
+      knowledgeLinks: { requestedCount: 1, linkedCount: 0, failedCount: 1 }
+    });
+    expect(result.content[0].text).toContain("attempted article history remains in the incident description");
+  });
+
+  it("saves explicit caller-scoped native Knowledge feedback", async () => {
+    const fake = fakeServer();
+    registerSubmitKnowledgeFeedbackTool(fake.server as never, client);
+    const result = await fake.tools[0].handler({
+      articleSysId: "a".repeat(32),
+      useful: "no",
+      originalQuestion: "How do I configure VPN?",
+      reason: "3",
+      comments: "The sequence is unclear"
+    }) as { structuredContent: Record<string, unknown> };
+    expect(submitKnowledgeFeedback).toHaveBeenCalledWith({
+      articleSysId: "a".repeat(32),
+      useful: "no",
+      query: "How do I configure VPN?",
+      reason: "3",
+      rating: undefined,
+      comments: "The sequence is unclear"
+    });
+    expect(result.structuredContent).toMatchObject({ mode: "feedback_confirmation", useful: "no", success: true });
   });
 
   it("builds a searchable incident history block", () => {

@@ -69,6 +69,7 @@ describe("MCP Apps surface", () => {
       ["remove_incident_attachment", /incident-detail\.html$/],
       ["search_knowledge", /knowledge\.html$/],
       ["get_knowledge_article", /knowledge\.html$/],
+      ["submit_knowledge_feedback", /knowledge\.html$/],
       ["create_incident_from_knowledge", /knowledge\.html$/]
     ]);
     for (const def of defs) {

@@ -28,6 +28,7 @@ describe("getMinimalToolDefinitions", () => {
       "search_catalog_items",
       "search_knowledge",
       "submit_cart",
+      "submit_knowledge_feedback",
       "update_cart_item",
       "update_order",
       "update_order_item",
@@ -98,5 +99,14 @@ describe("getMinimalToolDefinitions", () => {
     expect(props.attemptCount.enum).toEqual([3]);
     expect(props.urgency.enum).toEqual(["1", "2", "3"]);
     expect(props.impact.enum).toEqual(["1", "2", "3"]);
+  });
+
+  it("marks native Knowledge feedback as mutating and constrains native values", () => {
+    const definition = byName.submit_knowledge_feedback;
+    expect(definition.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
+    const props = (definition.inputSchema as { properties: Record<string, Record<string, unknown>> }).properties;
+    expect(props.useful.enum).toEqual(["yes", "no"]);
+    expect(props.reason.enum).toEqual(["1", "2", "3", "4"]);
+    expect(props.rating).toMatchObject({ minimum: 1, maximum: 5 });
   });
 });

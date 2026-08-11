@@ -20,7 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ServiceNow heading, nested-list, emphasis, code, and block structure through
   an attribute-free document model instead of article-specific text inference.
   Articles with omitted images or attachments now show bounded metadata and a
-  clear handoff to the complete caller-authorized ServiceNow article.
+  clear handoff to the complete caller-authorized ServiceNow article. Explicit
+  article outcomes now create caller-attributed native `kb_feedback` records,
+  and consented incidents best-effort link attempted articles through
+  `m2m_kb_task` without compromising truthful incident success.
 <!-- release-impact: patch -->
 
 ## [1.2.0] - 2026-08-10

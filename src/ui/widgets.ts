@@ -138,7 +138,7 @@ export const WIDGETS: readonly WidgetDescriptor[] = [
   },
   {
     toolName: "search_knowledge",
-    boundToolNames: ["get_knowledge_article", "create_incident_from_knowledge"],
+    boundToolNames: ["get_knowledge_article", "submit_knowledge_feedback", "create_incident_from_knowledge"],
     uri: `${WIDGET_URI_NAMESPACE}/knowledge.html`,
     name: "knowledge",
     description: "Show ranked ServiceNow Knowledge results, article detail, and consent-based incident escalation.",

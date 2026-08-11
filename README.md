@@ -9,13 +9,13 @@
 │ Microsoft 365       │        │ ServiceNow MCP       │        │ ServiceNow   │
 │ Copilot / Cowork    │────────│ Server (Azure Fn)    │────────│ Catalog      │
 │                     │        │                      │        │              │
-│ "How do I use VPN?"│ OAuth  │ + 26 MCP Tools       │ OAuth  │ + Knowledge  │
+│ "How do I use VPN?"│ OAuth  │ + 27 MCP Tools       │ OAuth  │ + Knowledge  │
 │ + 9 Widgets         │        │ + 9 SEP-1865 Widgets │        │ + Catalog    │
 └─────────────────────┘        └──────────────────────┘        └──────────────┘
 ```
 
 **What you get:**
-- 26 MCP tools: ranked Knowledge search/detail, consent-based KB escalation, catalog ordering, cart/order management, approvals, and incident management
+- 27 MCP tools: ranked Knowledge search/detail, native feedback, consent-based KB escalation, catalog ordering, cart/order management, approvals, and incident management
 - 9 interactive widgets (SEP-1865), including a shared ranked Knowledge results/article/escalation experience
 - Per-user authentication: orders and incidents stamped with the real user (not a service account)
 - Stateless, scalable: Flex Consumption Azure Functions + Node.js 20

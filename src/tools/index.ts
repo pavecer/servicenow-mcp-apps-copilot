@@ -33,7 +33,8 @@ import { registerRemoveIncidentAttachmentTool } from "./removeIncidentAttachment
 import {
   registerCreateIncidentFromKnowledgeTool,
   registerGetKnowledgeArticleTool,
-  registerSearchKnowledgeTool
+  registerSearchKnowledgeTool,
+  registerSubmitKnowledgeFeedbackTool
 } from "./knowledge";
 import { getWidgetForTool, registerWidgetResources } from "../ui/widgets";
 /**
@@ -102,6 +103,7 @@ const INCIDENT_TOOL_NAMES = [
 const KNOWLEDGE_TOOL_NAMES = [
   "search_knowledge",
   "get_knowledge_article",
+  "submit_knowledge_feedback",
   "create_incident_from_knowledge"
 ] as const;
 
@@ -728,6 +730,23 @@ export function getMinimalToolDefinitions() {
       }
     },
     {
+      name: "submit_knowledge_feedback",
+      description: "Save the caller's explicit helpful or not-helpful response against one ServiceNow Knowledge article.",
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+      inputSchema: {
+        type: "object",
+        properties: {
+          articleSysId: { type: "string", description: "Knowledge article sys_id" },
+          useful: { type: "string", enum: ["yes", "no"], description: "Explicit helpful response" },
+          originalQuestion: { type: "string", description: "Original question that led to the article" },
+          reason: { type: "string", enum: ["1", "2", "3", "4"], description: "Optional not-helpful reason: 1 incomplete, 2 incorrect, 3 unclear, 4 other" },
+          rating: { type: "integer", minimum: 1, maximum: 5, description: "Optional explicit rating" },
+          comments: { type: "string", description: "Optional feedback comment" }
+        },
+        required: ["articleSysId", "useful", "originalQuestion"]
+      }
+    },
+    {
       name: "create_incident_from_knowledge",
       description: "Create a flagged ServiceNow incident after the user explicitly confirms that Knowledge did not resolve the question.",
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
@@ -819,6 +838,7 @@ export function registerTools(
   // Knowledge retrieval and consent-based incident escalation.
   registerSearchKnowledgeTool(server, client);
   registerGetKnowledgeArticleTool(server, client);
+  registerSubmitKnowledgeFeedbackTool(server, client);
   registerCreateIncidentFromKnowledgeTool(server, client);
 
   // SEP-1865 widget resources.

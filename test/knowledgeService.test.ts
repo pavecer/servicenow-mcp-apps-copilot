@@ -3,9 +3,9 @@ import { ServiceNowClient } from "../src/services/servicenowClient";
 import type { TokenManager } from "../src/services/tokenManager";
 import { config } from "../src/config";
 
-function makeClient(get: ReturnType<typeof vi.fn>): ServiceNowClient {
+function makeClient(get: ReturnType<typeof vi.fn>, post: ReturnType<typeof vi.fn> = vi.fn()): ServiceNowClient {
   const client = new ServiceNowClient({} as TokenManager);
-  (client as unknown as { httpClient: { get: ReturnType<typeof vi.fn> } }).httpClient = { get };
+  (client as unknown as { httpClient: { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> } }).httpClient = { get, post };
   return client;
 }
 
@@ -225,5 +225,110 @@ describe("ServiceNowClient Knowledge methods", () => {
     expect(detail.media.attachments[0]).toEqual({ fileName: "guide<draft>.pdf", contentType: "application/pdf", sizeBytes: 0 });
     expect(detail.media.attachments[1].sizeBytes).toBe(0);
     expect(detail.media.attachments[2].sizeBytes).toBe(12);
+  });
+
+  it("writes caller-attributed native Knowledge feedback with exact choices", async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: { result: { sys_id: "2".repeat(32), active: "true", workflow_state: "published", valid_to: "2099-01-01" } }
+    });
+    const post = vi.fn().mockResolvedValue({ data: { result: { sys_id: "3".repeat(32) } } });
+    const client = makeClient(get, post);
+    vi.spyOn(client as never, "resolveCallerSysId" as never).mockResolvedValue("4".repeat(32) as never);
+
+    await client.submitKnowledgeFeedback({
+      articleSysId: "2".repeat(32), useful: "no", query: "Why does VPN fail?", reason: "3", rating: 2,
+      comments: "The order of steps is unclear"
+    });
+
+    expect(get).toHaveBeenCalledWith(`/api/now/table/kb_knowledge/${"2".repeat(32)}`, expect.objectContaining({
+      __snRequireCallerIdentity: true,
+      params: { sysparm_fields: "sys_id,active,workflow_state,valid_to" }
+    }));
+    expect(post).toHaveBeenCalledWith("/api/now/table/kb_feedback", {
+      article: "2".repeat(32), user: "4".repeat(32), useful: "no", query: "Why does VPN fail?",
+      reason: "3", rating: 2, comments: "The order of steps is unclear"
+    }, expect.objectContaining({ __snRequireCallerIdentity: true }));
+  });
+
+  it("does not send a negative reason with helpful feedback", async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: { result: { sys_id: "2".repeat(32), active: "true", workflow_state: "published" } }
+    });
+    const post = vi.fn().mockResolvedValue({ data: { result: {} } });
+    const client = makeClient(get, post);
+    vi.spyOn(client as never, "resolveCallerSysId" as never).mockResolvedValue("4".repeat(32) as never);
+
+    await client.submitKnowledgeFeedback({ articleSysId: "2".repeat(32), useful: "yes", query: "VPN", reason: "1" });
+
+    expect(post.mock.calls[0][1]).not.toHaveProperty("reason");
+  });
+
+  it.each([
+    [{ workflow_state: "published" }, "missing active"],
+    [{ active: "true" }, "missing workflow state"],
+    [{ active: "false", workflow_state: "published" }, "inactive"],
+    [{ active: "true", workflow_state: "draft" }, "draft"],
+    [{ active: "true", workflow_state: "published", valid_to: "2020-01-01" }, "expired"]
+  ])("rejects native feedback for an article that is %s", async (article, _label) => {
+    const get = vi.fn().mockResolvedValue({ data: { result: { sys_id: "2".repeat(32), ...article } } });
+    const post = vi.fn();
+    const client = makeClient(get, post);
+
+    await expect(client.submitKnowledgeFeedback({ articleSysId: "2".repeat(32), useful: "yes", query: "VPN" }))
+      .rejects.toThrow(/not published or accessible/i);
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("links only caller-visible Knowledge articles and reports unlinked inputs", async () => {
+    const first = "5".repeat(32);
+    const hidden = "6".repeat(32);
+    const get = vi.fn().mockResolvedValue({ data: { result: [{ sys_id: first, active: "true", workflow_state: "published" }] } });
+    const post = vi.fn().mockResolvedValue({ data: { result: {} } });
+    const client = makeClient(get, post);
+
+    const result = await client.linkKnowledgeArticlesToTask("7".repeat(32), [first, hidden, first]);
+
+    expect(get).toHaveBeenCalledWith("/api/now/table/kb_knowledge", expect.objectContaining({
+      __snRequireCallerIdentity: true,
+      params: expect.objectContaining({
+        sysparm_query: `sys_idIN${first},${hidden}^active=true^workflow_state=published`,
+        sysparm_fields: "sys_id,active,workflow_state,valid_to",
+        sysparm_limit: 2
+      })
+    }));
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith("/api/now/table/m2m_kb_task", {
+      kb_knowledge: first, task: "7".repeat(32)
+    }, expect.objectContaining({ __snRequireCallerIdentity: true }));
+    expect(result).toEqual({ requestedCount: 2, linkedCount: 1, failedCount: 1 });
+  });
+
+  it("keeps Knowledge task linking best-effort when one native write fails", async () => {
+    const first = "8".repeat(32);
+    const second = "9".repeat(32);
+    const get = vi.fn().mockResolvedValue({ data: { result: [
+      { sys_id: first, active: "true", workflow_state: "published" },
+      { sys_id: second, active: "true", workflow_state: "published" }
+    ] } });
+    const post = vi.fn().mockResolvedValueOnce({ data: { result: {} } }).mockRejectedValueOnce({ response: { status: 403 } });
+    const client = makeClient(get, post);
+
+    const result = await client.linkKnowledgeArticlesToTask("a".repeat(32), [first, second]);
+
+    expect(result).toEqual({ requestedCount: 2, linkedCount: 1, failedCount: 1 });
+  });
+
+  it("does not link expired Knowledge articles to a task", async () => {
+    const expired = "b".repeat(32);
+    const get = vi.fn().mockResolvedValue({ data: { result: [
+      { sys_id: expired, active: "true", workflow_state: "published", valid_to: "2020-01-01" }
+    ] } });
+    const post = vi.fn();
+    const client = makeClient(get, post);
+
+    const result = await client.linkKnowledgeArticlesToTask("c".repeat(32), [expired]);
+
+    expect(post).not.toHaveBeenCalled();
+    expect(result).toEqual({ requestedCount: 1, linkedCount: 0, failedCount: 1 });
   });
 });

@@ -65,9 +65,9 @@ the shortest path to resume work safely.
 
 ## Active Knowledge retrieval branch
 
-- Branch `feat/knowledge-retrieval` adds three tools and one shared MCP App,
-  moving the local and test-deployed inventory to 26 tools / 9 widgets. Public
-  `main` remains 23 / 8 until human validation and merge.
+- Branch `feat/knowledge-retrieval` now adds four tools and one shared MCP App,
+  moving the local inventory to 27 tools / 9 widgets. The current test deployment
+  remains at media runtime `cdf62b7` with 26 / 9; public `main` remains 23 / 8.
 - Implemented locally: deterministic native-score/lexical ranking, one-call
   Knowledge API search, one-call article detail, executable-block stripping,
   attempt/history state, third-attempt incident offer, explicit-consent incident
@@ -82,11 +82,13 @@ the shortest path to resume work safely.
   demo environment, then validate Alex/OBO visibility before approval.
 - Durable implementation checklist and validation matrix:
   [KNOWLEDGE_RETRIEVAL_PLAN.md](KNOWLEDGE_RETRIEVAL_PLAN.md).
-- Local validation: 41 test files / 366 tests pass; backend and MCP Apps
-  specialist reviews APPROVE; search, attempt-3, and detail widget screenshots
-  passed desktop/responsive light/dark inspection. The ranked-list and
-  source-structured article-detail follow-ups also passed actual-source desktop
-  light and narrow dark rendering.
+- The latest local native-write slice passes 7 focused files / 130 tests and
+  TypeScript/widget build. It adds strict caller-scoped native feedback,
+  accessible two-stage feedback UX, and truthful best-effort task links. Full
+  candidate validation passes 41 files / 395 tests; backend and MCP Apps
+  reviewers APPROVE. Initial commands, narrow dark feedback form, saved outcome,
+  gated fallback, and attempt-three escalation visuals passed. Test-tenant
+  deployment is still pending.
 - Local media-handoff follow-up counts omitted images across the full bounded
   article and retrieves at most 20 caller-visible attachment summaries
   (filename/type/size) with no IDs, URLs, or bytes. Image-only desktop light and
@@ -123,26 +125,30 @@ the shortest path to resume work safely.
   view works much better and is easier to read. This approves the formatting
   checkpoint originally validated at runtime commit `0dcfe4b`; the same
   structured renderer is retained in media-aware runtime `cdf62b7`.
-- Native feedback is not yet written. Verified demo schema supports
-  `kb_feedback` (`article`, `user`, `useful`, `rating`, `comments`, `reason`,
-  `query`) and native article/task linkage through `m2m_kb_task`
-  (`kb_knowledge`, `task`). Current incident escalation stores the article
-  history in `incident.description` but does not yet create `kb_feedback` or
-  `m2m_kb_task` records.
+- The local candidate now writes native `kb_feedback` with exact `yes`/`no`,
+  caller user, original query, and optional reason (`1` incomplete, `2`
+  incorrect, `3` unclear, `4` other). It verifies active/published/non-expired
+  caller visibility before writing. The widget discloses persistence, prevents
+  contradictory concurrent writes, and requires an explicit continuation.
+- After a consented incident POST, the local candidate visibility-checks up to
+  20 attempted articles and best-effort inserts `m2m_kb_task` links. Complete or
+  partial linking failure never falsifies incident success; attempted history
+  remains in `incident.description` and the confirmation reports diagnostics.
 - Live delegated-admin checks returned five ranked results for password reset,
   opened `KB0005012` with content and a source link, and confirmed attempt 3
   excludes the tried article and offers an incident without creating one. The
   demo fallback setting is enabled, storage public access is `Disabled`, and no
   temporary exemption remains.
-- No public push or PR has occurred. Next: complete explicit Alex/admin
-  validation of the three-attempt journey and consented incident path before
-  opening a Version release PR.
+- No public push or PR has occurred. Next: deploy the exact 27-tool candidate to
+  `snowmcpwidg-dev`, verify live native
+  records as admin/Alex, then finish the three-attempt and consented-incident
+  human journey before opening a Version release PR.
 
 ## Operational checkpoint
 
-- As of 2026-08-10, Function App `func-yj453fjwuhph4` is running and the Azure
-  subscription is enabled. The test endpoint exposes all 26 candidate tools and
-  is ready for M365 prompt testing; public `main` remains at 23 tools.
+- As of 2026-08-11, Function App `func-yj453fjwuhph4` is running and the Azure
+  subscription is enabled. The test endpoint currently exposes the approved
+  26-tool media runtime; the local native-feedback candidate exposes 27 tools.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).
 - Deployed Function App has been migrated to `dev351709` and validated live.

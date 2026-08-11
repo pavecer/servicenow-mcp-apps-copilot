@@ -59,6 +59,11 @@
   .media-files { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; }
   .media-file { color: var(--muted); font-size: 12px; }
   .media-more { color: var(--muted); font-size: 12px; }
+  .feedback-disclosure { margin-top: 14px; color: var(--muted); font-size: 12px; }
+  .feedback-panel { margin: 14px 0 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; }
+  .feedback-panel legend { padding: 0 4px; font-weight: 600; }
+  .feedback-option { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-size: 13px; }
+  .feedback-option input { margin-top: 3px; accent-color: var(--accent); }
   .notice { margin-top: 14px; padding: 12px; border: 1px solid var(--warning); border-radius: 8px; background: var(--warning-bg); font-size: 13px; line-height: 1.45; }
   .error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
   .success { color: var(--fg); background: var(--success-bg); border-color: var(--success); }
@@ -171,9 +176,9 @@
     var known = { "image/png": "PNG", "image/jpeg": "JPEG", "image/gif": "GIF", "image/webp": "WebP", "application/pdf": "PDF" };
     return known[type] || text(value) || "File";
   }
-  function sourceLink(article, label) {
+  function sourceLink(article, label, asButton) {
     if (!article.sourceLink) return null;
-    var source = make("a", "source-link", label || "View full article in ServiceNow");
+    var source = make("a", asButton ? "button-link" : "source-link", label || "View full article in ServiceNow");
     source.href = article.sourceLink;
     source.addEventListener("click", function (event) { event.preventDefault(); if (!openExternal(article.sourceLink)) showStatus("The ServiceNow source could not be opened.", true); });
     return source;
@@ -198,12 +203,13 @@
       if (attachments.length > 3) files.appendChild(make("li", "media-more", "+" + (attachments.length - 3) + " more attachments"));
       notice.appendChild(files);
     }
-    var link = sourceLink(article, "Open complete article in ServiceNow"); if (link) notice.appendChild(link);
     return notice;
   }
 
   var root = document.getElementById("root");
   var lastData = null;
+  var feedbackInFlight = false;
+  var journeyInFlight = false;
   applyTheme();
 
   function loading(message) { root.innerHTML = ""; var status = make("p", "empty", message || "Loading..."); status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); root.appendChild(status); }
@@ -213,7 +219,16 @@
   }
   function actionButton(label, primary, handler) { var button = make("button", primary ? "primary" : "", label); button.type = "button"; button.addEventListener("click", handler); return button; }
   function history(data) { return Array.isArray(data.triedArticles) ? data.triedArticles : []; }
-  function showStatus(message, isError) { var box = make("div", "notice" + (isError ? " error" : ""), message); box.setAttribute("role", isError ? "alert" : "status"); box.setAttribute("aria-live", "polite"); root.appendChild(box); return box; }
+  function showStatus(message, isError) {
+    var box = root.querySelector(".transient-status");
+    var created = !box;
+    if (!box) { box = make("div", "transient-status"); }
+    box.className = "notice transient-status" + (isError ? " error" : "");
+    box.setAttribute("role", isError ? "alert" : "status"); box.setAttribute("aria-live", isError ? "assertive" : "polite");
+    if (created) root.appendChild(box);
+    box.textContent = ""; box.textContent = message;
+    return box;
+  }
   function continueInChat(button, prompt) {
     var originalLabel = button ? button.textContent : "";
     if (button) { button.disabled = true; button.textContent = "Continuing..."; }
@@ -232,7 +247,8 @@
   }
 
   function createIncident(data, button) {
-    button.disabled = true; button.textContent = "Creating...";
+    if (journeyInFlight) return;
+    journeyInFlight = true; disableAllActions(); button.textContent = "Creating...";
     var tried = history(data).slice();
     if (tried.length === 0 && Array.isArray(data.articles) && data.articles.length > 0) {
       var selected = root.querySelector("input[name=article]:checked");
@@ -248,17 +264,119 @@
     };
     callTool("create_incident_from_knowledge", args).then(function (result) {
       var next = unwrap(result);
-      if (next && next.success === false) { render(data); showStatus(next.error || "The incident could not be created. Try again.", true); return; }
+      if (next && next.success === false) { journeyInFlight = false; render(data); showStatus(next.error || "The incident could not be created. Try again.", true); return; }
+      journeyInFlight = false;
       render(next);
     }).catch(function () {
+      journeyInFlight = false;
       render(data);
       continueInChat(null, "Please create a ServiceNow incident because Knowledge did not resolve my question after three Knowledge attempts. Original question: " + text(data.originalQuestion) + ". Tried articles: " + JSON.stringify(history(data)));
     });
   }
 
   function keepSearching(data, button) {
+    if (journeyInFlight) return;
+    journeyInFlight = true; disableAllActions(); button.textContent = "Continuing...";
     var excluded = history(data).map(function (item) { return item.sysId; }).filter(Boolean);
-    continueInChat(button, "Keep searching ServiceNow Knowledge without creating an incident. Use attempt=3, originalQuestion=" + JSON.stringify(text(data.originalQuestion)) + ", excludeArticleSysIds=" + JSON.stringify(excluded) + ", triedArticles=" + JSON.stringify(history(data)) + ".");
+    var prompt = "Keep searching ServiceNow Knowledge without creating an incident. Use attempt=3, originalQuestion=" + JSON.stringify(text(data.originalQuestion)) + ", excludeArticleSysIds=" + JSON.stringify(excluded) + ", triedArticles=" + JSON.stringify(history(data)) + ".";
+    var pending = sendFollowUp(prompt);
+    if (pending === false) { journeyInFlight = false; render(data); showStatus("Copilot could not continue this action. Try again from chat.", true); return; }
+    Promise.resolve(pending).then(function () { showStatus("Continuing in Copilot...", false); }).catch(function () {
+      journeyInFlight = false; render(data); showStatus("Copilot could not continue this action. Try again from chat.", true);
+    });
+  }
+  function feedbackContinuationPrompt(data) {
+    return "This article did not resolve my question. Search ServiceNow Knowledge again with attempt " + Math.min(3, (Number(data.attempt) || 1) + 1) + ". Original question: " + text(data.originalQuestion) + ". Exclude article sys_ids: " + history(data).map(function (item) { return item.sysId; }).join(", ") + ". Preserve triedArticles=" + JSON.stringify(history(data)) + ".";
+  }
+  function feedbackFallbackPrompt(data) {
+    var args = data.feedbackFallbackArgs || {};
+    var prompt = "Save my explicit ServiceNow Knowledge feedback by calling submit_knowledge_feedback with exactly these arguments: " + JSON.stringify(args) + ".";
+    if (args.useful === "no") {
+      prompt += " After the feedback call, " + (Number(data.attempt) >= 3 || data.offerIncident
+        ? "show the attempt-three options to create an incident or keep searching without creating one."
+        : feedbackContinuationPrompt(data));
+    } else {
+      prompt += " After it succeeds, acknowledge that the article solved my issue and do not create an incident.";
+    }
+    return prompt;
+  }
+  function saveFeedbackViaChat(data, button) {
+    if (journeyInFlight) return;
+    journeyInFlight = true; disableAllActions(); button.textContent = "Continuing...";
+    var pending = sendFollowUp(feedbackFallbackPrompt(data));
+    if (pending === false) { journeyInFlight = false; render(data); showStatus("Copilot could not continue this action. Try again from chat.", true); return; }
+    Promise.resolve(pending).then(function () { showStatus("Continuing in Copilot...", false); }).catch(function () {
+      journeyInFlight = false; render(data); showStatus("Copilot could not continue this action. Try again from chat.", true);
+    });
+  }
+  function continueFeedbackJourney(data, button) {
+    if (journeyInFlight) return;
+    journeyInFlight = true; disableAllActions(); button.textContent = "Continuing...";
+    var pending = sendFollowUp(feedbackContinuationPrompt(data));
+    if (pending === false) { journeyInFlight = false; render(data); showStatus("Copilot could not continue this action. Try again from chat.", true); return; }
+    Promise.resolve(pending).then(function () { showStatus("Continuing in Copilot...", false); }).catch(function () {
+      journeyInFlight = false; render(data); showStatus("Copilot could not continue this action. Try again from chat.", true);
+    });
+  }
+  function disableAllActions() { root.querySelectorAll("button").forEach(function (item) { item.disabled = true; }); }
+  function showFeedbackPanel(data) {
+    if (feedbackInFlight) return;
+    data.feedbackReasonPending = true;
+    render(data);
+  }
+  function submitFeedback(data, useful, reason, button) {
+    if (feedbackInFlight) return;
+    var article = data.article || {};
+    if (!article.sysId) { showStatus("This article cannot be identified for feedback.", true); return; }
+    feedbackInFlight = true;
+    data.feedbackPendingReason = reason || "";
+    disableAllActions(); button.textContent = "Saving...";
+    var args = {
+      articleSysId: article.sysId,
+      useful: useful,
+      originalQuestion: text(data.originalQuestion)
+    };
+    if (useful === "no" && reason) args.reason = reason;
+    callTool("submit_knowledge_feedback", args).then(function (result) {
+      var next = unwrap(result);
+      if (next && next.success === false) {
+        feedbackInFlight = false; data.feedbackReasonPending = false; data.feedbackSaveFailed = useful;
+        data.feedbackFallbackArgs = null; data.feedbackError = next.error || "The feedback could not be saved in ServiceNow."; render(data);
+        return;
+      }
+      feedbackInFlight = false; data.feedbackReasonPending = false; data.feedbackSaved = useful; data.feedbackSaveFailed = ""; data.feedbackSkipped = ""; data.feedbackFallbackArgs = null;
+      if (useful === "yes") render({ mode: "feedback_confirmation", useful: "yes", originalQuestion: data.originalQuestion });
+      else render(data);
+    }).catch(function () {
+      feedbackInFlight = false; data.feedbackReasonPending = false; data.feedbackSaveFailed = useful;
+      data.feedbackFallbackArgs = args; data.feedbackError = "The feedback tool is unavailable in this widget. You can save the same response through Copilot."; render(data);
+    });
+  }
+  function renderFeedbackReasons(data) {
+    var helpfulPanel = make("fieldset", "feedback-panel"); helpfulPanel.appendChild(make("legend", "", "Did this article solve your issue?"));
+    [["yes", "Solved my issue"], ["no", "Still need help"]].forEach(function (entry) {
+      var label = make("label", "feedback-option");
+      var radio = document.createElement("input"); radio.type = "radio"; radio.name = "feedback-useful"; radio.value = entry[0]; radio.required = true;
+      label.appendChild(radio); label.appendChild(document.createTextNode(entry[1])); helpfulPanel.appendChild(label);
+    });
+    root.appendChild(helpfulPanel);
+    var panel = make("fieldset", "feedback-panel"); panel.appendChild(make("legend", "", "If not helpful, what was missing? (optional)"));
+    [["1", "The article is incomplete"], ["2", "The article contains incorrect information"], ["3", "The article is unclear"], ["4", "Other"]].forEach(function (entry) {
+      var label = make("label", "feedback-option");
+      var radio = document.createElement("input"); radio.type = "radio"; radio.name = "feedback-reason"; radio.value = entry[0];
+      label.appendChild(radio); label.appendChild(document.createTextNode(entry[1])); panel.appendChild(label);
+    });
+    root.appendChild(panel);
+    var actions = make("div", "actions");
+    actions.appendChild(actionButton("Save feedback", true, function (event) {
+      var inputs = Array.from(root.querySelectorAll("input"));
+      var useful = inputs.find(function (input) { return input.name === "feedback-useful" && input.checked; });
+      if (!useful) { showStatus("Choose whether this article solved your issue.", true); return; }
+      var reason = inputs.find(function (input) { return input.name === "feedback-reason" && input.checked; });
+      submitFeedback(data, useful.value, useful.value === "no" && reason ? reason.value : "", event.currentTarget);
+    }));
+    actions.appendChild(actionButton("Cancel", false, function () { data.feedbackReasonPending = false; render(data); }));
+    root.appendChild(actions);
   }
 
   function renderSearch(data) {
@@ -327,25 +445,64 @@
     var card = make("article", "article"); card.appendChild(formatted.element);
     if (formatted.shortened) card.appendChild(make("p", "preview-note", article.sourceLink ? "Preview shortened. Open the full article in ServiceNow for the remaining content." : "Preview shortened. Ask Copilot for the remaining article content."));
     root.appendChild(card);
-    if (!mediaHandoff) { var source = sourceLink(article); if (source) root.appendChild(source); }
-    if (data.offerIncident) root.appendChild(make("div", "notice", "If this still does not solve the issue, I can create an incident with the Knowledge history after you confirm."));
-    var actions = make("div", "actions");
-    if (data.offerIncident) {
-      var create = actionButton("Create incident", true, function () { createIncident(data, create); }); actions.appendChild(create);
-      actions.appendChild(actionButton("Keep searching", false, function (event) { keepSearching(data, event.currentTarget); }));
-    } else {
-      actions.appendChild(actionButton("This solved it", true, function (event) { continueInChat(event.currentTarget, "The ServiceNow Knowledge article solved my question. No incident is needed."); }));
-      actions.appendChild(actionButton("Still need help", false, function (event) {
-        continueInChat(event.currentTarget, "This article did not resolve my question. Search ServiceNow Knowledge again with attempt " + Math.min(3, (Number(data.attempt) || 1) + 1) + ". Original question: " + text(data.originalQuestion) + ". Exclude article sys_ids: " + history(data).map(function (item) { return item.sysId; }).join(", ") + ". Preserve triedArticles=" + JSON.stringify(history(data)) + ".");
-      }));
+    if (data.feedbackReasonPending) { renderFeedbackReasons(data); return; }
+    if (data.feedbackSaved === "no" || data.feedbackSaveFailed === "no" || data.feedbackSkipped === "no") {
+      var saved = data.feedbackSaved === "no";
+      var skipped = data.feedbackSkipped === "no";
+      var outcome = make("div", "notice" + (saved ? " success" : " error"), saved
+        ? "Your not-helpful response was saved in ServiceNow."
+        : skipped ? "Feedback was not saved. You can still continue getting help."
+        : text(data.feedbackError) || "Your response could not be saved in ServiceNow, but you can continue getting help.");
+      outcome.setAttribute("role", saved ? "status" : "alert"); outcome.setAttribute("aria-live", saved ? "polite" : "assertive"); root.appendChild(outcome);
+      var outcomeActions = make("div", "actions");
+      if (!saved && !skipped) {
+        if (data.feedbackFallbackArgs) outcomeActions.appendChild(actionButton("Save via Copilot", true, function (event) { saveFeedbackViaChat(data, event.currentTarget); }));
+        else outcomeActions.appendChild(actionButton("Retry feedback", true, function (event) { submitFeedback(data, "no", text(data.feedbackPendingReason), event.currentTarget); }));
+        if (Number(data.attempt) >= 3 || data.offerIncident) {
+          outcomeActions.appendChild(actionButton("Continue without saving", false, function () { data.feedbackSaveFailed = ""; data.feedbackSkipped = "no"; render(data); }));
+        } else {
+          outcomeActions.appendChild(actionButton("Continue search", false, function (event) { continueFeedbackJourney(data, event.currentTarget); }));
+        }
+      } else if (Number(data.attempt) >= 3 || data.offerIncident) {
+        var create = actionButton("Create incident", true, function () { createIncident(data, create); }); outcomeActions.appendChild(create);
+        outcomeActions.appendChild(actionButton("Keep searching", false, function (event) { keepSearching(data, event.currentTarget); }));
+      } else {
+        outcomeActions.appendChild(actionButton("Continue search", true, function (event) { continueFeedbackJourney(data, event.currentTarget); }));
+      }
+      root.appendChild(outcomeActions); return;
     }
+    if (data.feedbackSaveFailed === "yes") {
+      var helpfulError = make("div", "notice error", text(data.feedbackError) || "The feedback could not be saved in ServiceNow.");
+      helpfulError.setAttribute("role", "alert"); helpfulError.setAttribute("aria-live", "assertive"); root.appendChild(helpfulError);
+      if (data.feedbackFallbackArgs) {
+        var fallbackActions = make("div", "actions");
+        fallbackActions.appendChild(actionButton("Save via Copilot", true, function (event) { saveFeedbackViaChat(data, event.currentTarget); }));
+        var fallbackSource = sourceLink(article, mediaHandoff ? "Open complete article in ServiceNow" : "Open in ServiceNow", true); if (fallbackSource) fallbackActions.appendChild(fallbackSource);
+        root.appendChild(fallbackActions); return;
+      }
+      var retryActions = make("div", "actions");
+      retryActions.appendChild(actionButton("Retry feedback", true, function (event) { submitFeedback(data, "yes", "", event.currentTarget); }));
+      var retrySource = sourceLink(article, mediaHandoff ? "Open complete article in ServiceNow" : "Open in ServiceNow", true); if (retrySource) retryActions.appendChild(retrySource);
+      root.appendChild(retryActions); return;
+    }
+    var actions = make("div", "actions");
+    root.appendChild(make("div", "feedback-disclosure", "Feedback is saved to ServiceNow Knowledge."));
+    actions.appendChild(actionButton("Give feedback", true, function () { showFeedbackPanel(data); }));
+    var openSource = sourceLink(article, mediaHandoff ? "Open complete article in ServiceNow" : "Open in ServiceNow", true); if (openSource) actions.appendChild(openSource);
     root.appendChild(actions);
+  }
+
+  function renderFeedbackConfirmation(data) {
+    var notice = make("div", "notice success", "Feedback saved in ServiceNow"); notice.setAttribute("role", "status"); notice.setAttribute("aria-live", "polite"); root.appendChild(notice);
+    root.appendChild(make("h1", "", data.useful === "yes" ? "Glad this article solved your issue" : "Thanks for the feedback"));
+    root.appendChild(make("div", "meta", "Your response will help improve ServiceNow Knowledge."));
   }
 
   function renderConfirmation(data) {
     root.appendChild(make("div", "notice success", "Incident " + text(data.number || (data.incident && data.incident.number)) + " created"));
     root.appendChild(make("h1", "", "Knowledge did not resolve the issue"));
     root.appendChild(make("div", "meta", "The incident includes your original question and the Knowledge articles already tried."));
+    if (data.knowledgeLinks && Number(data.knowledgeLinks.failedCount) > 0) root.appendChild(make("div", "notice", "The incident was created, but ServiceNow could not link every Knowledge article. The attempted article history is still included in the incident description."));
     var actions = make("div", "actions"); actions.appendChild(actionButton("Track incident", true, function (event) { continueInChat(event.currentTarget, "Show my ServiceNow incidents."); })); root.appendChild(actions);
   }
 
@@ -354,6 +511,7 @@
     if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
     if (data.success === false || data.mode === "error") return renderError(data);
     if (data.mode === "detail") return renderDetail(data);
+    if (data.mode === "feedback_confirmation") return renderFeedbackConfirmation(data);
     if (data.mode === "incident_confirmation") return renderConfirmation(data);
     renderSearch(data);
   }

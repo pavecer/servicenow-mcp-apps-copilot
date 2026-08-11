@@ -19,6 +19,8 @@ import {
   AddIncidentAttachmentInput,
   KnowledgeArticleDetail,
   KnowledgeAttachmentSummary,
+  KnowledgeTaskLinkResult,
+  SubmitKnowledgeFeedbackInput,
   ServiceNowKnowledgeCandidate
 } from "../types/servicenow";
 import { TokenManager } from "./tokenManager";
@@ -1887,6 +1889,106 @@ export class ServiceNowClient {
         attachments
       },
       sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
+    };
+  }
+
+  async submitKnowledgeFeedback(input: SubmitKnowledgeFeedbackInput): Promise<void> {
+    const articleSysId = requireServiceNowSysId(input.articleSysId, "Knowledge article sys_id");
+    const client = await this.getClient();
+    const articleResponse = await client.get<{ result: Record<string, unknown> }>(
+      `/api/now/table/kb_knowledge/${articleSysId}`,
+      {
+        params: { sysparm_fields: "sys_id,active,workflow_state,valid_to" },
+        __snRequireCallerIdentity: true
+      } as AxiosRequestConfig
+    );
+    const feedbackArticle = articleResponse.data.result ?? {};
+    const active = normalizeServiceNowChoice(feedbackArticle.active);
+    const workflowState = normalizeServiceNowChoice(feedbackArticle.workflow_state);
+    if (active !== "true" || workflowState !== "published" || !isVisiblePublishedKnowledgeRow(feedbackArticle)) {
+      throw new Error("Knowledge article is not published or accessible.");
+    }
+    const callerSysId = await this.resolveCallerSysId(client);
+    if (!callerSysId) throw new Error("Unable to resolve the ServiceNow caller for Knowledge feedback.");
+
+    const payload: Record<string, unknown> = {
+      article: articleSysId,
+      user: callerSysId,
+      useful: input.useful,
+      query: input.query.trim().slice(0, 1000)
+    };
+    if (input.useful === "no" && input.reason) payload.reason = input.reason;
+    if (input.rating) payload.rating = input.rating;
+    if (input.comments?.trim()) payload.comments = input.comments.trim().slice(0, 1000);
+
+    await client.post("/api/now/table/kb_feedback", payload, {
+      __snRequireCallerIdentity: true
+    } as AxiosRequestConfig);
+    Logger.info("ServiceNow Knowledge feedback saved", {
+      operation: "knowledge.feedback_saved",
+      articleSysId,
+      useful: input.useful
+    });
+  }
+
+  async linkKnowledgeArticlesToTask(taskSysId: string, articleSysIds: string[]): Promise<KnowledgeTaskLinkResult> {
+    const validatedTaskSysId = requireServiceNowSysId(taskSysId, "Task sys_id");
+    const requested = [...new Set(articleSysIds.map(id => requireServiceNowSysId(id, "Knowledge article sys_id")))].slice(0, 20);
+    if (requested.length === 0) return { requestedCount: 0, linkedCount: 0, failedCount: 0 };
+
+    const client = await this.getClient();
+    let response: { data: { result: Array<Record<string, unknown>> } };
+    try {
+      response = await client.get<{ result: Array<Record<string, unknown>> }>(
+        "/api/now/table/kb_knowledge",
+        {
+          params: {
+            sysparm_query: `sys_idIN${requested.join(",")}^active=true^workflow_state=published`,
+            sysparm_fields: "sys_id,active,workflow_state,valid_to",
+            sysparm_limit: requested.length
+          },
+          __snRequireCallerIdentity: true
+        } as AxiosRequestConfig
+      );
+    } catch (error) {
+      Logger.warn("Failed to verify ServiceNow Knowledge articles for task linking", {
+        operation: "knowledge.task_link_visibility_failed",
+        taskSysId: validatedTaskSysId,
+        requestedCount: requested.length
+      }, error);
+      return { requestedCount: requested.length, linkedCount: 0, failedCount: requested.length };
+    }
+    const visible = new Set((response.data.result ?? [])
+      .filter(row => {
+        const active = normalizeServiceNowChoice(row.active);
+        const workflowState = normalizeServiceNowChoice(row.workflow_state);
+        return active === "true" && workflowState === "published" && isVisiblePublishedKnowledgeRow(row);
+      })
+      .map(row => readKnowledgeString(row, ["sys_id"]))
+      .filter(Boolean));
+    let linkedCount = 0;
+    for (const articleSysId of requested) {
+      if (!visible.has(articleSysId)) continue;
+      try {
+        await client.post("/api/now/table/m2m_kb_task", {
+          kb_knowledge: articleSysId,
+          task: validatedTaskSysId
+        }, {
+          __snRequireCallerIdentity: true
+        } as AxiosRequestConfig);
+        linkedCount += 1;
+      } catch (error) {
+        Logger.warn("Failed to link ServiceNow Knowledge article to task", {
+          operation: "knowledge.task_link_failed",
+          articleSysId,
+          taskSysId: validatedTaskSysId
+        }, error);
+      }
+    }
+    return {
+      requestedCount: requested.length,
+      linkedCount,
+      failedCount: requested.length - linkedCount
     };
   }
 

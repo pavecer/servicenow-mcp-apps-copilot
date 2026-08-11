@@ -10,10 +10,12 @@ class TestElement {
   children: TestElement[] = [];
   checked = false;
   disabled = false;
+  required = false;
   name = "";
   type = "";
   value: string | number = "";
   attributes = new Map<string, string>();
+  listeners = new Map<string, Array<(event: { currentTarget: TestElement; preventDefault: () => void }) => void>>();
   private ownText = "";
 
   constructor(readonly tagName: string) {}
@@ -22,7 +24,12 @@ class TestElement {
   set textContent(value: string) { this.ownText = String(value); this.children = []; }
   set innerHTML(_value: string) { this.ownText = ""; this.children = []; }
   appendChild(child: TestElement) { this.children.push(child); return child; }
-  addEventListener() {}
+  addEventListener(name: string, listener: (event: { currentTarget: TestElement; preventDefault: () => void }) => void) {
+    const listeners = this.listeners.get(name) ?? [];
+    listeners.push(listener);
+    this.listeners.set(name, listeners);
+  }
+  click() { if (this.disabled) return; for (const listener of this.listeners.get("click") ?? []) listener({ currentTarget: this, preventDefault() {} }); }
   setAttribute(name: string, value: string) { this.attributes.set(name, value); }
   getAttribute(name: string) { return this.attributes.get(name) ?? null; }
   querySelectorAll(selector: string): TestElement[] {
@@ -39,14 +46,23 @@ class TestElement {
   querySelector(selector: string) { return this.querySelectorAll(selector)[0] ?? null; }
 }
 
-function mountWidget(payload: Record<string, unknown>): TestElement {
+function mountWidget(
+  payload: Record<string, unknown>,
+  options: {
+    callTool?: (name: string, args: Record<string, unknown>) => Promise<unknown>;
+    sendFollowUp?: (message: string) => Promise<unknown>;
+  } = {}
+): TestElement {
   const root = new TestElement("div");
   const document = {
     createElement: (name: string) => new TestElement(name),
     createTextNode: (value: string) => { const node = new TestElement("#text"); node.textContent = value; return node; },
     getElementById: () => root
   };
-  const window = { mcpHost: { applyTheme() {}, getData: () => payload, markRendered() {}, onData: (callback: (data: Record<string, unknown>) => void) => callback(payload) } };
+  const window = { mcpHost: {
+    applyTheme() {}, getData: () => payload, markRendered() {}, onData: (callback: (data: Record<string, unknown>) => void) => callback(payload),
+    callTool: options.callTool, sendFollowUp: options.sendFollowUp
+  } };
   const scriptStart = html.indexOf("<script>") + "<script>".length;
   const scriptEnd = html.lastIndexOf("</script>");
   new Function("window", "document", html.slice(scriptStart, scriptEnd))(window, document);
@@ -251,8 +267,10 @@ describe("Knowledge MCP App", () => {
     expect(root.textContent).toContain("+2 more attachments");
     expect(root.textContent).not.toContain("checklist.txt");
     expect(root.querySelector(".media-notice")?.getAttribute("aria-label")).toBe("Article media available in ServiceNow");
-    expect(root.querySelectorAll(".source-link").map(element => element.textContent)).toEqual(["Open complete article in ServiceNow"]);
-    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["This solved it", "Still need help"]);
+    expect(root.querySelectorAll(".source-link")).toHaveLength(0);
+    expect(root.querySelectorAll(".button-link").map(element => element.textContent)).toEqual(["Open complete article in ServiceNow"]);
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Give feedback"]);
+    expect(root.querySelectorAll("button").length + root.querySelectorAll(".button-link").length).toBe(2);
   });
 
   it("keeps the standard source link for articles without omitted media", () => {
@@ -264,7 +282,9 @@ describe("Knowledge MCP App", () => {
       article: { title: "Text article", content: "Text only", sourceLink: "https://example.service-now.com/kb", media: { imageCount: 0, attachments: [] } }
     });
     expect(root.querySelectorAll(".media-notice")).toHaveLength(0);
-    expect(root.querySelectorAll(".source-link").map(element => element.textContent)).toEqual(["View full article in ServiceNow"]);
+    expect(root.querySelectorAll(".source-link")).toHaveLength(0);
+    expect(root.querySelectorAll(".button-link").map(element => element.textContent)).toEqual(["Open in ServiceNow"]);
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Give feedback"]);
   });
 
   it("uses singular language for one ServiceNow attachment", () => {
@@ -284,6 +304,262 @@ describe("Knowledge MCP App", () => {
     expect(root.textContent).not.toContain("Open the complete article in ServiceNow to view");
   });
 
+  it("persists helpful feedback without starting another Knowledge attempt", async () => {
+    const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    const followUps: string[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async (name, args) => { calls.push({ name, args }); return { success: true, mode: "feedback_confirmation", useful: "yes" }; },
+      sendFollowUp: async message => { followUps.push(message); }
+    });
+
+    expect(root.textContent).toContain("Feedback is saved to ServiceNow Knowledge");
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
+    useful[0].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(calls).toEqual([{ name: "submit_knowledge_feedback", args: {
+      articleSysId: "a".repeat(32), useful: "yes", originalQuestion: "How do I configure VPN?"
+    } }]);
+    expect(followUps).toEqual([]);
+    expect(root.textContent).toContain("Feedback saved in ServiceNow");
+    expect(root.textContent).toContain("Glad this article solved your issue");
+    expect(root.querySelectorAll("button")).toHaveLength(0);
+  });
+
+  it("collects an optional native reason and shows the saved outcome before continuing", async () => {
+    const events: string[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?",
+      triedArticles: [{ sysId: "a".repeat(32), number: "KB1", title: "VPN" }],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async (name, args) => { events.push(`tool:${name}:${args.useful}:${args.reason}`); return { success: true }; },
+      sendFollowUp: async () => { events.push("follow-up"); }
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
+    useful[1].checked = true;
+    expect(useful.every(input => input.required)).toBe(true);
+    const reasons = root.querySelectorAll("input").filter(input => input.name === "feedback-reason");
+    expect(reasons).toHaveLength(4);
+    reasons[2].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(events).toEqual(["tool:submit_knowledge_feedback:no:3"]);
+    expect(root.textContent).toContain("not-helpful response was saved in ServiceNow");
+    expect(root.querySelectorAll(".notice")).toHaveLength(1);
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Continue search"]);
+
+    root.querySelectorAll("button")[0].click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(events).toEqual(["tool:submit_knowledge_feedback:no:3", "follow-up"]);
+  });
+
+  it("keeps explicit continuation available when not-helpful feedback cannot be saved", async () => {
+    const events: string[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async () => { events.push("tool-failed"); throw new Error("blocked"); },
+      sendFollowUp: async () => { events.push("follow-up"); }
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful"); useful[1].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(events).toEqual(["tool-failed"]);
+    expect(root.textContent).toContain("feedback tool is unavailable in this widget");
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Save via Copilot", "Continue search"]);
+    root.querySelectorAll("button").find(button => button.textContent === "Continue search")?.click();
+    await Promise.resolve(); await Promise.resolve();
+    expect(events).toEqual(["tool-failed", "follow-up"]);
+  });
+
+  it("offers retry before attempt-three escalation when feedback persistence fails", async () => {
+    const root = mountWidget({
+      mode: "detail", attempt: 3, offerIncident: true, originalQuestion: "VPN", triedArticles: [],
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, { callTool: async () => { throw new Error("blocked"); } });
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful"); useful[1].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Save via Copilot", "Continue without saving"]);
+    root.querySelectorAll("button").find(button => button.textContent === "Continue without saving")?.click();
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Create incident", "Keep searching"]);
+  });
+
+  it("prevents rapid contradictory feedback writes", async () => {
+    let resolveFeedback: ((value: unknown) => void) | undefined;
+    const calls: string[] = [];
+    const pending = new Promise(resolve => { resolveFeedback = resolve; });
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "VPN", triedArticles: [],
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, { callTool: async (_name, args) => { calls.push(String(args.useful)); return pending; } });
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful"); useful[0].checked = true;
+    const save = root.querySelectorAll("button").find(button => button.textContent === "Save feedback");
+    save?.click();
+    useful[0].checked = false; useful[1].checked = true; save?.click();
+    expect(root.querySelectorAll("button").every(button => button.disabled)).toBe(true);
+    expect(calls).toEqual(["yes"]);
+    resolveFeedback?.({ success: true, useful: "yes" });
+    await Promise.resolve(); await Promise.resolve();
+  });
+
+  it("falls back to Copilot with exact feedback arguments when widget calls are gated", async () => {
+    const followUps: string[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "VPN help", triedArticles: [],
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async () => { throw new Error("gated"); },
+      sendFollowUp: async message => { followUps.push(message); }
+    });
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful"); useful[1].checked = true;
+    const reasons = root.querySelectorAll("input").filter(input => input.name === "feedback-reason"); reasons[0].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+    root.querySelectorAll("button").find(button => button.textContent === "Save via Copilot")?.click();
+    await Promise.resolve(); await Promise.resolve();
+    expect(followUps).toHaveLength(1);
+    expect(followUps[0]).toContain("submit_knowledge_feedback");
+    expect(followUps[0]).toContain(`\"articleSysId\":\"${"a".repeat(32)}\"`);
+    expect(followUps[0]).toContain("\"useful\":\"no\"");
+    expect(followUps[0]).toContain("\"reason\":\"1\"");
+    expect(followUps[0]).toContain("Search ServiceNow Knowledge again with attempt 2");
+  });
+
+  it("locks Save via Copilot against a concurrent continue action", async () => {
+    let resolveFollowUp: ((value: unknown) => void) | undefined;
+    const followUps: string[] = [];
+    const pending = new Promise(resolve => { resolveFollowUp = resolve; });
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "VPN", triedArticles: [], feedbackSaveFailed: "no",
+      feedbackFallbackArgs: { articleSysId: "a".repeat(32), useful: "no", originalQuestion: "VPN" },
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, { sendFollowUp: async message => { followUps.push(message); return pending; } });
+    const actions = root.querySelectorAll("button");
+    actions.find(button => button.textContent === "Save via Copilot")?.click();
+    actions.find(button => button.textContent === "Continue search")?.click();
+    expect(actions.every(button => button.disabled)).toBe(true);
+    expect(followUps).toHaveLength(1);
+    resolveFollowUp?.(true);
+    await Promise.resolve(); await Promise.resolve();
+  });
+
+  it("locks Continue search against a subsequent Save via Copilot action", async () => {
+    let resolveFollowUp: ((value: unknown) => void) | undefined;
+    const followUps: string[] = [];
+    const pending = new Promise(resolve => { resolveFollowUp = resolve; });
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "VPN", triedArticles: [], feedbackSaveFailed: "no",
+      feedbackFallbackArgs: { articleSysId: "a".repeat(32), useful: "no", originalQuestion: "VPN" },
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, { sendFollowUp: async message => { followUps.push(message); return pending; } });
+    const actions = root.querySelectorAll("button");
+    actions.find(button => button.textContent === "Continue search")?.click();
+    actions.find(button => button.textContent === "Save via Copilot")?.click();
+    expect(actions.every(button => button.disabled)).toBe(true);
+    expect(followUps).toHaveLength(1);
+    expect(followUps[0]).toContain("Search ServiceNow Knowledge again with attempt 2");
+    resolveFollowUp?.(true);
+    await Promise.resolve(); await Promise.resolve();
+  });
+
+  it("offers direct retry after a structured helpful-feedback failure", async () => {
+    const calls: string[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "VPN", triedArticles: [],
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", sourceLink: "https://example.service-now.com/kb", media: { imageCount: 0, attachments: [] } }
+    }, { callTool: async (_name, args) => { calls.push(String(args.useful)); return calls.length === 1 ? { success: false, error: "Try again" } : { success: true }; } });
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful"); useful[0].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Retry feedback"]);
+    expect(root.querySelectorAll(".button-link").map(link => link.textContent)).toEqual(["Open in ServiceNow"]);
+    root.querySelectorAll("button")[0].click();
+    await Promise.resolve(); await Promise.resolve();
+    expect(calls).toEqual(["yes", "yes"]);
+    expect(root.textContent).toContain("Feedback saved in ServiceNow");
+  });
+
+  it("reuses one live alert for repeated incomplete feedback submissions", () => {
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "VPN", triedArticles: [],
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    });
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    var save = root.querySelectorAll("button").find(button => button.textContent === "Save feedback");
+    save?.click(); save?.click();
+    expect(root.querySelectorAll(".transient-status")).toHaveLength(1);
+    expect(root.querySelectorAll(".transient-status")[0].getAttribute("role")).toBe("alert");
+    expect(root.querySelectorAll(".transient-status")[0].getAttribute("aria-live")).toBe("assertive");
+  });
+
+  it("offers incident actions only after attempt-three not-helpful feedback", async () => {
+    const root = mountWidget({
+      mode: "detail", attempt: 3, offerIncident: true, originalQuestion: "VPN", triedArticles: [],
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, { callTool: async () => ({ success: true }) });
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Give feedback"]);
+    root.querySelectorAll("button")[0].click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful"); useful[1].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Create incident", "Keep searching"]);
+  });
+
+  it("prevents concurrent create-incident and keep-searching commands", async () => {
+    let resolveIncident: ((value: unknown) => void) | undefined;
+    const calls: string[] = [];
+    const pending = new Promise(resolve => { resolveIncident = resolve; });
+    const root = mountWidget({
+      mode: "detail", attempt: 3, offerIncident: true, originalQuestion: "VPN", triedArticles: [], feedbackSaved: "no",
+      article: { sysId: "a".repeat(32), title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async name => { calls.push(name); return pending; },
+      sendFollowUp: async () => { calls.push("follow-up"); }
+    });
+    const actions = root.querySelectorAll("button");
+    actions.find(button => button.textContent === "Create incident")?.click();
+    actions.find(button => button.textContent === "Keep searching")?.click();
+    expect(actions.every(button => button.disabled)).toBe(true);
+    expect(calls).toEqual(["create_incident_from_knowledge"]);
+    resolveIncident?.({ success: true, mode: "incident_confirmation", number: "INC1" });
+    await Promise.resolve(); await Promise.resolve();
+  });
+
+  it("renders direct native feedback confirmations", () => {
+    const root = mountWidget({ mode: "feedback_confirmation", success: true, useful: "yes", originalQuestion: "VPN" });
+    expect(root.textContent).toContain("Feedback saved in ServiceNow");
+    expect(root.textContent).toContain("Glad this article solved your issue");
+  });
+
+  it("keeps incident success truthful when some native Knowledge links fail", () => {
+    const root = mountWidget({
+      mode: "incident_confirmation", success: true, number: "INC0010001",
+      knowledgeLinks: { requestedCount: 2, linkedCount: 1, failedCount: 1 }
+    });
+    expect(root.textContent).toContain("Incident INC0010001 created");
+    expect(root.textContent).toContain("could not link every Knowledge article");
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toEqual(["Track incident"]);
+  });
+
   it("offers but never automatically creates an incident after attempt three", () => {
     expect(html).toContain("Search attempt \" + (Number(data.attempt) || 1) + \" of 3");
     expect(html).toContain("Nothing is submitted until you choose Create incident");
@@ -297,7 +573,12 @@ describe("Knowledge MCP App", () => {
   it("keeps each rendered state to at most two bottom actions by construction", () => {
     expect(html).toContain('actionButton("Read selected article"');
     expect(html).toContain('actionButton("Still need help"');
-    expect(html).toContain('actionButton("This solved it"');
+    expect(html).toContain('actionButton("Give feedback"');
+    expect(html).toContain('actionButton("Save feedback"');
+    expect(html).toContain('actionButton("Cancel"');
+    expect(html).toContain('actionButton("Retry feedback"');
+    expect(html).toContain('actionButton("Save via Copilot"');
+    expect(html).toContain('actionButton("Continue without saving"');
     expect(html).toContain('actionButton("Track incident"');
     expect(html).toContain('if (data.offerIncident)');
   });

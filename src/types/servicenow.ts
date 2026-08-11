@@ -242,3 +242,18 @@ export interface KnowledgeArticleHistoryItem {
   title: string;
   rank?: number;
 }
+
+export interface SubmitKnowledgeFeedbackInput {
+  articleSysId: string;
+  useful: "yes" | "no";
+  query: string;
+  reason?: "1" | "2" | "3" | "4";
+  rating?: number;
+  comments?: string;
+}
+
+export interface KnowledgeTaskLinkResult {
+  requestedCount: number;
+  linkedCount: number;
+  failedCount: number;
+}
