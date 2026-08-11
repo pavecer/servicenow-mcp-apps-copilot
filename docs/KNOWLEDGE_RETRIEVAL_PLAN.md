@@ -139,6 +139,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Scenario, setup, configuration, and handover documentation
 - [x] Full local build/test/security review
 - [x] Deploy exact runtime commit `0dcfe4b` to `snowmcpwidg-dev`
+- [x] Human visual validation of structured article detail
 - [ ] Human validation as Alex and admin
 - [ ] Public PR only after explicit approval
 
@@ -189,14 +190,18 @@ loading/error states, and shows no more than two bottom actions.
    14 nested `ul`, 40 `li`, maximum depth 5, and no truncation. Read-only probes
    also preserved VPN ordered/nested lists and emphasis, cookie headings/code,
    and password paragraph/strong structure.
+- Human visual validation completed on 2026-08-11: the user opened the deployed
+   Workstation Security Standard article and confirmed that the preserved source
+   formatting "works much better" and is easier to read.
 - Live delegated-admin validation returned five ranked articles, opened
    `KB0005012` with content and a ServiceNow source link, and confirmed that
    attempt 3 excludes the tried article and sets `offerIncident: true` without
    creating an incident. The demo-only Table API fallback is enabled, storage
    public access is `Disabled`, and no deployment exemption remains.
-- No public push or PR has occurred. Alex and admin must still complete the
-   human tenant journey, including explicit incident consent, before a Version
-   release PR can be opened.
+- No public push or PR has occurred. The article-formatting checkpoint is
+   approved, but Alex and admin must still complete the three-attempt tenant
+   journey, including explicit incident consent, before a Version release PR
+   can be opened.
 
 ## Verified Native Feedback Schema
 

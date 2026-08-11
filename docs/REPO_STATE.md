@@ -106,6 +106,10 @@ the shortest path to resume work safely.
 - Enterprise policy blocks external npm downloads. No dependency or lockfile was
   added; the parser is a bounded state machine with hostile/malformed tests and
   does not render raw ServiceNow HTML.
+- Human visual validation completed on 2026-08-11: the user opened the deployed
+  Workstation Security Standard article and confirmed that the source-structured
+  view works much better and is easier to read. This approves the formatting
+  checkpoint for runtime commit `0dcfe4b`.
 - Native feedback is not yet written. Verified demo schema supports
   `kb_feedback` (`article`, `user`, `useful`, `rating`, `comments`, `reason`,
   `query`) and native article/task linkage through `m2m_kb_task`
@@ -117,9 +121,9 @@ the shortest path to resume work safely.
   excludes the tried article and offers an incident without creating one. The
   demo fallback setting is enabled, storage public access is `Disabled`, and no
   temporary exemption remains.
-- No public push or PR has occurred. Next: complete explicit Alex/admin human
-  validation, including the consented incident path, before opening a Version
-  release PR.
+- No public push or PR has occurred. Next: complete explicit Alex/admin
+  validation of the three-attempt journey and consented incident path before
+  opening a Version release PR.
 
 ## Operational checkpoint
 
