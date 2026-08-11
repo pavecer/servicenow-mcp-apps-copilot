@@ -24,7 +24,7 @@ import { TokenManager } from "./tokenManager";
 import { getDownstreamTokenForCaller, isOboEnabled } from "./oboTokenService";
 import { getRequestContext } from "../requestContext";
 import Logger from "../utils/logger";
-import { htmlToPlainText } from "../utils/catalogFields";
+import { knowledgeDocumentToPlainText, parseKnowledgeDocument } from "../utils/knowledgeDocument";
 
 // Maximum number of concurrent ServiceNow REST calls per fan-out batch.
 // Keeps load on the ServiceNow instance bounded and avoids tripping per-user
@@ -339,26 +339,17 @@ function knowledgeRows(payload: unknown): Array<Record<string, unknown>> {
   return [];
 }
 
-function stripKnowledgeExecutableBlocks(value: string): string {
-  let output = value;
-  for (const tagName of ["script", "style", "noscript", "template"]) {
-    const openToken = `<${tagName}`;
-    const closeToken = `</${tagName}>`;
-    while (true) {
-      const lower = output.toLowerCase();
-      const start = lower.indexOf(openToken);
-      if (start < 0) break;
-      const close = lower.indexOf(closeToken, start + openToken.length);
-      output = close < 0
-        ? output.slice(0, start)
-        : `${output.slice(0, start)} ${output.slice(close + closeToken.length)}`;
-    }
-  }
-  return output;
+function knowledgePlainText(value: string): string {
+  return knowledgeDocumentToPlainText(parseKnowledgeDocument(value));
 }
 
-function knowledgePlainText(value: string): string {
-  return htmlToPlainText(stripKnowledgeExecutableBlocks(value));
+function knowledgeArticleContent(row: Record<string, unknown>): Pick<KnowledgeArticleDetail, "content" | "contentDocument"> {
+  const rawContent = readKnowledgeString(row, ["text", "article_body", "content", "description"]);
+  const contentDocument = parseKnowledgeDocument(rawContent);
+  return {
+    content: knowledgeDocumentToPlainText(contentDocument).slice(0, 5_000),
+    contentDocument
+  };
 }
 
 function isVisiblePublishedKnowledgeRow(row: Record<string, unknown>): boolean {
@@ -1802,11 +1793,9 @@ export class ServiceNowClient {
       const row = knowledgeRows(response.data)[0];
       const candidate = row ? normalizeKnowledgeCandidate(row, 1) : undefined;
       if (!row || !candidate) throw new Error(`Knowledge article '${articleSysId}' was not found or is not accessible.`);
-      const content = knowledgePlainText(readKnowledgeString(row, ["text", "article_body", "content", "description"]))
-        .slice(0, 20_000);
       return {
         ...candidate,
-        content,
+        ...knowledgeArticleContent(row),
         sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
       };
     } catch (error) {
@@ -1843,8 +1832,7 @@ export class ServiceNowClient {
     }
     return {
       ...candidate,
-      content: knowledgePlainText(readKnowledgeString(row, ["text", "article_body", "content", "description"]))
-        .slice(0, 20_000),
+      ...knowledgeArticleContent(row),
       sourceLink: `${config.serviceNow.instanceUrl.replace(/\/$/, "")}/kb_view.do?sys_kb_id=${articleSysId}`
     };
   }

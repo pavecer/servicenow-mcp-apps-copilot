@@ -202,8 +202,24 @@ export interface RankedKnowledgeArticle extends ServiceNowKnowledgeCandidate {
   matchReasons: string[];
 }
 
+export type KnowledgeContentTag =
+  | "p" | "div" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+  | "ul" | "ol" | "li" | "strong" | "em" | "code" | "pre"
+  | "blockquote" | "br";
+
+export type KnowledgeContentNode =
+  | { type: "text"; text: string }
+  | { type: "element"; tag: KnowledgeContentTag; children: KnowledgeContentNode[] };
+
+export interface KnowledgeContentDocument {
+  version: 1;
+  nodes: KnowledgeContentNode[];
+  truncated: boolean;
+}
+
 export interface KnowledgeArticleDetail extends ServiceNowKnowledgeCandidate {
   content: string;
+  contentDocument?: KnowledgeContentDocument;
   sourceLink: string;
 }
 

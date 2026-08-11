@@ -58,7 +58,7 @@ describe("ServiceNowClient Knowledge methods", () => {
           sys_id: "b".repeat(32),
           number: "KB0010002",
           short_description: "Configure VPN",
-          text: "<p>Install the client.</p><script>alert(1)</script><p>Sign in.</p>"
+          text: "<h3>Mac</h3><ul><li>Install <strong>the client</strong><ul><li>Verify enrollment</li></ul></li></ul><p>Run <code>check</code>.</p><script>alert(1)</script>"
         }
       }
     });
@@ -68,9 +68,30 @@ describe("ServiceNowClient Knowledge methods", () => {
 
     expect(get).toHaveBeenCalledTimes(1);
     expect(get.mock.calls[0][1]).not.toHaveProperty("params");
-    expect(result.content).toContain("Install the client.");
+    expect(result.content).toContain("Install the client");
     expect(result.content).not.toContain("<script>");
     expect(result.content).not.toContain("alert(1)");
+    expect(result.contentDocument).toMatchObject({
+      version: 1,
+      truncated: false,
+      nodes: [
+        { type: "element", tag: "h3", children: [{ type: "text", text: "Mac" }] },
+        { type: "element", tag: "ul", children: [
+          { type: "element", tag: "li", children: [
+            { type: "text", text: "Install " },
+            { type: "element", tag: "strong", children: [{ type: "text", text: "the client" }] },
+            { type: "element", tag: "ul" }
+          ] }
+        ] },
+        { type: "element", tag: "p", children: [
+          { type: "text", text: "Run " },
+          { type: "element", tag: "code", children: [{ type: "text", text: "check" }] },
+          { type: "text", text: "." }
+        ] }
+      ]
+    });
+    expect(JSON.stringify(result.contentDocument)).not.toContain("alert(1)");
+    expect(result.content.length).toBeLessThanOrEqual(5_000);
     expect(result.sourceLink).toContain(`sys_kb_id=${"b".repeat(32)}`);
   });
 
@@ -145,7 +166,11 @@ describe("ServiceNowClient Knowledge methods", () => {
       const client = makeClient(get);
       const detail = await client.getKnowledgeArticle("e".repeat(32));
       expect(get.mock.calls[1][0]).toBe(`/api/now/table/kb_knowledge/${"e".repeat(32)}`);
-      expect(detail).toMatchObject({ number: "KB5", content: "Steps" });
+      expect(detail).toMatchObject({
+        number: "KB5",
+        content: "Steps",
+        contentDocument: { version: 1, truncated: false, nodes: [{ type: "text", text: "Steps" }] }
+      });
     } finally {
       (config.serviceNow as { knowledgeTableFallbackEnabled: boolean }).knowledgeTableFallbackEnabled = previous;
     }

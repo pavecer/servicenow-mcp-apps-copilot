@@ -40,9 +40,15 @@
   .content { font-size: 13px; line-height: 1.55; }
   .content h2 { margin: 18px 0 6px; font-size: 14px; }
   .content h2:first-child { margin-top: 0; }
+  .content h3 { margin: 14px 0 6px; font-size: 13px; }
   .content p { margin: 0 0 12px; }
   .content ol, .content ul { margin: 4px 0 16px; padding-left: 24px; }
+  .content li > ol, .content li > ul { margin: 8px 0 4px; }
   .content li { margin: 0 0 8px; padding-left: 2px; }
+  .content code { padding: 1px 4px; border-radius: 3px; background: var(--bg); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .92em; }
+  .content pre { margin: 8px 0 14px; padding: 10px; overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); white-space: pre-wrap; }
+  .content pre code { padding: 0; background: transparent; }
+  .content blockquote { margin: 8px 0 14px; padding: 6px 10px; border-left: 3px solid var(--border); color: var(--muted); }
   .article-contact { padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg); font-weight: 600; }
   .article-note { padding: 8px 10px; border-radius: 4px; background: var(--warning-bg); color: var(--fg); }
   .preview-note { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
@@ -94,8 +100,30 @@
     var candidates = line.match(/\+?\d[\d\s().-]*\d/g) || [];
     return candidates.some(function (candidate) { return (candidate.match(/\d/g) || []).length >= 8; });
   }
-  function renderArticleContent(value) {
+  function safeDocumentTag(tag) {
+    switch (tag) {
+      case "p": case "div": case "ul": case "ol": case "li": case "strong": case "em": case "code": case "pre": case "blockquote": case "br": return tag;
+      case "h1": case "h2": return "h2";
+      case "h3": case "h4": case "h5": case "h6": return "h3";
+      default: return "";
+    }
+  }
+  function renderDocumentNode(node) {
+    if (!node || typeof node !== "object") return null;
+    if (node.type === "text") return document.createTextNode(text(node.text));
+    var safeTag = node.type === "element" ? safeDocumentTag(node.tag) : "";
+    if (!safeTag) return null;
+    var element = make(safeTag, "");
+    (Array.isArray(node.children) ? node.children : []).forEach(function (child) { var rendered = renderDocumentNode(child); if (rendered) element.appendChild(rendered); });
+    return element;
+  }
+  function renderArticleContent(value, contentDocument) {
     var content = make("div", "content");
+    if (contentDocument && contentDocument.version === 1 && Array.isArray(contentDocument.nodes)) {
+      contentDocument.nodes.forEach(function (node) { var rendered = renderDocumentNode(node); if (rendered) content.appendChild(rendered); });
+      if (content.childNodes.length === 0) content.appendChild(make("p", "empty", "No article content is available."));
+      return { element: content, shortened: contentDocument.truncated === true };
+    }
     var rawContent = text(value).replace(/\r/g, "");
     var shortened = rawContent.length > 5000;
     var preview = shortened ? rawContent.slice(0, 5000).replace(/\s+\S*$/, "") : rawContent;
@@ -246,7 +274,7 @@
     root.appendChild(make("h1", "", text(article.title) || "Knowledge article"));
     if (article.number) root.appendChild(make("div", "meta", text(article.number)));
     addSourceMetadata(root, article);
-    var formatted = renderArticleContent(article.content);
+    var formatted = renderArticleContent(article.content, article.contentDocument);
     var card = make("article", "article"); card.appendChild(formatted.element);
     if (formatted.shortened) card.appendChild(make("p", "preview-note", article.sourceLink ? "Preview shortened. Open the full article in ServiceNow for the remaining content." : "Preview shortened. Ask Copilot for the remaining article content."));
     root.appendChild(card);

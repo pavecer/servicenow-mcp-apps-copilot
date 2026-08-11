@@ -131,6 +131,51 @@ describe("Knowledge MCP App", () => {
     expect(html).not.toContain("content.innerHTML");
   });
 
+  it("prefers the safe ServiceNow document structure over plain-text inference", () => {
+    const root = mountWidget({
+      mode: "detail",
+      attempt: 1,
+      originalQuestion: "Workstation security",
+      triedArticles: [],
+      article: {
+        title: "Workstation Security Standard",
+        content: "This fallback must not render",
+        contentDocument: {
+          version: 1,
+          truncated: false,
+          nodes: [
+            { type: "element", tag: "h1", children: [{ type: "text", text: "Mac" }] },
+            { type: "element", tag: "h3", children: [{ type: "text", text: "Casper Management Framework" }] },
+            { type: "element", tag: "ul", children: [
+              { type: "element", tag: "li", children: [
+                { type: "text", text: "Install agent" },
+                { type: "element", tag: "ul", children: [
+                  { type: "element", tag: "li", children: [
+                    { type: "element", tag: "strong", children: [{ type: "text", text: "Verify" }] },
+                    { type: "text", text: " enrollment" }
+                  ] }
+                ] }
+              ] }
+            ] },
+            { type: "element", tag: "p", children: [
+              { type: "text", text: "Run " },
+              { type: "element", tag: "code", children: [{ type: "text", text: "security-check" }] }
+            ] }
+          ]
+        }
+      }
+    });
+    expect(root.querySelectorAll("h2").map(element => element.textContent)).toEqual(["Mac"]);
+    expect(root.querySelectorAll("h3").map(element => element.textContent)).toEqual(["Casper Management Framework"]);
+    expect(root.querySelectorAll("ul")).toHaveLength(2);
+    expect(root.querySelectorAll("li")).toHaveLength(2);
+    expect(root.querySelectorAll("strong").map(element => element.textContent)).toEqual(["Verify"]);
+    expect(root.querySelectorAll("code").map(element => element.textContent)).toEqual(["security-check"]);
+    expect(root.textContent).not.toContain("fallback must not render");
+    expect(html).toContain('case "h1": case "h2": return "h2"');
+    expect(html).not.toContain("content.innerHTML");
+  });
+
   it("labels a shortened article preview instead of silently clipping it", () => {
     const root = mountWidget({
       mode: "detail",
@@ -144,6 +189,35 @@ describe("Knowledge MCP App", () => {
     ]);
     expect(html).not.toContain("max-height: 420px");
     expect(html).not.toContain("overflow: hidden; }\n  .content");
+  });
+
+  it("bounds structured previews and ignores inherited or unknown tag names", () => {
+    const root = mountWidget({
+      mode: "detail",
+      attempt: 1,
+      originalQuestion: "Structured article",
+      triedArticles: [],
+      article: {
+        title: "Structured article",
+        content: "fallback",
+        sourceLink: "https://example.service-now.com/kb",
+        contentDocument: {
+          version: 1,
+          truncated: true,
+          nodes: [
+            { type: "element", tag: "constructor", children: [{ type: "text", text: "Hidden" }] },
+            { type: "element", tag: "__proto__", children: [] },
+            { type: "element", tag: "p", children: [{ type: "text", text: "Visible preview" }] }
+          ]
+        }
+      }
+    });
+    expect(root.textContent).toContain("Visible preview");
+    expect(root.textContent).not.toContain("Hidden");
+    expect(root.querySelectorAll(".preview-note").map(element => element.textContent)).toEqual([
+      "Preview shortened. Open the full article in ServiceNow for the remaining content."
+    ]);
+    expect(html).toContain('default: return ""');
   });
 
   it("offers but never automatically creates an incident after attempt three", () => {

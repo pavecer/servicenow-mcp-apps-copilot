@@ -16,8 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Keep Knowledge article actions visible with compact ranked previews, format
-  category metadata clearly, decode numeric HTML entities, and render article
-  sections, steps, support contacts, and notes with readable semantics.
+  category metadata clearly, decode rich-text entities, and preserve bounded
+  ServiceNow heading, nested-list, emphasis, code, and block structure through
+  an attribute-free document model instead of article-specific text inference.
 <!-- release-impact: patch -->
 
 ## [1.2.0] - 2026-08-10
