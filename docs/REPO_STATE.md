@@ -82,13 +82,13 @@ the shortest path to resume work safely.
   demo environment, then validate Alex/OBO visibility before approval.
 - Durable implementation checklist and validation matrix:
   [KNOWLEDGE_RETRIEVAL_PLAN.md](KNOWLEDGE_RETRIEVAL_PLAN.md).
-- Local validation: 40 test files / 350 tests pass; backend and MCP Apps
+- Local validation: 41 test files / 360 tests pass; backend and MCP Apps
   specialist reviews APPROVE; search, attempt-3, and detail widget screenshots
-  passed desktop/responsive light/dark inspection. The ranked-list and semantic
-  article-detail follow-ups also passed actual-source desktop light and narrow
-  dark rendering.
+  passed desktop/responsive light/dark inspection. The ranked-list and
+  source-structured article-detail follow-ups also passed actual-source desktop
+  light and narrow dark rendering.
 - Minor release preparation synchronized npm/M365/changelog at `1.2.0`.
-  Runtime commit `e37f154` is deployed only to `snowmcpwidg-dev`; live validation
+  Runtime commit `0dcfe4b` is deployed only to `snowmcpwidg-dev`; live validation
   reports 26 tools. The existing developer app passed 61 package checks and was
   updated under title `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169` without catalog
   publication.
@@ -96,9 +96,16 @@ the shortest path to resume work safely.
   bottom actions, labeled metadata, category-preserving narrow layout, and
   numeric HTML entity decoding. Live search returned five results with no
   numeric entity literals in title/snippet/category/base fields.
-- Selected article detail now uses semantic headings, preserved numbered and
-  bulleted steps, support contact callouts, notes, and explicit shortened-preview
-  recovery instead of a flat or silently clipped text block.
+- Selected article detail now preserves ServiceNow source headings, paragraphs,
+  nested ordered/unordered lists, emphasis, code/preformatted text, blockquotes,
+  and breaks through a bounded attribute-free document model. Plain text derives
+  from the same sanitized tree, and shortened previews are explicit.
+- Live KB0005001 detail exposes document v1 with 2 major headings, 10 subsection
+  headings, 14 nested lists, 40 items, depth 5, and no truncation. VPN, cookie,
+  and password source structures were also verified read-only.
+- Enterprise policy blocks external npm downloads. No dependency or lockfile was
+  added; the parser is a bounded state machine with hostile/malformed tests and
+  does not render raw ServiceNow HTML.
 - Native feedback is not yet written. Verified demo schema supports
   `kb_feedback` (`article`, `user`, `useful`, `rating`, `comments`, `reason`,
   `query`) and native article/task linkage through `m2m_kb_task`

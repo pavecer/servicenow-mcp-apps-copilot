@@ -138,7 +138,7 @@ loading/error states, and shows no more than two bottom actions.
 - [x] Tool/widget lockstep manifests and exact-count tests
 - [x] Scenario, setup, configuration, and handover documentation
 - [x] Full local build/test/security review
-- [x] Deploy exact runtime commit `e37f154` to `snowmcpwidg-dev`
+- [x] Deploy exact runtime commit `0dcfe4b` to `snowmcpwidg-dev`
 - [ ] Human validation as Alex and admin
 - [ ] Public PR only after explicit approval
 
@@ -159,26 +159,36 @@ loading/error states, and shows no more than two bottom actions.
 
 ## Local Validation Checkpoint
 
-- Full repository: 40 test files / 350 tests passed.
+- Full repository: 41 test files / 360 tests passed.
 - Backend and MCP Apps specialist reviews: APPROVE after all High/Medium
    findings were remediated.
 - Visual review passed for desktop search, responsive dark attempt 3,
-   responsive article detail, the compact ranked-results update, and semantic
-   detail sections/lists/contact callouts/notes in desktop light and narrow dark
-   layouts using the actual widget source.
+   responsive article detail, the compact ranked-results update, and preserved
+   source headings/nested lists in desktop light and narrow dark layouts using
+   the actual widget source.
 - Minor release preparation completed: canonical npm/M365 version is `1.2.0`
    and the dated changelog section contains the validated release notes.
-- Runtime commit `e37f154` is deployed only to `snowmcpwidg-dev`; live MCP
+- Runtime commit `0dcfe4b` is deployed only to `snowmcpwidg-dev`; live MCP
    validation reports 26 tools, and the existing developer M365 app passed all
    61 package checks and was updated without organizational publication.
 - Ranked search now renders the top three compact previews so both actions stay
    visible, labels Knowledge base/category/update metadata, retains category in
    the narrow layout, and decodes decimal/hex numeric HTML entities before they
    reach the widget.
-- Selected articles now render sanitized text as semantic sections, preserved
-   numbered/bulleted steps, support contact callouts, and notes. Long previews
-   are explicitly labeled and route to the full ServiceNow article instead of
-   being silently clipped.
+- Selected articles now preserve ServiceNow's returned heading, paragraph,
+   nested-list, emphasis, code, preformatted, blockquote, and line-break
+   structure through a bounded attribute-free document model. Executable blocks,
+   attributes, and unknown tags are removed; plain model text derives from the
+   same sanitized tree. Long previews are explicitly labeled and route to the
+   full ServiceNow article.
+- No package was added: managed-machine policy blocks external npm downloads,
+   so the implementation uses a dependency-free bounded state-machine parser
+   with hostile/malformed fixtures rather than bypassing policy or rendering raw
+   ServiceNow HTML.
+- Live deployed KB0005001 validation reports document v1 with 2 `h1`, 10 `h3`,
+   14 nested `ul`, 40 `li`, maximum depth 5, and no truncation. Read-only probes
+   also preserved VPN ordered/nested lists and emphasis, cookie headings/code,
+   and password paragraph/strong structure.
 - Live delegated-admin validation returned five ranked articles, opened
    `KB0005012` with content and a ServiceNow source link, and confirmed that
    attempt 3 excludes the tried article and sets `offerIncident: true` without
