@@ -66,8 +66,8 @@ m365-agent/               Declarative-agent package (manifest, ai-plugin, tools)
 scripts/                  deploy/setup PowerShell + dev/ helper scripts
 docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy)
 .github/
-  agents/*.chatmode.md    Custom VS Code agents (Copilot-ready release, deploy, MCP Apps UI)
-  skills/mcp-apps-ui/     Skill: MCP Apps UI/UX guidelines + repo conventions
+  agents/*.{agent,chatmode}.md  Custom VS Code agents (release, deploy, UI, communications)
+  skills/                 MCP Apps UI and release-communications workflows
 ```
 
 - `release:auto` stops at the human test boundary: build, tests, policy-aware
@@ -82,6 +82,9 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
 - Public releases follow [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md). Every PR
   selects one release impact and human-validation state; user-facing behavior
   must be approved in the test tenant before the public PR is opened.
+- After a GitHub Release exists, use the **Release Communications** agent or
+  `.github/skills/release-communications/` to update GitHub Pages and prepare an
+  approval-gated LinkedIn draft. Never announce `Unreleased` or test-only state.
 
 ## Critical invariants (violating these breaks cold start or tests)
 

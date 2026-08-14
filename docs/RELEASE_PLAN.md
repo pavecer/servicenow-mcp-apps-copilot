@@ -142,6 +142,22 @@ npm run release:publish -- \
 Teams Admin Center approval is still required. Never run `release:publish` as an
 automatic consequence of merging to `main` or creating a GitHub Release.
 
+## Release Communications
+
+After the GitHub Release exists, use the workspace **Release Communications**
+agent or `release-communications` skill to prepare the public announcement. The
+dated `CHANGELOG.md` release section remains the source of truth.
+
+The workflow updates `site/index.html` to the released public baseline, creates
+an approval-marked LinkedIn draft under `release-comms/`, verifies the public
+release and project links, and prepares a dedicated communications PR. Merging
+the site change to `main` triggers the existing GitHub Pages workflow.
+
+LinkedIn publication is deliberately separate. The agent must present the exact
+final draft and receive explicit approval in the current conversation before it
+may publish or schedule anything. If no authorized LinkedIn integration is
+available, publication remains manual.
+
 ## Hotfixes and Rollbacks
 
 - A hotfix is a patch release from current supported `main`.
@@ -160,4 +176,6 @@ automatic consequence of merging to `main` or creating a GitHub Release.
 - [ ] Release PR is merged before tagging.
 - [ ] Tag exactly matches the canonical version.
 - [ ] GitHub Release notes match the changelog.
+- [ ] GitHub Pages reflects the released public baseline.
+- [ ] LinkedIn copy was checked against the dated changelog and explicitly approved.
 - [ ] Organizational catalog publication, if any, has separate approval.
