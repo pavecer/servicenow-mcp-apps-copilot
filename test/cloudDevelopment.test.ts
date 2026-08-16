@@ -124,6 +124,7 @@ describe("Codespaces cloud development", () => {
     expect(deployWorkflow).toContain("azd env refresh");
     expect(deployWorkflow).toContain("Validate live MCP tools");
     expect(deployWorkflow).not.toContain("environment: ${{ vars.AZURE_ENV_NAME }}");
+    expect(deployWorkflow).not.toMatch(/^\s{2}push:/m);
     expect(releasePlan).toContain("single development approval gate");
     expect(copilotSetup).toContain("copilot-setup-steps:");
     expect(copilotSetup).toContain("node-version: 20");
