@@ -80,6 +80,12 @@ must use an identity that can read and deploy to `AZURE_RESOURCE_GROUP`. Privile
 Agent 365 or tenant-admin approval remains a human/admin operation; Codespaces
 does not bypass those roles.
 
+The Codespace can reach the public Azure Function and ServiceNow test instance,
+and it can provision/update the M365 developer agent after interactive sign-in.
+It cannot impersonate the final human MCP Apps conversation or bypass tenant
+Conditional Access, consent, licensing, or admin policy. `release:auto` stops at
+that boundary by design.
+
 ## Validate the cloud workstation
 
 ```bash
@@ -126,14 +132,24 @@ approval-gated `release:publish` operation.
 Use the workspace **Cloud Development** agent or load the `cloud-development`
 skill for end-to-end work. Agents own implementation, specialist delegation,
 tests, exact-commit Azure deployment, ServiceNow verification, M365 prompt
-preparation, and draft PR evidence. The only human development gate is one
-approving PR review after the prepared MCP Apps click-through succeeds in the
-Microsoft 365 test tenant and its expected records or read results are confirmed
-in the ServiceNow test environment.
+preparation, and draft PR evidence. The only human development gate follows the
+prepared MCP Apps click-through in the Microsoft 365 test tenant and confirmation
+of its expected records or read results in the ServiceNow test environment.
 
-Branch protection should require the `Build and test` status check, resolved
-conversations, stale-review dismissal, and exactly one approving review. A push
-after approval invalidates the evidence and requires the final gate again.
+Every user-facing PR must contain a completed **Human test plan** before review.
+The agent writes exact prompts/clicks and expected widget states, identifies the
+test personas and fixtures, lists ServiceNow record/attribution/ACL checks, and
+provides cleanup steps. The approver follows that script and records `PASS` or
+the failed step in the PR. An independent collaborator submits an approving
+review; in a sole-maintainer repository, the maintainer's explicit merge
+instruction after recording `PASS` is the approval record.
+
+Branch protection must require the `Build and test` status check and resolved
+conversations. Require one approving review when an independent reviewer is
+available. GitHub cannot accept an author's approval of their own PR, so a
+sole-maintainer repository instead keeps the review count at zero and relies on
+the recorded Human result plus explicit merge instruction. A push after either
+form of approval invalidates the evidence and requires the final gate again.
 
 GitHub's hosted Copilot coding agent uses
 `.github/workflows/copilot-setup-steps.yml` to pin Node 20, install locked

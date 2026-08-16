@@ -23,9 +23,8 @@ build commands, secrets, and release boundaries.
 
 ## One human approval gate
 
-The only development approval gate is the final approving PR review after the
-exact candidate has passed automated validation and human click-through in both
-test environments:
+The only development approval gate occurs after the exact candidate has passed
+automated validation and human click-through in both test environments:
 
 1. ServiceNow test instance: validate the expected records, caller attribution,
    ACL behavior, and cleanup for the changed scenario.
@@ -33,9 +32,11 @@ test environments:
    widget interaction against the deployed exact commit.
 
 Agents prepare the prompts, deploy the candidate, collect non-secret evidence,
-and update the PR. The human records the click-through result and approves the
-PR once. Any push after approval invalidates that approval and requires the same
-final gate again.
+and update the PR. The human records `PASS` and explicitly authorizes merge. If
+an independent reviewer exists, use one approving GitHub review as that record;
+in a sole-maintainer repository, use the PR evidence plus an explicit merge
+instruction. Any push after approval invalidates it and requires the same final
+gate again.
 
 Tenant admin consent, organizational catalog approval, production deployment,
 and public communications are privileged operational actions outside this

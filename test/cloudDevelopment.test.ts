@@ -106,6 +106,13 @@ describe("Codespaces cloud development", () => {
     expect(agent).toContain("user-invocable: true");
     expect(instructions).toContain("## One human approval gate");
     expect(pullRequestTemplate).toContain("### Candidate evidence");
+    expect(pullRequestTemplate).toContain("### Human test plan");
+    expect(pullRequestTemplate).toContain("Manual steps and expected results");
+    expect(pullRequestTemplate).toContain("ServiceNow verification");
+    expect(pullRequestTemplate).toContain("Human result: PENDING");
+    expect(pullRequestTemplate).toContain("Approval record: PENDING");
+    expect(skill).toContain("explicit merge instruction from the sole maintainer");
+    expect(read("docs/CODESPACES.md")).toContain("sole-maintainer repository");
     expect(releasePlan).toContain("single development approval gate");
     expect(copilotSetup).toContain("copilot-setup-steps:");
     expect(copilotSetup).toContain("node-version: 20");
