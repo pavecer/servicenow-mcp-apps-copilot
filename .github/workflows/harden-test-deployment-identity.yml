@@ -1,0 +1,88 @@
+name: Harden test deployment identity
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restrict deployment identity to test resources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          identity="$(az identity list \
+            --query "[?clientId=='$AZURE_CLIENT_ID'] | [0]" \
+            --output json)"
+          principal_id="$(jq -r '.principalId // empty' <<<"$identity")"
+          if [[ -z "$principal_id" ]]; then
+            echo "Managed deployment identity was not found" >&2
+            exit 1
+          fi
+
+          subscription_scope="/subscriptions/$AZURE_SUBSCRIPTION_ID"
+          resource_group_scope="$subscription_scope/resourceGroups/$AZURE_RESOURCE_GROUP"
+          storage_id="$(az storage account list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query '[0].id' \
+            --output tsv)"
+          if [[ -z "$storage_id" ]]; then
+            echo "Deployment storage account was not found" >&2
+            exit 1
+          fi
+
+          az role assignment create \
+            --assignee-object-id "$principal_id" \
+            --assignee-principal-type ServicePrincipal \
+            --role Contributor \
+            --scope "$resource_group_scope" \
+            --output none
+          az role assignment create \
+            --assignee-object-id "$principal_id" \
+            --assignee-principal-type ServicePrincipal \
+            --role "User Access Administrator" \
+            --scope "$resource_group_scope" \
+            --output none
+          az role assignment create \
+            --assignee-object-id "$principal_id" \
+            --assignee-principal-type ServicePrincipal \
+            --role "Storage Blob Data Contributor" \
+            --scope "$storage_id" \
+            --output none
+
+          mapfile -t broad_assignments < <(az role assignment list \
+            --assignee-object-id "$principal_id" \
+            --scope "$subscription_scope" \
+            --query "[?scope=='$subscription_scope' && (roleDefinitionName=='Contributor' || roleDefinitionName=='User Access Administrator')].id" \
+            --output tsv)
+          if (( ${#broad_assignments[@]} > 0 )); then
+            az role assignment delete --ids "${broad_assignments[@]}"
+          fi
+
+          remaining_broad="$(az role assignment list \
+            --assignee-object-id "$principal_id" \
+            --scope "$subscription_scope" \
+            --query "[?scope=='$subscription_scope'] | length(@)" \
+            --output tsv)"
+          if [[ "$remaining_broad" != "0" ]]; then
+            echo "Subscription-scope assignments remain" >&2
+            exit 1
+          fi
