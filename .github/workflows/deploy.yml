@@ -21,13 +21,6 @@ on:
         description: Exact 40-character commit SHA to deploy to the test environment
         required: true
         type: string
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - ".github/skills/**"
-      - ".github/agents/**"
 
 permissions:
   id-token: write # required to request the OIDC token
@@ -47,6 +40,7 @@ jobs:
       AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      FUNCTION_APP_NAME: ${{ vars.FUNCTION_APP_NAME }}
       CANDIDATE_REF: ${{ inputs.candidate_ref || github.sha }}
     steps:
       - name: Validate exact candidate
@@ -73,30 +67,34 @@ jobs:
           npm ci
           npm run build
 
-      - name: Install azd
-        uses: Azure/setup-azd@v2
-
       - name: Azure login (OIDC federated credential)
-        run: azd auth login --client-id "$AZURE_CLIENT_ID" --federated-credential-provider github --tenant-id "$AZURE_TENANT_ID"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Restore azd environment
+      - name: Create remote-build source package
         shell: bash
         run: |
-          azd env new "$AZURE_ENV_NAME" \
-            --subscription "$AZURE_SUBSCRIPTION_ID" \
-            --location "$AZURE_LOCATION" \
-            --no-prompt
-          azd env set AZURE_RESOURCE_GROUP "$AZURE_RESOURCE_GROUP"
-          azd env refresh "$AZURE_ENV_NAME" --no-prompt
+          mkdir -p .tmp
+          zip -q -r .tmp/candidate-source.zip . \
+            -x '.git/*' 'node_modules/*' 'dist/*' '.tmp/*' '.azure/*' \
+               'local.settings.json' '.env' 'env/*' 'debug/*' \
+               'm365-agent/appPackage/build/*'
 
       - name: Deploy application code to Azure
-        # `azd deploy` ships the built code to already-provisioned infra.
-        # For the very first deployment (to create the infra), run `azd up`
-        # locally once — see README "Deploy to Azure".
-        run: azd deploy --no-prompt
+        run: >-
+          az functionapp deployment source config-zip
+          --name "$FUNCTION_APP_NAME"
+          --resource-group "$AZURE_RESOURCE_GROUP"
+          --src .tmp/candidate-source.zip
+          --build-remote true
+          --timeout 600
+          --output none
 
       - name: Validate live MCP tools
         shell: bash
         run: |
-          endpoint="$(azd env get-value MCP_ENDPOINT_URL)"
+          endpoint="https://${FUNCTION_APP_NAME}.azurewebsites.net/mcp"
           npm run validate:live -- --endpoint "$endpoint"
