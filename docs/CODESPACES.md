@@ -124,9 +124,10 @@ gh workflow run deploy.yml \
 
 Always dispatch the workflow definition from `main`. It checks out the supplied
 candidate SHA only after validating that it is immutable, while the OIDC token
-remains bound to the trusted `main` workflow. The job restores the existing azd
-test environment, deploys application code without provisioning infrastructure,
-and validates the live MCP tool surface.
+remains bound to the trusted `main` workflow. The job creates a bounded source
+package, uses Azure CLI remote build to deploy only Function code without
+provisioning infrastructure or reading runtime secrets, and validates the live
+MCP tool surface.
 
 Do not store a human M365 password, browser cache, device-code token, or refresh
 token to simulate app-only M365 support. The current `atk auth login m365`
