@@ -121,12 +121,14 @@ describe("Codespaces cloud development", () => {
     expect(read("docs/CODESPACES.md")).toContain("do not support application permissions");
     expect(deployWorkflow).toContain("candidate_ref:");
     expect(deployWorkflow).toContain("ref: ${{ env.CANDIDATE_REF }}");
-    expect(deployWorkflow).toContain("azure/login@v2");
-    expect(deployWorkflow).toContain("config-zip");
-    expect(deployWorkflow).toContain("--build-remote true");
+    expect(deployWorkflow).toContain("Azure/setup-azd@v2");
+    expect(deployWorkflow).toContain("azd provision --no-prompt");
+    expect(deployWorkflow).toContain("azd deploy --no-prompt");
+    expect(deployWorkflow).toContain("secrets.SERVICENOW_CLIENT_SECRET");
     expect(deployWorkflow).toContain("Validate live MCP tools");
     expect(deployWorkflow).not.toContain("environment: ${{ vars.AZURE_ENV_NAME }}");
     expect(deployWorkflow).not.toContain("azd env refresh");
+    expect(deployWorkflow).not.toContain("config-zip");
     expect(deployWorkflow).not.toMatch(/^\s{2}push:/m);
     expect(releasePlan).toContain("single development approval gate");
     expect(copilotSetup).toContain("copilot-setup-steps:");

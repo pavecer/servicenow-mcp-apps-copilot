@@ -42,6 +42,22 @@ jobs:
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       FUNCTION_APP_NAME: ${{ vars.FUNCTION_APP_NAME }}
       CANDIDATE_REF: ${{ inputs.candidate_ref || github.sha }}
+      CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
+      ENTRA_ALLOWED_AUDIENCES: ${{ vars.ENTRA_ALLOWED_AUDIENCES }}
+      ENTRA_AUDIENCE: ${{ vars.ENTRA_AUDIENCE }}
+      ENTRA_AUTH_DISABLED: ${{ vars.ENTRA_AUTH_DISABLED }}
+      ENTRA_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
+      ENTRA_OAUTH_SCOPES: ${{ vars.ENTRA_OAUTH_SCOPES }}
+      ENTRA_OBO_DOWNSTREAM_SCOPE: ${{ vars.ENTRA_OBO_DOWNSTREAM_SCOPE }}
+      ENTRA_OBO_ENABLED: ${{ vars.ENTRA_OBO_ENABLED }}
+      ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID }}
+      LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+      SERVICENOW_CLIENT_ID: ${{ vars.SERVICENOW_CLIENT_ID }}
+      SERVICENOW_INSTANCE_URL: ${{ vars.SERVICENOW_INSTANCE_URL }}
+      SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED: ${{ vars.SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED }}
+      SERVICENOW_OAUTH_GRANT_TYPE: ${{ vars.SERVICENOW_OAUTH_GRANT_TYPE }}
+      SERVICENOW_OAUTH_TOKEN_PATH: ${{ vars.SERVICENOW_OAUTH_TOKEN_PATH }}
+      SERVICENOW_USERNAME: ${{ vars.SERVICENOW_USERNAME }}
     steps:
       - name: Validate exact candidate
         shell: bash
@@ -67,34 +83,32 @@ jobs:
           npm ci
           npm run build
 
-      - name: Azure login (OIDC federated credential)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      - name: Install azd
+        uses: Azure/setup-azd@v2
 
-      - name: Create remote-build source package
-        shell: bash
-        run: |
-          mkdir -p .tmp
-          zip -q -r .tmp/candidate-source.zip . \
-            -x '.git/*' 'node_modules/*' 'dist/*' '.tmp/*' '.azure/*' \
-               'local.settings.json' '.env' 'env/*' 'debug/*' \
-               'm365-agent/appPackage/build/*'
+      - name: Azure login (OIDC federated credential)
+        run: >-
+          azd auth login
+          --client-id "$AZURE_CLIENT_ID"
+          --federated-credential-provider github
+          --tenant-id "$AZURE_TENANT_ID"
+
+      - name: Reconcile test infrastructure
+        run: azd provision --no-prompt
+        env:
+          ENTRA_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
+          SERVICENOW_CLIENT_SECRET: ${{ secrets.SERVICENOW_CLIENT_SECRET }}
+          SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
 
       - name: Deploy application code to Azure
-        run: >-
-          az functionapp deployment source config-zip
-          --name "$FUNCTION_APP_NAME"
-          --resource-group "$AZURE_RESOURCE_GROUP"
-          --src .tmp/candidate-source.zip
-          --build-remote true
-          --timeout 600
-          --output none
+        run: azd deploy --no-prompt
+        env:
+          ENTRA_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
+          SERVICENOW_CLIENT_SECRET: ${{ secrets.SERVICENOW_CLIENT_SECRET }}
+          SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
 
       - name: Validate live MCP tools
         shell: bash
         run: |
-          endpoint="https://${FUNCTION_APP_NAME}.azurewebsites.net/mcp"
+          endpoint="$(azd env get-value MCP_ENDPOINT_URL)"
           npm run validate:live -- --endpoint "$endpoint"

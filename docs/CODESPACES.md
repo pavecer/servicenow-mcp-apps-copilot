@@ -125,9 +125,13 @@ gh workflow run deploy.yml \
 Always dispatch the workflow definition from `main`. It checks out the supplied
 candidate SHA only after validating that it is immutable, while the OIDC token
 remains bound to the trusted `main` workflow. The job creates a bounded source
-package, uses Azure CLI remote build to deploy only Function code without
-provisioning infrastructure or reading runtime secrets, and validates the live
-MCP tool surface.
+checkout, reconciles the existing test infrastructure with `azd provision`,
+deploys Function code with `azd deploy`, and validates the live MCP tool surface.
+Runtime ServiceNow and Entra values are stored only as encrypted Actions secrets
+or non-secret GitHub variables and are passed only to provision/deploy steps.
+The deployment identity is scoped to the test resource group plus deployment
+storage; it has no subscription-wide assignment. This workflow never provisions
+or publishes the M365 agent package.
 
 Do not store a human M365 password, browser cache, device-code token, or refresh
 token to simulate app-only M365 support. The current `atk auth login m365`
