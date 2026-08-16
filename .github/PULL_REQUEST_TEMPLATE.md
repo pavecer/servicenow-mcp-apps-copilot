@@ -41,8 +41,9 @@ Select exactly one.
 
 ## Human validation
 
-Select exactly one. User-facing behavior must be tested before this public PR
-is opened.
+Select exactly one. Agents may open a draft PR while evidence is pending. A
+user-facing PR must not merge until the final approving review is submitted
+after click-through validation in both test environments.
 
 - [ ] Not required — no user-facing behavior changed
 - [ ] Completed maintainer workflow review — release/CI tooling only
@@ -52,10 +53,25 @@ is opened.
 
 <!-- State what was tested and where, or why human validation is not required. -->
 
+<!-- For user-facing changes include the exact SHA, M365 agent prompts/widget -->
+<!-- result, corresponding ServiceNow record/ACL result, and cleanup outcome. -->
+
+### Candidate evidence
+
+- Exact SHA:
+- Build/tests/release check:
+- Azure test deployment and live tools:
+- ServiceNow test environment:
+- M365 test tenant click-through:
+- Fixture cleanup and storage security restoration:
+- Final approving review:
+
 ## Checklist
 
 - [ ] `npm run build && npm test` passes locally.
 - [ ] `npm run release:check` passes locally.
+- [ ] The exact deployed SHA is recorded above; no commits were pushed after
+      the final approving review.
 - [ ] Tests added or updated where practical.
 - [ ] If a tool/widget was added or renamed, **all** lockstep locations were
       updated together (tool file + Zod schema, `src/tools/index.ts`,

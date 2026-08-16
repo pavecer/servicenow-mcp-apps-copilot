@@ -24,6 +24,7 @@ Copilot / Cowork** via **MCP Apps (SEP-1865)** interactive HTML widgets.
 
 ```bash
 npm install            # install deps
+npm run cloud:check    # verify Codespaces tools, identities, Azure access, and endpoint
 npm run build          # build-widgets.mjs (regenerates generated/) THEN tsc
 npm test               # vitest — full suite (exact-count manifest/widget tests)
 npm run release:auto -- --environment snowmcpwidg-dev # deploy through M365 prompt-test readiness
@@ -65,8 +66,9 @@ m365-agent/               Declarative-agent package (manifest, ai-plugin, tools)
 scripts/                  deploy/setup PowerShell + dev/ helper scripts
 docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy)
 .github/
-  agents/*.chatmode.md    Custom VS Code agents (Copilot-ready release, deploy, MCP Apps UI)
-  skills/mcp-apps-ui/     Skill: MCP Apps UI/UX guidelines + repo conventions
+  copilot-instructions.md      Always-on repository agent and single-gate policy
+  agents/*.{agent,chatmode}.md Custom agents (cloud orchestration, release, deploy, UI)
+  skills/                      Cloud development and MCP Apps UI workflows
 ```
 
 - `release:auto` stops at the human test boundary: build, tests, policy-aware
@@ -80,7 +82,26 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
   submitting another one.
 - Public releases follow [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md). Every PR
   selects one release impact and human-validation state; user-facing behavior
-  must be approved in the test tenant before the public PR is opened.
+  is prepared in a draft PR and receives one final human approval after
+  Microsoft 365 click-through and ServiceNow test-environment verification.
+
+## Agent portfolio
+
+- **Cloud Development** plus `.github/skills/cloud-development/`: primary
+  Codespaces workflow from implementation through exact-commit test deployment,
+  two-environment evidence, and approval-ready draft PR.
+- **mcp-apps-ui** plus `.github/skills/mcp-apps-ui/`: widget UX, host bridge,
+  protocol metadata, visual states, and widget/tool lockstep.
+- **copilot-ready-release**: build, tests, policy-aware Azure deployment, live
+  tools, and existing M365 developer package update.
+- **deploy-mcp-server**: Azure Functions provisioning and deployment repair.
+- **deploy-mcp-container**: optional Container Apps deployment path only.
+
+GitHub's hosted Copilot coding agent uses
+`.github/workflows/copilot-setup-steps.yml` for Node 20, locked dependencies,
+build output, and contract tests. It has no tenant secrets. Live ServiceNow,
+Azure test deployment, and M365 work run from the Codespace agent after
+`npm run cloud:check`.
 
 ## Critical invariants (violating these breaks cold start or tests)
 

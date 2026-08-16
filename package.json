@@ -40,6 +40,8 @@
     "demo:cleanup": "node scripts/dev/seed-approval-demo.mjs cleanup --confirm",
     "sn:local": "npm run build && node scripts/dev/test-servicenow-local.mjs",
     "preflight:readiness": "node scripts/dev/preflight-readiness.mjs",
+    "codespaces:configure": "node .devcontainer/scripts/configure-codespaces.mjs",
+    "cloud:check": "node .devcontainer/scripts/configure-codespaces.mjs --strict && node .devcontainer/scripts/check-cloud-readiness.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
