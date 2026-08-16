@@ -39,6 +39,9 @@
 | **Azure subscription** | Permissions to create resource groups, Function Apps, App registrations, Key Vault |
 | **Azure CLI & azd** | [Installation guide](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) |
 | **Node.js 20+** | To build locally |
+| **PowerShell 7** | Required by deployment and ServiceNow setup scripts on every OS |
+| **Azure Functions Core Tools 4** | Required for `npm start` and local Functions debugging |
+| **M365 Agents Toolkit** | The release workflow runs the CLI through `npx`; install the recommended VS Code extension for interactive agent work |
 | **ServiceNow instance** | Admin access to set up OAuth apps and integration user |
 | **Microsoft Entra ID** | Permissions to register an app |
 | **Microsoft 365 Copilot** | License required to run the declarative agent |
@@ -62,7 +65,7 @@ pwsh -File scripts/setup-servicenow.ps1 -InstanceUrl https://<instance>.service-
 - Add **Web redirect URIs**: `https://oauth.botframework.com/callback`, `https://global.consent.azure-apim.net/redirect`
 
 **3. Deploy to Azure:**
-```bash
+```powershell
 npm run deploy:azure
 ```
 → Prompted for values; Function App + Key Vault + App Insights provisioned.
@@ -124,9 +127,11 @@ npm run deploy:azure
 
 ## Develop Locally
 
-```bash
-npm install
-cp local.settings.sample.json local.settings.json
+```powershell
+# Configure your organization-approved registry before installing packages.
+npm config set registry https://<approved-registry>/ --location=user
+npm ci
+Copy-Item local.settings.sample.json local.settings.json
 # Edit local.settings.json with your ServiceNow + Entra credentials
 npm run build    # regenerates widgets, then tsc
 npm test         # vitest — must pass before PR
@@ -134,13 +139,13 @@ npm run start:dev # runs on http://localhost:7071/mcp
 ```
 
 **Test the deployment:**
-```bash
+```powershell
 npm run smoke:test   # validates connectivity + sample flows
 ```
 
 **Automated release up to M365 Copilot prompt testing:**
 
-```bash
+```powershell
 npm run release:auto -- --environment snowmcpwidg-dev
 ```
 

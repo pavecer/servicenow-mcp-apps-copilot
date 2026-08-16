@@ -21,6 +21,8 @@
     "build:widgets": "node scripts/dev/build-widgets.mjs",
     "prebuild": "npm run build:widgets",
     "build": "tsc -p .",
+    "prewatch": "npm run build:widgets",
+    "watch": "tsc -w -p .",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "deploy:azure": "pwsh -File scripts/deploy-azure.ps1",
     "start:standalone": "npm run build && node dist/server.js",
@@ -59,8 +61,11 @@
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.43",
     "@vitest/coverage-v8": "^4.1.9",
+    "archiver": "^8.0.0",
+    "cross-spawn": "^7.0.6",
     "esbuild": "^0.28.1",
     "typescript": "^5.9.3",
+    "unzipper": "^0.12.5",
     "vitest": "^4.1.5"
   },
   "overrides": {
