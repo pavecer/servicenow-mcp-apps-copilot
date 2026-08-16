@@ -2,6 +2,9 @@ name: Harden test deployment identity
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - chore/release-communications
 
 permissions:
   id-token: write
