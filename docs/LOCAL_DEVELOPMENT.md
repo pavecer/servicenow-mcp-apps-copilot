@@ -2,6 +2,10 @@
 
 This guide covers building, testing, and troubleshooting the ServiceNow MCP server locally.
 
+For a reproducible cloud workstation with the same toolchain plus Azure,
+ServiceNow, and Microsoft 365 test-environment access, see
+[GitHub Codespaces development](CODESPACES.md).
+
 ## Setup
 
 ### 1. Install Dependencies
