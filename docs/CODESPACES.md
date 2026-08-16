@@ -80,6 +80,66 @@ must use an identity that can read and deploy to `AZURE_RESOURCE_GROUP`. Privile
 Agent 365 or tenant-admin approval remains a human/admin operation; Codespaces
 does not bypass those roles.
 
+The Codespace can reach the public Azure Function and ServiceNow test instance,
+and it can provision/update the M365 developer agent after interactive sign-in.
+It cannot impersonate the final human MCP Apps conversation or bypass tenant
+Conditional Access, consent, licensing, or admin policy. `release:auto` stops at
+that boundary by design.
+
+## Authentication and autonomy matrix
+
+| Work | Autonomous after setup | Supported authentication |
+| --- | --- | --- |
+| Build, unit tests, package validation | Yes | No cloud identity required |
+| Azure code deployment | Yes | GitHub Actions OIDC (preferred), or a dedicated Azure service principal/certificate |
+| ServiceNow integration API checks | Yes | Repository-scoped Codespaces secrets for the test integration identity |
+| ServiceNow per-user OBO/ACL proof | No | Final human test personas supply delegated identity |
+| M365 package build and schema validation | Yes | No M365 login required |
+| M365 developer-agent/OAuth-vault provision or update | No | Delegated licensed M365 test account through `atk auth login m365` |
+| M365 Copilot conversation and MCP Apps click-through | No | Final human test in the licensed test tenant |
+
+The repository's `.github/workflows/deploy.yml` is already prepared for
+secretless Azure deployment through GitHub OIDC, but remains inert until a
+maintainer completes the one-time `azd pipeline config --provider github`
+bootstrap in the correct Azure tenant/subscription. That command creates the
+federated credential and configures `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
+`AZURE_SUBSCRIPTION_ID`, `AZURE_ENV_NAME`, and `AZURE_LOCATION`. After bootstrap,
+an agent can dispatch the workflow for a candidate branch without an interactive
+Azure login or a stored Azure client secret.
+
+The bootstrap values live in GitHub repository settings, not tracked env files.
+Secret values remain encrypted Actions/Codespaces secrets; tenant, subscription,
+location, environment, and resource-group identifiers are non-secret GitHub
+variables. The workflow itself is intentionally visible and auditable in the
+repository, while credentials are never committed.
+
+Deploy an exact candidate without trusting its workflow definition:
+
+```bash
+gh workflow run deploy.yml \
+  --repo pavecer/servicenow-mcp-apps-copilot \
+  --ref main \
+  -f candidate_ref=<40-character-commit-sha>
+```
+
+Always dispatch the workflow definition from `main`. It checks out the supplied
+candidate SHA only after validating that it is immutable, while the OIDC token
+remains bound to the trusted `main` workflow. The job restores the existing azd
+test environment, deploys application code without provisioning infrastructure,
+and validates the live MCP tool surface.
+
+Do not store a human M365 password, browser cache, device-code token, or refresh
+token to simulate app-only M365 support. The current `atk auth login m365`
+command has no service-principal mode, and Microsoft Graph's Teams app catalog
+publish/update APIs do not support application permissions. Keep delegated M365
+provisioning at the human boundary when a package change actually requires it.
+
+Most runtime, tool-schema, and widget changes do not require M365 package
+provisioning: the existing agent points to the stable Azure endpoint and uses
+dynamic MCP tool discovery. Deploy those candidates through the Azure OIDC
+workflow, run live MCP and ServiceNow checks autonomously, and reserve M365 login
+for changes under `m365-agent/` or OAuth registration/configuration.
+
 ## Validate the cloud workstation
 
 ```bash
@@ -126,14 +186,24 @@ approval-gated `release:publish` operation.
 Use the workspace **Cloud Development** agent or load the `cloud-development`
 skill for end-to-end work. Agents own implementation, specialist delegation,
 tests, exact-commit Azure deployment, ServiceNow verification, M365 prompt
-preparation, and draft PR evidence. The only human development gate is one
-approving PR review after the prepared MCP Apps click-through succeeds in the
-Microsoft 365 test tenant and its expected records or read results are confirmed
-in the ServiceNow test environment.
+preparation, and draft PR evidence. The only human development gate follows the
+prepared MCP Apps click-through in the Microsoft 365 test tenant and confirmation
+of its expected records or read results in the ServiceNow test environment.
 
-Branch protection should require the `Build and test` status check, resolved
-conversations, stale-review dismissal, and exactly one approving review. A push
-after approval invalidates the evidence and requires the final gate again.
+Every user-facing PR must contain a completed **Human test plan** before review.
+The agent writes exact prompts/clicks and expected widget states, identifies the
+test personas and fixtures, lists ServiceNow record/attribution/ACL checks, and
+provides cleanup steps. The approver follows that script and records `PASS` or
+the failed step in the PR. An independent collaborator submits an approving
+review; in a sole-maintainer repository, the maintainer's explicit merge
+instruction after recording `PASS` is the approval record.
+
+Branch protection must require the `Build and test` status check and resolved
+conversations. Require one approving review when an independent reviewer is
+available. GitHub cannot accept an author's approval of their own PR, so a
+sole-maintainer repository instead keeps the review count at zero and relies on
+the recorded Human result plus explicit merge instruction. A push after either
+form of approval invalidates the evidence and requires the final gate again.
 
 GitHub's hosted Copilot coding agent uses
 `.github/workflows/copilot-setup-steps.yml` to pin Node 20, install locked

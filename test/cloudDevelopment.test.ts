@@ -97,6 +97,7 @@ describe("Codespaces cloud development", () => {
     const pullRequestTemplate = read(".github/PULL_REQUEST_TEMPLATE.md");
     const releasePlan = read("docs/RELEASE_PLAN.md");
     const copilotSetup = read(".github/workflows/copilot-setup-steps.yml");
+    const deployWorkflow = read(".github/workflows/deploy.yml");
 
     expect(skill).toMatch(/^---\r?\nname: cloud-development\r?\n/);
     expect(skill).toContain("Single human gate");
@@ -106,6 +107,23 @@ describe("Codespaces cloud development", () => {
     expect(agent).toContain("user-invocable: true");
     expect(instructions).toContain("## One human approval gate");
     expect(pullRequestTemplate).toContain("### Candidate evidence");
+    expect(pullRequestTemplate).toContain("### Human test plan");
+    expect(pullRequestTemplate).toContain("Manual steps and expected results");
+    expect(pullRequestTemplate).toContain("ServiceNow verification");
+    expect(pullRequestTemplate).toContain("Human result: PENDING");
+    expect(pullRequestTemplate).toContain("Approval record: PENDING");
+    expect(skill).toContain("explicit merge instruction from the sole maintainer");
+    expect(skill).toContain("OIDC-backed `.github/workflows/deploy.yml`");
+    expect(skill).toContain("Do not run `atk provision`");
+    expect(read("docs/CODESPACES.md")).toContain("sole-maintainer repository");
+    expect(read("docs/CODESPACES.md")).toContain("## Authentication and autonomy matrix");
+    expect(read("docs/CODESPACES.md")).toContain("azd pipeline config --provider github");
+    expect(read("docs/CODESPACES.md")).toContain("do not support application permissions");
+    expect(deployWorkflow).toContain("candidate_ref:");
+    expect(deployWorkflow).toContain("ref: ${{ env.CANDIDATE_REF }}");
+    expect(deployWorkflow).toContain("azd env refresh");
+    expect(deployWorkflow).toContain("Validate live MCP tools");
+    expect(deployWorkflow).not.toContain("environment: ${{ vars.AZURE_ENV_NAME }}");
     expect(releasePlan).toContain("single development approval gate");
     expect(copilotSetup).toContain("copilot-setup-steps:");
     expect(copilotSetup).toContain("node-version: 20");

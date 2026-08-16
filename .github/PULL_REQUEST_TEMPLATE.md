@@ -42,8 +42,8 @@ Select exactly one.
 ## Human validation
 
 Select exactly one. Agents may open a draft PR while evidence is pending. A
-user-facing PR must not merge until the final approving review is submitted
-after click-through validation in both test environments.
+user-facing PR must not merge until click-through validation passes in both test
+environments and the human records final approval.
 
 - [ ] Not required — no user-facing behavior changed
 - [ ] Completed maintainer workflow review — release/CI tooling only
@@ -56,6 +56,22 @@ after click-through validation in both test environments.
 <!-- For user-facing changes include the exact SHA, M365 agent prompts/widget -->
 <!-- result, corresponding ServiceNow record/ACL result, and cleanup outcome. -->
 
+### Human test plan
+
+<!-- Required for user-facing changes. The agent preparing this PR must replace -->
+<!-- every placeholder with a reproducible manual script before requesting approval. -->
+
+- Test tenant / agent: <!-- developer or organizational agent; never include tenant IDs -->
+- Test persona(s): <!-- for example requestor, approver, admin; no private identifiers -->
+- Preconditions / fixtures: <!-- exact safe fixture state and setup command -->
+- Manual steps and expected results:
+      1. <!-- exact prompt or click --> → <!-- expected tool, widget, and visible state -->
+      2. <!-- next interaction --> → <!-- expected result and recovery/error behavior -->
+- ServiceNow verification: <!-- table/record state, caller attribution, ACL expectation -->
+- Cleanup: <!-- exact cleanup command or records to remove/reset -->
+- Human result: PENDING
+- Approval record: PENDING <!-- independent approving review, or sole-maintainer merge instruction -->
+
 ### Candidate evidence
 
 - Exact SHA:
@@ -64,14 +80,16 @@ after click-through validation in both test environments.
 - ServiceNow test environment:
 - M365 test tenant click-through:
 - Fixture cleanup and storage security restoration:
-- Final approving review:
+- Final human approval:
 
 ## Checklist
 
 - [ ] `npm run build && npm test` passes locally.
 - [ ] `npm run release:check` passes locally.
 - [ ] The exact deployed SHA is recorded above; no commits were pushed after
-      the final approving review.
+      final human approval.
+- [ ] For user-facing changes, the human test plan has no placeholders and its
+      result is PASS before approval.
 - [ ] Tests added or updated where practical.
 - [ ] If a tool/widget was added or renamed, **all** lockstep locations were
       updated together (tool file + Zod schema, `src/tools/index.ts`,

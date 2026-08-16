@@ -56,6 +56,18 @@ unrelated ServiceNow records.
 
 ### 3. Validate the exact candidate
 
+Classify the candidate before choosing a deployment path:
+
+- **No `m365-agent/` or OAuth registration/configuration change:** deploy the
+  exact SHA through the OIDC-backed `.github/workflows/deploy.yml` on `main`
+  once its one-time Azure federation setup exists. Do not run `atk provision`;
+  the existing agent uses the stable endpoint and dynamic MCP discovery.
+- **M365 package/OAuth change:** build and validate the package autonomously,
+  then mark delegated M365 provisioning as part of the final human gate. Never
+  persist a human password, browser token, device-code token, or refresh token.
+- **ServiceNow validation:** use the integration identity for autonomous API
+  checks; reserve per-user OBO and ACL proof for the listed human personas.
+
 Run, at minimum:
 
 ```bash
@@ -71,11 +83,25 @@ For a user-facing or deployed change, run:
 npm run release:auto -- --environment snowmcpwidg-dev
 ```
 
+Use `release:auto` only when delegated M365 authentication is already present
+or the candidate legitimately changes the M365 package. For package-neutral
+changes, prefer the Azure OIDC deployment workflow plus live MCP validation.
+Dispatch it with `gh workflow run deploy.yml --ref main -f
+candidate_ref=<full-commit-sha>`; never dispatch an untrusted candidate's copy of
+the deployment workflow or use a moving branch name as deployment evidence.
+
 Record the deployed commit SHA, endpoint health, live tool validation, M365
 package validation, storage-network restoration, and test fixture cleanup. Do
 not claim click-through success from API/unit tests.
 
 ### 4. Prepare two-environment evidence
+
+Before requesting human approval, add a reproducible **Human test plan** to the
+PR. Never ask the approver to infer what to test. The plan must identify the
+test agent/environment, personas, fixture preconditions, exact prompts and
+clicks, expected tool/widget and visible states, corresponding ServiceNow
+record/ACL checks, and cleanup. Mark the result `PENDING` until the human runs
+it; change it to `PASS` only from the human's reported observations.
 
 ServiceNow evidence must state:
 
@@ -104,14 +130,19 @@ all automated and agent-owned work is finished.
 
 Request one final human action:
 
-1. Run the prepared click-through scenarios in the Microsoft 365 test tenant.
-2. Confirm their expected effects in the ServiceNow test environment.
-3. Add or confirm the evidence in the PR and submit one approving PR review.
+1. Follow the PR's prepared Human test plan exactly in the Microsoft 365 test
+  tenant; record deviations or failures instead of improvising around them.
+2. Confirm the listed effects, caller attribution, and ACL behavior in the
+  ServiceNow test environment, then run the listed cleanup.
+3. Set the Human result to `PASS` with concise observed evidence and submit the
+  final approval: an approving review from an independent reviewer, or an
+  explicit merge instruction from the sole maintainer. Any failed step keeps
+  the PR unapproved and returns it to the agent for repair.
 
-After approval, do not push another commit. Branch protection dismisses stale
-reviews; any new push requires the final gate again. Agents may merge only when
-the required review, CI, conversations, and repository checks are green and the
-user has explicitly asked for merge automation.
+After approval, do not push another commit. Any new push invalidates the Human
+result and independent review, if present, and requires the final gate again.
+Agents may merge only when CI, conversations, repository checks, and the
+applicable approval record are complete.
 
 ## Hard stops
 
@@ -121,13 +152,23 @@ user has explicitly asked for merge automation.
   protection.
 - Never describe an automated API test as human click-through evidence.
 - Never make a Codespaces port public while local Entra auth is disabled.
-- Never approve a PR using the same identity that authored it.
+- Never fabricate an independent review or treat an author's self-review as one.
 
 ## Evidence format
 
 Use this concise block in the PR:
 
 ```markdown
+### Human test plan
+- Test tenant / agent: `<developer or organizational agent>`
+- Test persona(s): `<roles/personas>`
+- Preconditions / fixtures: `<safe setup>`
+- Manual steps and expected results:
+  1. `<prompt/click>` → `<expected tool, widget, visible state>`
+- ServiceNow verification: `<record, attribution, ACL expectations>`
+- Cleanup: `<cleanup/reset procedure>`
+- Human result: PENDING
+
 ### Candidate evidence
 - Exact SHA: `<sha>`
 - Build/tests/release check: PASS
