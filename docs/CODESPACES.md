@@ -107,6 +107,27 @@ federated credential and configures `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
 an agent can dispatch the workflow for a candidate branch without an interactive
 Azure login or a stored Azure client secret.
 
+The bootstrap values live in GitHub repository settings, not tracked env files.
+Secret values remain encrypted Actions/Codespaces secrets; tenant, subscription,
+location, environment, and resource-group identifiers are non-secret GitHub
+variables. The workflow itself is intentionally visible and auditable in the
+repository, while credentials are never committed.
+
+Deploy an exact candidate without trusting its workflow definition:
+
+```bash
+gh workflow run deploy.yml \
+  --repo pavecer/servicenow-mcp-apps-copilot \
+  --ref main \
+  -f candidate_ref=<40-character-commit-sha>
+```
+
+Always dispatch the workflow definition from `main`. It checks out the supplied
+candidate SHA only after validating that it is immutable, while the OIDC token
+remains bound to the trusted `main` workflow. The job restores the existing azd
+test environment, deploys application code without provisioning infrastructure,
+and validates the live MCP tool surface.
+
 Do not store a human M365 password, browser cache, device-code token, or refresh
 token to simulate app-only M365 support. The current `atk auth login m365`
 command has no service-principal mode, and Microsoft Graph's Teams app catalog

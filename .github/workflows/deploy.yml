@@ -16,6 +16,11 @@ name: deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      candidate_ref:
+        description: Exact 40-character commit SHA to deploy to the test environment
+        required: true
+        type: string
   push:
     branches: [main]
     paths-ignore:
@@ -35,16 +40,27 @@ jobs:
     timeout-minutes: 15
     # Inert until AZURE_ENV_NAME is set as a repo/environment variable.
     if: ${{ vars.AZURE_ENV_NAME != '' }}
-    environment: ${{ vars.AZURE_ENV_NAME }}
     env:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      CANDIDATE_REF: ${{ inputs.candidate_ref || github.sha }}
     steps:
+      - name: Validate exact candidate
+        shell: bash
+        run: |
+          if [[ ! "$CANDIDATE_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "candidate_ref must be an exact 40-character lowercase commit SHA" >&2
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_REF }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -63,8 +79,24 @@ jobs:
       - name: Azure login (OIDC federated credential)
         run: azd auth login --client-id "$AZURE_CLIENT_ID" --federated-credential-provider github --tenant-id "$AZURE_TENANT_ID"
 
+      - name: Restore azd environment
+        shell: bash
+        run: |
+          azd env new "$AZURE_ENV_NAME" \
+            --subscription "$AZURE_SUBSCRIPTION_ID" \
+            --location "$AZURE_LOCATION" \
+            --no-prompt
+          azd env set AZURE_RESOURCE_GROUP "$AZURE_RESOURCE_GROUP"
+          azd env refresh "$AZURE_ENV_NAME" --no-prompt
+
       - name: Deploy application code to Azure
         # `azd deploy` ships the built code to already-provisioned infra.
         # For the very first deployment (to create the infra), run `azd up`
         # locally once — see README "Deploy to Azure".
         run: azd deploy --no-prompt
+
+      - name: Validate live MCP tools
+        shell: bash
+        run: |
+          endpoint="$(azd env get-value MCP_ENDPOINT_URL)"
+          npm run validate:live -- --endpoint "$endpoint"
