@@ -8,9 +8,15 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
 const strict = process.argv.includes("--strict");
 const outputRootArg = process.argv.indexOf("--output-root");
+if (outputRootArg !== -1) {
+  const outputRootValue = process.argv[outputRootArg + 1];
+  if (!outputRootValue || outputRootValue.startsWith("--")) {
+    throw new Error("--output-root requires a directory path.");
+  }
+}
 const outputRoot = outputRootArg === -1
   ? repoRoot
-  : path.resolve(process.argv[outputRootArg + 1] || "");
+  : path.resolve(process.argv[outputRootArg + 1]);
 
 const runtimeRequired = [
   "SERVICENOW_INSTANCE_URL",
@@ -107,12 +113,12 @@ function configureM365() {
     envLine("MCP_SERVER_URL"),
     envLine("MCP_SERVER_HOST"),
     envLine("AZURE_AI_OPENAI_ENDPOINT"),
-    envLine("AZURE_AI_API_KEY"),
     envLine("AZURE_AI_API_VERSION"),
     envLine("AZURE_AI_MODEL_NAME")
   ];
   const userLines = [
     envLine("SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F"),
+    envLine("AZURE_AI_API_KEY"),
     envLine("TEAMS_APP_UPDATE_TIME")
   ];
 

@@ -49,6 +49,7 @@ describe("Codespaces cloud development", () => {
       M365_APP_ID: "m365-app",
       MCP_SERVER_URL: "https://example.test/mcp",
       MCP_SERVER_HOST: "example.test",
+      AZURE_AI_API_KEY: "azure-ai-secret",
       SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F: "m365-secret"
     };
 
@@ -64,12 +65,29 @@ describe("Codespaces cloud development", () => {
         path.join(outputRoot, "m365-agent", "env", ".env.dev.user"),
         "utf8"
       );
+      const m365Public = fs.readFileSync(
+        path.join(outputRoot, "m365-agent", "env", ".env.dev"),
+        "utf8"
+      );
       expect(settings.Values.SERVICENOW_INSTANCE_URL).toBe(env.SERVICENOW_INSTANCE_URL);
       expect(settings.Values.ENTRA_OBO_ENABLED).toBe("true");
       expect(m365User).toContain("SECRET_MCP_DA_OAUTH_CLIENT_SECRET_FUNCYJ453F=m365-secret");
+      expect(m365User).toContain("AZURE_AI_API_KEY=azure-ai-secret");
+      expect(m365Public).not.toContain("AZURE_AI_API_KEY");
     } finally {
       fs.rmSync(outputRoot, { recursive: true, force: true });
     }
+  });
+
+  it.each([
+    ["missing value", ["--output-root"]],
+    ["flag as value", ["--output-root", "--strict"]]
+  ])("rejects a malformed output-root: %s", (_name, args) => {
+    expect(() => execFileSync(
+      process.execPath,
+      [".devcontainer/scripts/configure-codespaces.mjs", ...args],
+      { cwd: root, stdio: "pipe" }
+    )).toThrow();
   });
 
   it("keeps the cloud agent, skill, and single approval gate discoverable", () => {
