@@ -56,6 +56,18 @@ unrelated ServiceNow records.
 
 ### 3. Validate the exact candidate
 
+Classify the candidate before choosing a deployment path:
+
+- **No `m365-agent/` or OAuth registration/configuration change:** deploy the
+  exact branch through the OIDC-backed `.github/workflows/deploy.yml` once its
+  one-time Azure federation setup exists. Do not run `atk provision`; the
+  existing agent uses the stable endpoint and dynamic MCP discovery.
+- **M365 package/OAuth change:** build and validate the package autonomously,
+  then mark delegated M365 provisioning as part of the final human gate. Never
+  persist a human password, browser token, device-code token, or refresh token.
+- **ServiceNow validation:** use the integration identity for autonomous API
+  checks; reserve per-user OBO and ACL proof for the listed human personas.
+
 Run, at minimum:
 
 ```bash
@@ -70,6 +82,10 @@ For a user-facing or deployed change, run:
 ```bash
 npm run release:auto -- --environment snowmcpwidg-dev
 ```
+
+Use `release:auto` only when delegated M365 authentication is already present
+or the candidate legitimately changes the M365 package. For package-neutral
+changes, prefer the Azure OIDC deployment workflow plus live MCP validation.
 
 Record the deployed commit SHA, endpoint health, live tool validation, M365
 package validation, storage-network restoration, and test fixture cleanup. Do

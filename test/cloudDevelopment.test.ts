@@ -112,7 +112,12 @@ describe("Codespaces cloud development", () => {
     expect(pullRequestTemplate).toContain("Human result: PENDING");
     expect(pullRequestTemplate).toContain("Approval record: PENDING");
     expect(skill).toContain("explicit merge instruction from the sole maintainer");
+    expect(skill).toContain("OIDC-backed `.github/workflows/deploy.yml`");
+    expect(skill).toContain("Do not run `atk provision`");
     expect(read("docs/CODESPACES.md")).toContain("sole-maintainer repository");
+    expect(read("docs/CODESPACES.md")).toContain("## Authentication and autonomy matrix");
+    expect(read("docs/CODESPACES.md")).toContain("azd pipeline config --provider github");
+    expect(read("docs/CODESPACES.md")).toContain("do not support application permissions");
     expect(releasePlan).toContain("single development approval gate");
     expect(copilotSetup).toContain("copilot-setup-steps:");
     expect(copilotSetup).toContain("node-version: 20");

@@ -86,6 +86,39 @@ It cannot impersonate the final human MCP Apps conversation or bypass tenant
 Conditional Access, consent, licensing, or admin policy. `release:auto` stops at
 that boundary by design.
 
+## Authentication and autonomy matrix
+
+| Work | Autonomous after setup | Supported authentication |
+| --- | --- | --- |
+| Build, unit tests, package validation | Yes | No cloud identity required |
+| Azure code deployment | Yes | GitHub Actions OIDC (preferred), or a dedicated Azure service principal/certificate |
+| ServiceNow integration API checks | Yes | Repository-scoped Codespaces secrets for the test integration identity |
+| ServiceNow per-user OBO/ACL proof | No | Final human test personas supply delegated identity |
+| M365 package build and schema validation | Yes | No M365 login required |
+| M365 developer-agent/OAuth-vault provision or update | No | Delegated licensed M365 test account through `atk auth login m365` |
+| M365 Copilot conversation and MCP Apps click-through | No | Final human test in the licensed test tenant |
+
+The repository's `.github/workflows/deploy.yml` is already prepared for
+secretless Azure deployment through GitHub OIDC, but remains inert until a
+maintainer completes the one-time `azd pipeline config --provider github`
+bootstrap in the correct Azure tenant/subscription. That command creates the
+federated credential and configures `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
+`AZURE_SUBSCRIPTION_ID`, `AZURE_ENV_NAME`, and `AZURE_LOCATION`. After bootstrap,
+an agent can dispatch the workflow for a candidate branch without an interactive
+Azure login or a stored Azure client secret.
+
+Do not store a human M365 password, browser cache, device-code token, or refresh
+token to simulate app-only M365 support. The current `atk auth login m365`
+command has no service-principal mode, and Microsoft Graph's Teams app catalog
+publish/update APIs do not support application permissions. Keep delegated M365
+provisioning at the human boundary when a package change actually requires it.
+
+Most runtime, tool-schema, and widget changes do not require M365 package
+provisioning: the existing agent points to the stable Azure endpoint and uses
+dynamic MCP tool discovery. Deploy those candidates through the Azure OIDC
+workflow, run live MCP and ServiceNow checks autonomously, and reserve M365 login
+for changes under `m365-agent/` or OAuth registration/configuration.
+
 ## Validate the cloud workstation
 
 ```bash
