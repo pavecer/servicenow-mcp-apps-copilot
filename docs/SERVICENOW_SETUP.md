@@ -81,6 +81,8 @@ Preferred enterprise approach:
     access is needed)
   - `sys_attachment` (create + read + delete — incident file attachments)
   - `sys_user` (read only for identity resolution)
+  - ServiceNow Knowledge API / `kb_knowledge` (read only; article visibility
+    must honor Knowledge user criteria for the effective caller)
 - Restrict visibility to approved catalogs/categories using user criteria.
 - If your security policy requires strict per-user access enforcement, set `SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN=true` and provide `x-servicenow-access-token` per caller.
 
@@ -164,8 +166,17 @@ The MCP server calls these standard ServiceNow Service Catalog APIs:
 | `/api/now/table/incident/{sys_id}` | GET / PATCH | Read incident detail + comment activity; add a customer-visible comment |
 | `/api/now/attachment` | GET | List a caller's incident attachments |
 | `/api/now/attachment/file` | POST | Upload a file/screenshot to an incident |
+| `/api/sn_km_api/knowledge/articles` | GET | Search caller-visible published Knowledge articles |
+| `/api/sn_km_api/knowledge/articles/{sys_id}` | GET | Read one caller-visible Knowledge article |
+| `/api/now/table/kb_knowledge[/{sys_id}]` | GET | Optional caller-scoped fallback when the dedicated Knowledge API is unavailable and `SERVICENOW_KNOWLEDGE_TABLE_FALLBACK_ENABLED=true` |
 
 Ensure no firewall rules, IP allow-lists, or network policies block access from the Azure Function App to these endpoints.
+
+For Knowledge, validate with the same effective identity used by the agent.
+Admin-visible articles are not proof that an employee can read them. The
+current demo instance has admin demo content while the shared integration user
+returns zero rows; test-tenant release therefore requires an Alex/OBO visibility
+check before publication.
 
 ---
 

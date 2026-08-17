@@ -10,16 +10,22 @@ ServiceNow, and Microsoft 365 test-environment access, see
 
 ### 1. Install Dependencies
 
-```bash
-npm install
+On a managed device, configure npm to use only your organization-approved
+registry before resolving dependencies. Do not disable TLS verification to work
+around a blocked public registry.
+
+```powershell
+npm config set registry https://<approved-registry>/ --location=user
+npm config get registry
+npm ci
 ```
 
 ### 2. Configure Local Settings
 
 Copy the sample configuration and fill in your credentials:
 
-```bash
-cp local.settings.sample.json local.settings.json
+```powershell
+Copy-Item local.settings.sample.json local.settings.json
 ```
 
 Edit `local.settings.json` with your ServiceNow and Entra ID credentials:
@@ -33,7 +39,7 @@ For details on each variable, see [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md).
 
 ### 3. Build the Project
 
-```bash
+```powershell
 npm run build
 ```
 
@@ -41,33 +47,37 @@ This regenerates MCP Apps widgets and runs TypeScript compilation. **Always run 
 
 ### 4. Run Tests
 
-```bash
+```powershell
 npm test
 ```
 
-Runs the full Vitest suite (247 tests, ~3–5 seconds). All tests must pass before committing.
+Runs the full Vitest suite. All tests must pass before committing; the exact
+count is intentionally enforced by the repository's manifest/widget tests where
+relevant rather than duplicated in this guide.
 
 To run a single test file:
 
-```bash
-npx vitest run test/logger.test.ts
+```powershell
+npm exec -- vitest run test/logger.test.ts
 ```
 
 ## Running Locally
 
 ### Start the MCP Server
 
-```bash
+```powershell
 npm run start:dev
 ```
 
-The server starts on `http://localhost:7071/mcp` and watches for file changes.
+The server starts on `http://localhost:7071/mcp`. It builds once before starting.
+For TypeScript watch mode, use the VS Code Functions debug profile or run
+`npm run watch` in a separate terminal before `npm start`.
 
 ### Test Locally
 
 In a separate terminal:
 
-```bash
+```powershell
 npm run smoke:test
 ```
 
@@ -92,8 +102,8 @@ All tests passed!
 
 Once deployed to Azure:
 
-```bash
-# Get an Entra access token
+```powershell
+# Get an Entra access token.
 $token = az account get-access-token --resource api://<ENTRA_CLIENT_ID> --query accessToken -o tsv
 
 # Test the deployed endpoint
@@ -106,7 +116,7 @@ npm run smoke:test
 
 For faster iteration on ServiceNow API calls (bypassing MCP and Azure Functions):
 
-```bash
+```powershell
 npm run sn:local -- validate
 npm run sn:local -- search "laptop" 5
 npm run sn:local -- form 04b7e94b4f7b4200086eeed18110c7fd
@@ -146,7 +156,7 @@ Then restart the server.
 | **401 on /mcp** | `ENTRA_AUTH_DISABLED=true` in `local.settings.json`; Bearer validation is on by default |
 | **ServiceNow auth fails** | Verify `SERVICENOW_INSTANCE_URL`, `SERVICENOW_CLIENT_ID`, and `SERVICENOW_CLIENT_SECRET` are correct |
 | **Tests fail with "cannot find module"** | Run `npm run build` first to regenerate widgets |
-| **Port 7071 in use** | Change `functionAppPort` in `.vscode/tasks.json` or kill the existing process |
+| **Port 7071 in use** | Stop the existing Functions host or run `func start --port <port>` and point smoke tests at that endpoint |
 
 ### See Full Details
 
@@ -180,12 +190,12 @@ test/
 
 | Step | Command | Output |
 |------|---------|--------|
-| **Clean** | `npm run clean` | Removes `dist/`, `*.js`, `*.d.ts` |
+| **Clean** | `npm run clean` | Removes `dist/` |
 | **Build widgets** | `npm run build:widgets` | Regenerates `src/ui/widgets/generated/` |
 | **Compile TS** | `tsc` | Produces `.js` and `.d.ts` files |
-| **Both** | `npm run build` | Runs clean + build:widgets + tsc |
+| **Both** | `npm run build` | Runs build:widgets + tsc |
 | **Test** | `npm test` | Runs Vitest suite |
-| **Watch** | `npm run watch` | Re-runs build on file changes |
+| **Watch** | `npm run watch` | Builds widgets once, then recompiles TypeScript on changes |
 
 ## Git Workflow
 

@@ -11,8 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.2.0] - 2026-08-10
+
+### Added
+
 - Add enforceable release planning and version checks for contributors.
 <!-- release-impact: minor -->
+- Add ranked, caller-visible ServiceNow Knowledge retrieval with a three-attempt resolution journey and consent-based incident escalation.
+<!-- release-impact: minor -->
+- Knowledge not-helpful feedback now accepts an optional free-text comment
+  (trimmed, up to 1000 characters), surfaced as a textarea in the Knowledge
+  widget and passed to `submit_knowledge_feedback` as `comments`.
+<!-- release-impact: patch -->
 
 ### Changed
 
@@ -24,6 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Require Entra authentication for test deployments and authenticate live MCP
   validation instead of relying on unauthenticated discovery.
+<!-- release-impact: patch -->
+- Keep Knowledge article actions visible with compact ranked previews, format
+  category metadata clearly, decode rich-text entities, and preserve bounded
+  ServiceNow heading, nested-list, emphasis, code, and block structure through
+  an attribute-free document model instead of article-specific text inference.
+  Articles with omitted images or attachments now show bounded metadata and a
+  clear handoff to the complete caller-authorized ServiceNow article. Explicit
+  article outcomes now create caller-attributed native `kb_feedback` records,
+  and consented incidents best-effort link attempted articles through
+  `m2m_kb_task` without compromising truthful incident success.
 <!-- release-impact: patch -->
 
 ## [1.1.6] - 2026-08-10
@@ -186,6 +210,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Azure infrastructure as Bicep, `azd` deployment, optional Azure Container
   Apps path, and the `m365-agent/` declarative-agent package.
 
-[Unreleased]: https://github.com/pavecer/servicenow-mcp-apps-copilot/compare/d629c7ab1030a971658b69514b67a082ab43653a...HEAD
+[Unreleased]: https://github.com/pavecer/servicenow-mcp-apps-copilot/compare/v1.2.0...HEAD
 [1.1.6]: https://github.com/pavecer/servicenow-mcp-apps-copilot/tree/d629c7ab1030a971658b69514b67a082ab43653a
 [1.0.0]: https://github.com/pavecer/servicenow-mcp-apps-copilot/tree/3504769e45422609c7274ce1da46a636a1db1797
+
+[1.2.0]: https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/v1.2.0

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const root = process.cwd();
 const script = path.join(root, "scripts/dev/release-governance.mjs");
 const temporaryDirectories: string[] = [];
+const GOVERNANCE_NOTE = "Add enforceable release planning and version checks for contributors.";
 
 function temporaryFile(contents: string): string {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "release-governance-"));
@@ -47,17 +48,48 @@ function prBody(
   ].join("\n");
 }
 
-function basePackage(version = "1.1.6"): string {
+function currentVersion(): string {
+  return JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
+}
+
+function basePackage(version = currentVersion()): string {
   const current = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   current.version = version;
   return temporaryFile(`${JSON.stringify(current, null, 2)}\n`);
 }
 
-function baseLock(version = "1.1.6"): string {
+function baseLock(version = currentVersion()): string {
   const current = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
   current.version = version;
   current.packages[""].version = version;
   return temporaryFile(`${JSON.stringify(current, null, 2)}\n`);
+}
+
+function governanceFixture(options: { version?: string; releaseNote?: string; impact?: "patch" | "minor" | "major" } = {}) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "governance-repo-"));
+  temporaryDirectories.push(fixtureRoot);
+  fs.mkdirSync(path.join(fixtureRoot, "scripts/dev"), { recursive: true });
+  fs.mkdirSync(path.join(fixtureRoot, "m365-agent/appPackage"), { recursive: true });
+  for (const relativePath of [
+    "scripts/dev/release-governance.mjs", "package.json", "package-lock.json",
+    "m365-agent/appPackage/manifest.json"
+  ]) fs.copyFileSync(path.join(root, relativePath), path.join(fixtureRoot, relativePath));
+
+  const version = options.version ?? currentVersion();
+  for (const relativePath of ["package.json", "package-lock.json", "m365-agent/appPackage/manifest.json"]) {
+    const filePath = path.join(fixtureRoot, relativePath);
+    const json = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    json.version = version;
+    if (relativePath === "package-lock.json") json.packages[""].version = version;
+    fs.writeFileSync(filePath, `${JSON.stringify(json, null, relativePath.includes("manifest") ? 4 : 2)}\n`);
+  }
+  const note = options.releaseNote ?? GOVERNANCE_NOTE;
+  const impact = options.impact ?? "minor";
+  fs.writeFileSync(path.join(fixtureRoot, "CHANGELOG.md"), [
+    "# Changelog", "", "## [Unreleased]", "", "### Added", "", `- ${note}`,
+    `<!-- release-impact: ${impact} -->`, "", `## [${version}] - 2026-08-09`, "", "Baseline.", ""
+  ].join("\n"));
+  return { fixtureRoot, fixtureScript: path.join(fixtureRoot, "scripts/dev/release-governance.mjs"), version };
 }
 
 afterEach(() => {
@@ -73,22 +105,24 @@ describe("release governance", () => {
   });
 
   it("accepts a classified PR whose release note is in Unreleased", () => {
-    const releaseNote = "Add enforceable release planning and version checks for contributors.";
+    const releaseNote = GOVERNANCE_NOTE;
+    const fixture = governanceFixture();
     const body = temporaryFile(prBody(releaseNote));
     const changed = temporaryFile("CHANGELOG.md\nscripts/dev/release-governance.mjs\n");
-    const base = temporaryFile("# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [1.1.6]\n\nBaseline.\n");
-    const output = execFileSync("node", [script, "pr-check", "--body-file", body, "--changed-files", changed, "--base-changelog", base, "--base-package", basePackage(), "--json"], {
-      cwd: root,
+    const base = temporaryFile(`# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [${fixture.version}] - 2026-08-09\n\nBaseline.\n`);
+    const output = execFileSync("node", [fixture.fixtureScript, "pr-check", "--body-file", body, "--changed-files", changed, "--base-changelog", base, "--base-package", basePackage(fixture.version), "--json"], {
+      cwd: fixture.fixtureRoot,
       encoding: "utf8"
     });
     expect(JSON.parse(output)).toMatchObject({ impact: "minor", prKind: "Regular change", humanValidation: "Completed maintainer workflow review" });
   });
 
   it("rejects a release-bearing PR that omits the changelog", () => {
-    const body = temporaryFile(prBody("Add enforceable release planning and version checks for contributors."));
+    const fixture = governanceFixture();
+    const body = temporaryFile(prBody(GOVERNANCE_NOTE));
     const changed = temporaryFile("scripts/dev/release-governance.mjs\n");
-    const result = spawnSync("node", [script, "pr-check", "--body-file", body, "--changed-files", changed, "--base-package", basePackage()], {
-      cwd: root,
+    const result = spawnSync("node", [fixture.fixtureScript, "pr-check", "--body-file", body, "--changed-files", changed, "--base-package", basePackage(fixture.version)], {
+      cwd: fixture.fixtureRoot,
       encoding: "utf8"
     });
     expect(result.status).toBe(1);
@@ -96,11 +130,12 @@ describe("release governance", () => {
   });
 
   it("rejects ambiguous release impact and mismatched tags", () => {
-    const body = temporaryFile(prBody("Add enforceable release planning and version checks for contributors.")
+    const fixture = governanceFixture();
+    const body = temporaryFile(prBody(GOVERNANCE_NOTE)
       .replace("- [ ] Patch", "- [x] Patch"));
     const changed = temporaryFile("CHANGELOG.md\n");
-    const prResult = spawnSync("node", [script, "pr-check", "--body-file", body, "--changed-files", changed, "--base-package", basePackage()], {
-      cwd: root,
+    const prResult = spawnSync("node", [fixture.fixtureScript, "pr-check", "--body-file", body, "--changed-files", changed, "--base-package", basePackage(fixture.version)], {
+      cwd: fixture.fixtureRoot,
       encoding: "utf8"
     });
     expect(prResult.status).toBe(1);
@@ -112,21 +147,22 @@ describe("release governance", () => {
   });
 
   it("rejects release impact without tenant validation or a newly added note", () => {
-    const releaseNote = "Add enforceable release planning and version checks for contributors.";
+    const releaseNote = GOVERNANCE_NOTE;
+    const fixture = governanceFixture();
     const changed = temporaryFile("CHANGELOG.md\n");
-    const baseWithoutNote = temporaryFile("# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [1.1.6]\n\nBaseline.\n");
+    const baseWithoutNote = temporaryFile(`# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [${fixture.version}] - 2026-08-09\n\nBaseline.\n`);
     const validationResult = spawnSync("node", [
-      script, "pr-check", "--body-file", temporaryFile(prBody(releaseNote, "Not required")),
-      "--changed-files", changed, "--base-changelog", baseWithoutNote, "--base-package", basePackage()
-    ], { cwd: root, encoding: "utf8" });
+      fixture.fixtureScript, "pr-check", "--body-file", temporaryFile(prBody(releaseNote, "Not required")),
+      "--changed-files", changed, "--base-changelog", baseWithoutNote, "--base-package", basePackage(fixture.version)
+    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
     expect(validationResult.status).toBe(1);
     expect(validationResult.stderr).toMatch(/require 'Completed maintainer workflow review'/i);
 
-    const baseWithNote = temporaryFile(`# Changelog\n\n## [Unreleased]\n\n- ${releaseNote}\n<!-- release-impact: minor -->\n\n## [1.1.6]\n\nBaseline.\n`);
+    const baseWithNote = temporaryFile(`# Changelog\n\n## [Unreleased]\n\n- ${releaseNote}\n<!-- release-impact: minor -->\n\n## [${fixture.version}] - 2026-08-09\n\nBaseline.\n`);
     const provenanceResult = spawnSync("node", [
-      script, "pr-check", "--body-file", temporaryFile(prBody(releaseNote)),
-      "--changed-files", changed, "--base-changelog", baseWithNote, "--base-package", basePackage()
-    ], { cwd: root, encoding: "utf8" });
+      fixture.fixtureScript, "pr-check", "--body-file", temporaryFile(prBody(releaseNote)),
+      "--changed-files", changed, "--base-changelog", baseWithNote, "--base-package", basePackage(fixture.version)
+    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
     expect(provenanceResult.status).toBe(1);
     expect(provenanceResult.stderr).toMatch(/already existed in the base changelog/i);
   });
@@ -319,10 +355,11 @@ describe("release governance", () => {
   });
 
   it("refuses a release below the highest queued impact", () => {
-    const result = spawnSync("node", [script, "plan", "--type", "patch"], { cwd: root, encoding: "utf8" });
+    const fixture = governanceFixture();
+    const result = spawnSync("node", [fixture.fixtureScript, "plan", "--type", "patch"], { cwd: fixture.fixtureRoot, encoding: "utf8" });
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/understates queued minor changes/i);
-    expect(execFileSync("node", [script, "plan", "--type", "minor"], { cwd: root, encoding: "utf8" }))
+    expect(execFileSync("node", [fixture.fixtureScript, "plan", "--type", "minor"], { cwd: fixture.fixtureRoot, encoding: "utf8" }))
       .toContain("requiredType: minor");
   });
 
@@ -342,8 +379,13 @@ describe("release governance", () => {
     }
     const basePackage = temporaryFile(fs.readFileSync(path.join(fixtureRoot, "package.json"), "utf8"));
     const fixtureScript = path.join(fixtureRoot, "scripts/dev/release-governance.mjs");
+    const fixtureVersion = JSON.parse(fs.readFileSync(path.join(fixtureRoot, "package.json"), "utf8")).version as string;
+    fs.writeFileSync(path.join(fixtureRoot, "CHANGELOG.md"), [
+      "# Changelog", "", "## [Unreleased]", "", "### Added", "", `- ${GOVERNANCE_NOTE}`,
+      "<!-- release-impact: minor -->", "", `## [${fixtureVersion}] - 2026-08-09`, "", "Baseline.", ""
+    ].join("\n"));
     execFileSync("node", [fixtureScript, "prepare", "--type", "minor", "--date", "2026-08-10"], { cwd: fixtureRoot });
-    const releaseNote = "Add enforceable release planning and version checks for contributors.";
+    const releaseNote = GOVERNANCE_NOTE;
     const body = temporaryFile(prBody(releaseNote, "Completed in test tenant", "Minor", "Version release"));
     const changed = temporaryFile("CHANGELOG.md\npackage.json\npackage-lock.json\nm365-agent/appPackage/manifest.json\n");
     const output = execFileSync("node", [
@@ -397,18 +439,21 @@ describe("release governance", () => {
     }
     const fixtureScript = path.join(fixtureRoot, "scripts/dev/release-governance.mjs");
     const basePackageFile = temporaryFile(fs.readFileSync(path.join(fixtureRoot, "package.json"), "utf8"));
+    const baseVersion = JSON.parse(fs.readFileSync(path.join(fixtureRoot, "package.json"), "utf8")).version as string;
+    const [baseMajor, baseMinor, basePatch] = baseVersion.split(".").map(Number);
+    const patchVersion = `${baseMajor}.${baseMinor}.${basePatch + 1}`;
     for (const relativePath of ["package.json", "package-lock.json", "m365-agent/appPackage/manifest.json"]) {
       const filePath = path.join(fixtureRoot, relativePath);
       const json = JSON.parse(fs.readFileSync(filePath, "utf8"));
-      json.version = "1.1.7";
-      if (relativePath === "package-lock.json") json.packages[""].version = "1.1.7";
+      json.version = patchVersion;
+      if (relativePath === "package-lock.json") json.packages[""].version = patchVersion;
       fs.writeFileSync(filePath, `${JSON.stringify(json, null, relativePath.includes("manifest") ? 4 : 2)}\n`);
     }
     fs.writeFileSync(path.join(fixtureRoot, "CHANGELOG.md"), [
       "# Changelog", "", "## [Unreleased]", "", "### Added", "",
-      "## [1.1.7] - 2026-08-10", "", "### Added", "",
+      `## [${patchVersion}] - 2026-08-10`, "", "### Added", "",
       "- Add enforceable release planning and version checks for contributors.",
-      "<!-- release-impact: minor -->", "", "## [1.1.6] - 2026-08-09", "", "Baseline.", ""
+      "<!-- release-impact: minor -->", "", `## [${baseVersion}] - 2026-08-09`, "", "Baseline.", ""
     ].join("\n"));
     const currentVersion = JSON.parse(fs.readFileSync(path.join(fixtureRoot, "package.json"), "utf8")).version;
     const result = spawnSync("node", [
@@ -420,37 +465,38 @@ describe("release governance", () => {
       "--changed-files", temporaryFile("CHANGELOG.md\npackage.json\npackage-lock.json\nm365-agent/appPackage/manifest.json\n"),
       "--base-package", basePackageFile
     ], { cwd: fixtureRoot, encoding: "utf8" });
-    expect(currentVersion).toBe("1.1.7");
+    expect(currentVersion).toBe(patchVersion);
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/understates minor changes/i);
   });
 
   it("allows only the one-time version baseline alignment", () => {
-    const releaseNote = "Add enforceable release planning and version checks for contributors.";
+    const fixture = governanceFixture({ version: "1.1.6" });
+    const releaseNote = GOVERNANCE_NOTE;
     const body = temporaryFile(prBody(releaseNote, "Completed maintainer workflow review", "Minor", "Version baseline alignment"));
     const changed = temporaryFile("CHANGELOG.md\npackage.json\npackage-lock.json\n");
     const baseChangelog = temporaryFile("# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [1.0.0] - 2026-01-01\n\nBaseline.\n");
     const output = execFileSync("node", [
-      script, "pr-check", "--body-file", body, "--changed-files", changed,
+      fixture.fixtureScript, "pr-check", "--body-file", body, "--changed-files", changed,
       "--base-changelog", baseChangelog, "--base-package", basePackage("1.0.0"),
       "--base-lock", baseLock("1.0.0"), "--json"
-    ], { cwd: root, encoding: "utf8" });
+    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
     expect(JSON.parse(output)).toMatchObject({ impact: "minor", prKind: "Version baseline alignment" });
 
     const invalid = spawnSync("node", [
-      script, "pr-check", "--body-file", body, "--changed-files", changed,
+      fixture.fixtureScript, "pr-check", "--body-file", body, "--changed-files", changed,
       "--base-changelog", baseChangelog, "--base-package", basePackage("1.1.5"),
       "--base-lock", baseLock("1.1.5")
-    ], { cwd: root, encoding: "utf8" });
+    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
     expect(invalid.status).toBe(1);
     expect(invalid.stderr).toMatch(/restricted to the one-time 1\.0\.0 -> 1\.1\.6/i);
 
     const runtime = spawnSync("node", [
-      script, "pr-check", "--body-file", body,
+      fixture.fixtureScript, "pr-check", "--body-file", body,
       "--changed-files", temporaryFile("CHANGELOG.md\npackage.json\npackage-lock.json\nsrc/server.ts\n"),
       "--base-changelog", baseChangelog, "--base-package", basePackage("1.0.0"),
       "--base-lock", baseLock("1.0.0")
-    ], { cwd: root, encoding: "utf8" });
+    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
     expect(runtime.status).toBe(1);
     expect(runtime.stderr).toMatch(/cannot include runtime or deployment changes/i);
   });

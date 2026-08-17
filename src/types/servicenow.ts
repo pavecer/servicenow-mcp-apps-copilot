@@ -174,3 +174,86 @@ export interface AddIncidentAttachmentInput {
   /** Raw file bytes. */
   data: Buffer;
 }
+
+// ── Knowledge retrieval (read-only employee self-service flow) ─────────────
+
+export interface ServiceNowKnowledgeCandidate {
+  sysId: string;
+  number: string;
+  title: string;
+  shortDescription: string;
+  snippet: string;
+  keywords: string;
+  knowledgeBase: string;
+  category: string;
+  language: string;
+  updatedOn: string;
+  publishedOn: string;
+  nativeScore?: number;
+  nativeRank: number;
+}
+
+export type KnowledgeRelevanceBand = "best" | "strong" | "related";
+
+export interface RankedKnowledgeArticle extends ServiceNowKnowledgeCandidate {
+  rank: number;
+  score: number;
+  relevanceBand: KnowledgeRelevanceBand;
+  matchReasons: string[];
+}
+
+export type KnowledgeContentTag =
+  | "p" | "div" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+  | "ul" | "ol" | "li" | "strong" | "em" | "code" | "pre"
+  | "blockquote" | "br";
+
+export type KnowledgeContentNode =
+  | { type: "text"; text: string }
+  | { type: "element"; tag: KnowledgeContentTag; children: KnowledgeContentNode[] };
+
+export interface KnowledgeContentDocument {
+  version: 1;
+  nodes: KnowledgeContentNode[];
+  truncated: boolean;
+  omittedImageCount?: number;
+}
+
+export interface KnowledgeAttachmentSummary {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+}
+
+export interface KnowledgeArticleMedia {
+  imageCount: number;
+  attachments: KnowledgeAttachmentSummary[];
+}
+
+export interface KnowledgeArticleDetail extends ServiceNowKnowledgeCandidate {
+  content: string;
+  contentDocument?: KnowledgeContentDocument;
+  media: KnowledgeArticleMedia;
+  sourceLink: string;
+}
+
+export interface KnowledgeArticleHistoryItem {
+  sysId: string;
+  number: string;
+  title: string;
+  rank?: number;
+}
+
+export interface SubmitKnowledgeFeedbackInput {
+  articleSysId: string;
+  useful: "yes" | "no";
+  query: string;
+  reason?: "1" | "2" | "3" | "4";
+  rating?: number;
+  comments?: string;
+}
+
+export interface KnowledgeTaskLinkResult {
+  requestedCount: number;
+  linkedCount: number;
+  failedCount: number;
+}

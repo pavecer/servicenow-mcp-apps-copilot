@@ -8,9 +8,11 @@ the shortest path to resume work safely.
 
 ## Current verified state
 
-- Repo: `servicenow-mcp-apps-copilot`, branch `main`.
+- Repo: `servicenow-mcp-apps-copilot`; public baseline is branch `main`, while
+  the active local candidate is on `feat/knowledge-retrieval`.
 - Surface: MCP Apps only.
-- Current inventory: 23 tools, 8 widgets.
+- Public inventory: 23 tools, 8 widgets. The test-only deployment currently
+  exposes the Knowledge candidate with 27 tools and 9 widgets.
 - Primary deployed endpoint:
   `https://func-yj453fjwuhph4.azurewebsites.net/mcp`
 - Primary Azure resource group: `rg-snowmcpwidg-dev`
@@ -39,10 +41,10 @@ the shortest path to resume work safely.
   earlier premature merge was fully reverted. Do not bypass the
   human-validation gate for future behavioral changes.
 
-## Active local release-governance change
+## Release governance
 
-- Branch `feat/release-governance` contains a complete, local-only release
-  governance implementation. It has not been pushed or opened as a public PR.
+- Release governance was merged through PR #47 as commit `ad465e2` after
+  maintainer review, CI, and CodeQL validation.
 - The project version is reconciled to the existing M365 baseline `1.1.6`
   across npm, the lockfile, and the app manifest. `CHANGELOG.md` now has an
   explicit `1.1.6` historical baseline and a clean `Unreleased` queue.
@@ -58,15 +60,99 @@ the shortest path to resume work safely.
   reports `1.1.6`; a Minor preview reports required type `minor` and next
   version `1.2.0`; editor diagnostics are clean; focused reviewer verdict is
   APPROVE.
-- Publication gate: review this workflow with the maintainer before creating a
-  public PR. The intended PR kind is the one-time `Version baseline alignment`,
-  impact `Minor`, with `Completed maintainer workflow review` evidence.
+- The first CodeQL run found three parsing/escaping alerts; these were fixed
+  before merge with linear parsing and hostile-input tests.
+
+## Active Knowledge retrieval branch
+
+- Branch `feat/knowledge-retrieval` adds four tools and one shared MCP App,
+  moving the local and test-deployed inventory to 27 tools / 9 widgets. Public
+  `main` remains 23 / 8.
+- Implemented locally: deterministic native-score/lexical ranking, one-call
+  Knowledge API search, one-call article detail, executable-block stripping,
+  attempt/history state, third-attempt incident offer, explicit-consent incident
+  creation, standardized KB-not-helpful incident description, and agent intent
+  routing.
+- The configured integration identity sees zero Knowledge rows; delegated demo
+  admin access sees demo articles. Alex/OBO article visibility must still be
+  proven through the test-tenant experience.
+- Delegated admin probe after deployment: dedicated `sn_km_api` returns 400
+  (endpoint unavailable), while caller-scoped `kb_knowledge` returns rows. An
+  opt-in caller-scoped Table API fallback is implemented; enable it only in the
+  demo environment, then validate Alex/OBO visibility before approval.
+- Durable implementation checklist and validation matrix:
+  [KNOWLEDGE_RETRIEVAL_PLAN.md](KNOWLEDGE_RETRIEVAL_PLAN.md).
+- The latest local native-write slice passes 7 focused files / 130 tests and
+  TypeScript/widget build. It adds strict caller-scoped native feedback,
+  accessible two-stage feedback UX, and truthful best-effort task links. Full
+  candidate validation passes 41 files / 395 tests; backend and MCP Apps
+  reviewers APPROVE. Initial commands, narrow dark feedback form, saved outcome,
+  gated fallback, and attempt-three escalation visuals passed.
+- Local media-handoff follow-up counts omitted images across the full bounded
+  article and retrieves at most 20 caller-visible attachment summaries
+  (filename/type/size) with no IDs, URLs, or bytes. Image-only desktop light and
+  attachment-only narrow dark visual states passed; attachment metadata failure
+  is nonfatal.
+- Minor release preparation synchronized npm/M365/changelog at `1.2.0`.
+  Runtime `b363012` plus package-guidance fix `1164751` is deployed only to
+  `snowmcpwidg-dev`; live validation reports 27 tools. The existing developer app
+  passed 61 package checks and was updated under title
+  `T_7083fecd-9cd0-e94d-285b-0e25bfc2a169` without catalog publication.
+- The deployed ranked list shows the top three compact previews with visible
+  bottom actions, labeled metadata, category-preserving narrow layout, and
+  numeric HTML entity decoding. Live search returned five results with no
+  numeric entity literals in title/snippet/category/base fields.
+- Selected article detail now preserves ServiceNow source headings, paragraphs,
+  nested ordered/unordered lists, emphasis, code/preformatted text, blockquotes,
+  and breaks through a bounded attribute-free document model. Plain text derives
+  from the same sanitized tree, and shortened previews are explicit.
+- Live KB0005001 detail exposes document v1 with 2 major headings, 10 subsection
+  headings, 14 nested lists, 40 items, depth 5, and no truncation. VPN, cookie,
+  and password source structures were also verified read-only.
+- Live media verification: KB0000003 reports 3 omitted images; KB0000018 reports
+  one caller-visible PNG attachment (`300px-Windows_Vista.png`, 77,404 bytes).
+  Both expose the canonical article link and no direct media URL, attachment ID,
+  download URL, or file bytes.
+- Human media-handoff validation completed on 2026-08-11: the user tested the
+  deployed image and attachment states and confirmed that both worked as
+  described. This approves the media UX in runtime `cdf62b7`.
+- Enterprise policy blocks external npm downloads. No dependency or lockfile was
+  added; the parser is a bounded state machine with hostile/malformed tests and
+  does not render raw ServiceNow HTML.
+- Human visual validation completed on 2026-08-11: the user opened the deployed
+  Workstation Security Standard article and confirmed that the source-structured
+  view works much better and is easier to read. This approves the formatting
+  checkpoint originally validated at runtime commit `0dcfe4b`; the same
+  structured renderer is retained in media-aware runtime `cdf62b7`.
+- The local candidate now writes native `kb_feedback` with exact `yes`/`no`,
+  caller user, original query, and optional reason (`1` incomplete, `2`
+  incorrect, `3` unclear, `4` other). It verifies active/published/non-expired
+  caller visibility before writing. The widget discloses persistence, prevents
+  contradictory concurrent writes, and requires an explicit continuation.
+- After a consented incident POST, the local candidate visibility-checks up to
+  20 attempted articles and best-effort inserts `m2m_kb_task` links. Complete or
+  partial linking failure never falsifies incident success; attempted history
+  remains in `incident.description` and the confirmation reports diagnostics.
+- Live delegated-admin proof created one KB0005001 `kb_feedback` row
+  (`useful=no`, reason `3`, caller populated), caller-attributed incident
+  `INC0010015`, and one `m2m_kb_task` link. Tool diagnostics were 1 requested / 1
+  linked / 0 failed. Cleanup deleted link, feedback, and incident with HTTP 204;
+  zero marker-owned feedback/incident rows remained afterward.
+- Live delegated-admin checks returned five ranked results for password reset,
+  opened `KB0005012` with content and a source link, and confirmed attempt 3
+  excludes the tried article and offers an incident without creating one. The
+  demo fallback setting is enabled, storage public access is `Disabled`, and no
+  temporary exemption remains.
+- No public push or PR has occurred. Next: deploy the exact 27-tool candidate to
+  `snowmcpwidg-dev`, verify live native
+  records as admin/Alex, then finish the three-attempt and consented-incident
+  human journey before opening a Version release PR.
 
 ## Operational checkpoint
 
-- As of 2026-08-10, Function App `func-yj453fjwuhph4` is running and the Azure
-  subscription is enabled. The live MCP endpoint exposes all 23 tools and is
-  ready for M365 prompt testing.
+- As of 2026-08-11, Function App `func-yj453fjwuhph4` is running and the Azure
+  subscription is enabled. The test endpoint exposes all 27 candidate tools;
+  public `main` remains at 23 tools.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).
 - Deployed Function App has been migrated to `dev351709` and validated live.
@@ -75,9 +161,11 @@ the shortest path to resume work safely.
 - OBO is restored and enabled again on the deployed Function App.
 - Step 1 manager approval actions are deployed: `approve_order_approval` and
   `reject_order_approval` both render the order-detail widget.
-- The live endpoint exposes all 23 tools, including both approval actions.
-- M365 agent package `1.1.6` was validated and applied to the existing tenant
-  app `0d52a642-334e-4835-94b6-f6acc349569d`; OAuth registration was preserved.
+- The live test endpoint exposes all 27 tools, including the four Knowledge
+  tools and both approval actions.
+- Developer M365 agent package `1.2.0` was validated and applied to existing app
+  `0d52a642-334e-4835-94b6-f6acc349569d`; OAuth registration was preserved. The
+  organizationally published baseline remains `1.1.6`.
 - `npm run release:auto -- --environment snowmcpwidg-dev` is the verified
   automation path through the human M365 Copilot prompt-test boundary.
 - Tenant policy `MCAPSGovDeployPolicies / StorageAccount_PublicNetwork_Modify`

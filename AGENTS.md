@@ -5,10 +5,11 @@ should read [README.md](README.md); this file is the fast path for agents.
 
 ## What this is
 
-A stateless **Model Context Protocol (MCP) server** for the ServiceNow Service
-Catalog, hosted on **Azure Functions** (Node.js 20, TypeScript). It delivers
-catalog ordering (search → form → order → track, plus a cart) to **Microsoft 365
-Copilot / Cowork** via **MCP Apps (SEP-1865)** interactive HTML widgets.
+A stateless **Model Context Protocol (MCP) server** for ServiceNow Knowledge,
+Service Catalog, and incident self-service, hosted on **Azure Functions**
+(Node.js 20, TypeScript). It delivers Knowledge retrieval, catalog ordering, and
+incident workflows to **Microsoft 365 Copilot / Cowork** via **MCP Apps
+(SEP-1865)** interactive HTML widgets.
 
 ## Resume here first
 
@@ -67,8 +68,8 @@ scripts/                  deploy/setup PowerShell + dev/ helper scripts
 docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy)
 .github/
   copilot-instructions.md      Always-on repository agent and single-gate policy
-  agents/*.{agent,chatmode}.md Custom agents (cloud orchestration, release, deploy, UI)
-  skills/                      Cloud development and MCP Apps UI workflows
+  agents/*.{agent,chatmode}.md Custom agents (cloud, release, deploy, UI, communications)
+  skills/                      Cloud, MCP Apps UI, and release communications workflows
 ```
 
 - `release:auto` stops at the human test boundary: build, tests, policy-aware
@@ -86,6 +87,9 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
   Microsoft 365 click-through and ServiceNow test-environment verification.
   Follow [docs/HUMAN_APPROVAL.md](docs/HUMAN_APPROVAL.md) for the exact
   SHA-bound validation and merge-authorization records.
+- After a GitHub Release exists, use the **Release Communications** agent or
+  `.github/skills/release-communications/` to update GitHub Pages and prepare an
+  approval-gated LinkedIn draft. Never announce `Unreleased` or test-only state.
 
 ## Agent portfolio
 
@@ -98,6 +102,8 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
   tools, and existing M365 developer package update.
 - **deploy-mcp-server**: Azure Functions provisioning and deployment repair.
 - **deploy-mcp-container**: optional Container Apps deployment path only.
+- **Release Communications** plus `.github/skills/release-communications/`:
+  post-release site updates and approval-gated public announcement drafts.
 
 GitHub's hosted Copilot coding agent uses
 `.github/workflows/copilot-setup-steps.yml` for Node 20, locked dependencies,

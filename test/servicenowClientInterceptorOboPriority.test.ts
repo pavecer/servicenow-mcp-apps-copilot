@@ -103,12 +103,13 @@ async function loadFreshClient(): Promise<Loaded> {
   };
 }
 
-function makeRequest(): InternalAxiosRequestConfig {
+function makeRequest(requireCallerIdentity = false): InternalAxiosRequestConfig {
   // Minimal shape the interceptor reads/writes.
   return {
     headers: {} as Record<string, string>,
     method: "get",
-    url: "/api/now/table/sys_user"
+    url: "/api/now/table/sys_user",
+    ...(requireCallerIdentity ? { __snRequireCallerIdentity: true } : {})
   } as unknown as InternalAxiosRequestConfig;
 }
 
@@ -252,6 +253,30 @@ describe("ServiceNowClient request interceptor — OBO priority chain", () => {
       )
     ).rejects.toThrow(/AAD outage during OBO/);
 
+    expect(tokenManagerGetAccessToken).not.toHaveBeenCalled();
+  });
+
+  it("fails closed for a caller-scoped Knowledge request when no caller identity is available", async () => {
+    delete process.env.SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN;
+    delete process.env.ENTRA_OBO_ENABLED;
+    const { interceptor, runWithRequestContext, tokenManagerGetAccessToken } = await loadFreshClient();
+
+    await expect(runWithRequestContext({}, () => interceptor(makeRequest(true))))
+      .rejects.toThrow(/caller identity is required/i);
+    expect(tokenManagerGetAccessToken).not.toHaveBeenCalled();
+  });
+
+  it("does not fall back after OBO failure for a caller-scoped Knowledge request", async () => {
+    delete process.env.SERVICENOW_REQUIRE_CALLER_ACCESS_TOKEN;
+    process.env.ENTRA_OBO_ENABLED = "true";
+    process.env.ENTRA_OBO_DOWNSTREAM_SCOPE = "api://server/ServiceNow.Use";
+    const { interceptor, runWithRequestContext, tokenManagerGetAccessToken, oboGetTokenSpy } = await loadFreshClient();
+    oboGetTokenSpy.mockRejectedValue(new Error("Knowledge OBO unavailable"));
+
+    await expect(runWithRequestContext(
+      { callerEntraAccessToken: "user-jwt", callerEntraObjectId: "oid-kb" },
+      () => interceptor(makeRequest(true))
+    )).rejects.toThrow("Knowledge OBO unavailable");
     expect(tokenManagerGetAccessToken).not.toHaveBeenCalled();
   });
 });

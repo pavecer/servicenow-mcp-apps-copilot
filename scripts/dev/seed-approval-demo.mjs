@@ -15,8 +15,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
-import { spawnSync } from "node:child_process";
 import axios from "axios";
+import spawn from "cross-spawn";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
@@ -90,7 +90,7 @@ async function createClient() {
   if (command === "seed" || command === "cleanup") {
     let scope = String(config.ENTRA_OBO_DOWNSTREAM_SCOPE || "").trim();
     if (!scope) {
-      const scopeResult = spawnSync(
+      const scopeResult = spawn.sync(
         "azd",
         ["env", "get-value", "ENTRA_OBO_DOWNSTREAM_SCOPE"],
         { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
@@ -100,7 +100,7 @@ async function createClient() {
     if (!scope) {
       throw new Error("ENTRA_OBO_DOWNSTREAM_SCOPE is missing from local settings and the active azd environment.");
     }
-    const result = spawnSync(
+    const result = spawn.sync(
       "az",
       ["account", "get-access-token", "--scope", scope, "--query", "accessToken", "--output", "tsv"],
       { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }

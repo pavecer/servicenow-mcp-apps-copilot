@@ -11,9 +11,11 @@ describe("getMinimalToolDefinitions", () => {
       "add_incident_comment",
       "add_to_cart",
       "approve_order_approval",
+      "create_incident_from_knowledge",
       "get_catalog_item_form",
       "get_incident_detail",
       "get_incident_form",
+      "get_knowledge_article",
       "get_order_detail",
       "list_user_incidents",
       "list_user_orders",
@@ -24,7 +26,9 @@ describe("getMinimalToolDefinitions", () => {
       "remove_order_item",
       "report_incident",
       "search_catalog_items",
+      "search_knowledge",
       "submit_cart",
+      "submit_knowledge_feedback",
       "update_cart_item",
       "update_order",
       "update_order_item",
@@ -81,5 +85,28 @@ describe("getMinimalToolDefinitions", () => {
     );
     expect(props.forceConfiguredCredentials).toBeDefined();
     expect(props.forceClientCredentials).toBeUndefined();
+  });
+
+  it("marks Knowledge incident escalation as mutating and constrains consent inputs", () => {
+    const definition = byName.create_incident_from_knowledge;
+    expect(definition.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false
+    });
+    const props = (definition.inputSchema as { properties: Record<string, Record<string, unknown>> }).properties;
+    expect(props.userConfirmed.enum).toEqual([true]);
+    expect(props.attemptCount.enum).toEqual([3]);
+    expect(props.urgency.enum).toEqual(["1", "2", "3"]);
+    expect(props.impact.enum).toEqual(["1", "2", "3"]);
+  });
+
+  it("marks native Knowledge feedback as mutating and constrains native values", () => {
+    const definition = byName.submit_knowledge_feedback;
+    expect(definition.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
+    const props = (definition.inputSchema as { properties: Record<string, Record<string, unknown>> }).properties;
+    expect(props.useful.enum).toEqual(["yes", "no"]);
+    expect(props.reason.enum).toEqual(["1", "2", "3", "4"]);
+    expect(props.rating).toMatchObject({ minimum: 1, maximum: 5 });
   });
 });

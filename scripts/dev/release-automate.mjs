@@ -15,8 +15,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import url from "node:url";
+import spawn from "cross-spawn";
+import { createSourcePackage } from "./source-package.mjs";
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..");
@@ -34,24 +35,35 @@ function hasArg(name) {
 
 function runChecked(cmd, args, opts = {}) {
   console.log(`\n==> ${cmd} ${args.join(" ")}`);
-  const result = spawnSync(cmd, args, {
+  const result = spawn.sync(cmd, args, {
     cwd: repoRoot,
     stdio: "inherit",
     env: opts.env || process.env,
     ...opts
   });
 
+  if (result.error) {
+    throw new Error(`Could not start ${cmd}: ${result.error.message}`);
+  }
   if (result.status !== 0) {
     throw new Error(`${cmd} ${args.join(" ")} failed with exit code ${result.status ?? 1}`);
   }
 }
 
 function runBestEffort(cmd, args) {
-  const result = spawnSync(cmd, args, {
+  const result = spawn.sync(cmd, args, {
     cwd: repoRoot,
     stdio: "ignore"
   });
   return result.status === 0;
+}
+
+function runAtk(args, opts = {}) {
+  runChecked(
+    "npx",
+    ["-y", "--package", "@microsoft/m365agentstoolkit-cli", "atk", ...args],
+    { ...opts, env: { ...process.env, ATK_CLI_SKILL: "true", ...opts.env } }
+  );
 }
 
 function setStoragePublicAccess(storageArmUrl, value) {
@@ -90,7 +102,7 @@ function ensureStoragePublicAccess(storageArmUrl) {
   throw new Error("Storage public access remained disabled after the temporary policy exemption was created.");
 }
 
-function deploySourcePackage() {
+async function deploySourcePackage() {
   const functionAppName = runCapture("azd", ["env", "get-value", "FUNCTION_APP_NAME"]);
   const resourceGroup = runCapture("azd", ["env", "get-value", "AZURE_RESOURCE_GROUP"]);
   const deploymentStorageUrl = runCapture("az", [
@@ -115,25 +127,7 @@ function deploySourcePackage() {
   const exemptionName = "copilot-ready-deploy";
   let exemptionCreated = false;
 
-  fs.mkdirSync(path.dirname(packagePath), { recursive: true });
-  fs.rmSync(packagePath, { force: true });
-
-  runChecked("zip", [
-    "-qr",
-    packagePath,
-    ".",
-    "-x",
-    ".git/*",
-    "node_modules/*",
-    "dist/*",
-    ".tmp/*",
-    ".azure/*",
-    "local.settings.json",
-    ".env",
-    "env/*",
-    "debug/*",
-    "m365-agent/appPackage/build/*"
-  ]);
+  await createSourcePackage(repoRoot, packagePath);
 
   const publicNetworkAccess = runCapture("az", [
     "rest",
@@ -250,28 +244,23 @@ function refreshM365Agent(agentEnvironment) {
   const projectPath = path.join(repoRoot, "m365-agent");
   const buildPath = path.join(projectPath, "appPackage", "build");
   fs.rmSync(buildPath, { recursive: true, force: true });
-  runChecked(
-    "atk",
-    ["provision", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"],
-    { env: { ...process.env, ATK_CLI_SKILL: "true" } }
-  );
+  runAtk(["provision", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"]);
 }
 
 function publishM365Agent(agentEnvironment) {
   const projectPath = path.join(repoRoot, "m365-agent");
-  runChecked(
-    "atk",
-    ["publish", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"],
-    { env: { ...process.env, ATK_CLI_SKILL: "true" } }
-  );
+  runAtk(["publish", "--env", agentEnvironment, "--folder", projectPath, "--interactive", "false"]);
 }
 
 function runCapture(cmd, args) {
-  const result = spawnSync(cmd, args, {
+  const result = spawn.sync(cmd, args, {
     cwd: repoRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
+  if (result.error) {
+    throw new Error(`Could not start ${cmd}: ${result.error.message}`);
+  }
   if (result.status !== 0) {
     const err = (result.stderr || "").trim() || `${cmd} failed`;
     throw new Error(err);
@@ -280,7 +269,7 @@ function runCapture(cmd, args) {
 }
 
 function runCaptureOptional(cmd, args) {
-  const result = spawnSync(cmd, args, {
+  const result = spawn.sync(cmd, args, {
     cwd: repoRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"]
@@ -304,7 +293,7 @@ function required(values, key) {
   return String(value).trim();
 }
 
-function main() {
+async function main() {
   const environmentName = getArg("--environment") || process.env.AZD_ENV_NAME || "snowmcpwidg-dev";
   const agentEnvironment = getArg("--agent-environment") || "dev";
   const publish = hasArg("--publish");
@@ -375,7 +364,7 @@ function main() {
     { env: deployEnv }
   );
 
-  deploySourcePackage();
+  await deploySourcePackage();
 
   const endpoint = runCapture("azd", ["env", "get-value", "MCP_ENDPOINT_URL"]);
   if (!endpoint) {
@@ -397,7 +386,7 @@ function main() {
 }
 
 try {
-  main();
+  await main();
 } catch (error) {
   console.error(error?.message || String(error));
   process.exit(1);

@@ -169,9 +169,9 @@ and the journal's *"last task"* section.
 
 ## Build & validate
 
-```bash
+```powershell
 # 1. Local dev
-npm install       # node_modules is NOT copied into this fork
+npm ci            # node_modules is not copied between machines
 npm test          # the surface + widget + field suites cover the MCP Apps path
 npm run build
 npm run smoke:test  # against `func start` if you have one
@@ -184,7 +184,7 @@ npx @modelcontextprotocol/inspector http://localhost:8080/mcp
 
 # 3. Sideload the declarative agent
 cd m365-agent
-cp env/.env.dev env/.env.dev.user      # fill in MCP_SERVER_URL / DOMAIN
+Copy-Item env/.env.dev env/.env.dev.user # fill in MCP_SERVER_URL / DOMAIN
 #   then use the M365 Agents Toolkit VS Code extension → Provision
 ```
 

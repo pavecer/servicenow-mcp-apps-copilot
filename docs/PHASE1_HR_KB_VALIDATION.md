@@ -35,7 +35,11 @@ Validated with direct API probes using current local credentials:
 
 Interpretation:
 
-- Knowledge scenarios are unblocked from an API/table-availability standpoint.
+- Knowledge tables are reachable. The current configured integration identity
+  returns zero visible article/category rows, while the demo admin UI contains
+  demo content. This is a visibility distinction, not proof of missing data.
+- Knowledge release remains gated on dedicated Knowledge API validation and an
+  Alex/OBO check proving employee-visible articles and user criteria.
 - HR scenarios are blocked in the current instance until HRSD core tables are
   enabled/provisioned and ACLs are granted for the integration identity.
 
