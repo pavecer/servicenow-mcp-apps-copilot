@@ -111,7 +111,7 @@ export async function getDownstreamTokenForCaller(req: OboExchangeRequest): Prom
     if (isCacheHit(cached)) {
       Logger.debug("OBO: using cached downstream token", {
         operation: "obo.cache_hit",
-        callerCacheEnabled: true,
+        callerOid: cacheKey,
         expiresInMs: cached.expiresAtEpochMs - Date.now()
       });
       return cached.value;
@@ -143,7 +143,7 @@ async function exchangeAndCache(req: OboExchangeRequest, cacheKey: string): Prom
 
   Logger.debug("OBO: requesting downstream token", {
     operation: "obo.request",
-    callerCacheEnabled: cacheKey !== NO_CACHE_KEY,
+    callerOid: cacheKey === NO_CACHE_KEY ? null : cacheKey,
     scope
   });
 
@@ -178,7 +178,8 @@ async function exchangeAndCache(req: OboExchangeRequest, cacheKey: string): Prom
 
   Logger.info("OBO: downstream token acquired", {
     operation: "obo.acquired",
-    callerCacheEnabled: cacheKey !== NO_CACHE_KEY,
+    callerOid: cacheKey === NO_CACHE_KEY ? null : cacheKey,
+    cached: cacheKey !== NO_CACHE_KEY,
     expiresInMs: expiresAtEpochMs - Date.now()
   });
 
