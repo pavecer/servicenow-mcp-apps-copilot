@@ -145,7 +145,8 @@ Request one final human action:
   the agent for repair.
 
 After approval, do not push another commit. Any new push invalidates the Human
-result and independent review, if present, and requires the final gate again.
+result and the applicable independent-review or sole-maintainer approval record,
+and requires the final gate again.
 Agents may merge only when CI, conversations, repository checks, and both
 SHA-bound human records are complete. A comment-only review, vague approval,
 reaction, or `@copilot` mention is not merge authority.
