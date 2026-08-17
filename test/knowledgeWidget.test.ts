@@ -31,6 +31,7 @@ class TestElement {
   }
   click() { if (this.disabled) return; for (const listener of this.listeners.get("click") ?? []) listener({ currentTarget: this, preventDefault() {} }); }
   setAttribute(name: string, value: string) { this.attributes.set(name, value); }
+  removeAttribute(name: string) { this.attributes.delete(name); }
   getAttribute(name: string) { return this.attributes.get(name) ?? null; }
   querySelectorAll(selector: string): TestElement[] {
     const found: TestElement[] = [];
@@ -51,17 +52,25 @@ function mountWidget(
   options: {
     callTool?: (name: string, args: Record<string, unknown>) => Promise<unknown>;
     sendFollowUp?: (message: string) => Promise<unknown>;
+    requestDisplayMode?: (mode: string) => Promise<{ mode?: string }>;
+    getDisplayMode?: () => string;
+    getAvailableDisplayModes?: () => string[];
   } = {}
 ): TestElement {
   const root = new TestElement("div");
+  const documentElement = new TestElement("html");
   const document = {
+    documentElement,
     createElement: (name: string) => new TestElement(name),
     createTextNode: (value: string) => { const node = new TestElement("#text"); node.textContent = value; return node; },
     getElementById: () => root
   };
   const window = { mcpHost: {
     applyTheme() {}, getData: () => payload, markRendered() {}, onData: (callback: (data: Record<string, unknown>) => void) => callback(payload),
-    callTool: options.callTool, sendFollowUp: options.sendFollowUp
+    callTool: options.callTool, sendFollowUp: options.sendFollowUp,
+    requestDisplayMode: options.requestDisplayMode,
+    getDisplayMode: options.getDisplayMode,
+    getAvailableDisplayModes: options.getAvailableDisplayModes
   } };
   const scriptStart = html.indexOf("<script>") + "<script>".length;
   const scriptEnd = html.lastIndexOf("</script>");
@@ -207,6 +216,49 @@ describe("Knowledge MCP App", () => {
     ]);
     expect(html).not.toContain("max-height: 420px");
     expect(html).not.toContain("overflow: hidden; }\n  .content");
+  });
+
+  it("shows Expand only for article detail when fullscreen is advertised", () => {
+    const detailWithFullscreen = mountWidget(
+      {
+        mode: "detail",
+        attempt: 1,
+        originalQuestion: "Long article",
+        triedArticles: [],
+        article: { title: "Long article", content: "content", sourceLink: "https://example.service-now.com/kb" }
+      },
+      { getAvailableDisplayModes: () => ["inline", "fullscreen"], getDisplayMode: () => "inline" }
+    );
+    expect(detailWithFullscreen.querySelectorAll("button").map(button => button.textContent)).toContain("Expand");
+
+    const detailInlineOnly = mountWidget(
+      {
+        mode: "detail",
+        attempt: 1,
+        originalQuestion: "Long article",
+        triedArticles: [],
+        article: { title: "Long article", content: "content", sourceLink: "https://example.service-now.com/kb" }
+      },
+      { getAvailableDisplayModes: () => ["inline"], getDisplayMode: () => "inline" }
+    );
+    expect(detailInlineOnly.querySelectorAll("button").map(button => button.textContent)).not.toContain("Expand");
+
+    const searchWithFullscreen = mountWidget(
+      {
+        mode: "search",
+        query: "reset password",
+        attempt: 1,
+        articles: [{
+          sysId: "00000000000000000000000000000001",
+          number: "KB1",
+          title: "Article 1",
+          snippet: "Snippet"
+        }],
+        triedArticles: []
+      },
+      { getAvailableDisplayModes: () => ["inline", "fullscreen"], getDisplayMode: () => "inline" }
+    );
+    expect(searchWithFullscreen.querySelectorAll("button").map(button => button.textContent)).not.toContain("Expand");
   });
 
   it("bounds structured previews and ignores inherited or unknown tag names", () => {

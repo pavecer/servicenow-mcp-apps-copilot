@@ -175,7 +175,9 @@ How a widget actually renders and talks to the host:
    need `_meta.ui.permissions` **on the resource, not the tool**.
 4. **Bidirectional comms** — app ↔ host speak a JSON-RPC dialect over
    `postMessage`. The app receives the tool result, can `callServerTool` /
-   `tools/call`, send follow-up messages, open links, and push context updates.
+   `tools/call`, send follow-up messages, open links, push context updates, and
+   request a display mode change (for example inline → side-by-side/fullscreen)
+   when the host advertises that capability.
 
 Server registration (canonical `ext-apps` shape):
 - `registerAppTool(server, name, { …, _meta: { ui: { resourceUri } } }, handler)`
@@ -225,6 +227,10 @@ Consume only this facade from widget JS:
 - `openExternal(url)` → open a URL (the sandbox blocks `window.open` /
   `target=_blank`)
 - `applyTheme()` → sync `<html data-theme>` with host theme
+- `getDisplayMode()` / `getAvailableDisplayModes()` → read host display-mode
+  context (for conditional inline affordances such as Expand)
+- `requestDisplayMode("inline"|"fullscreen"|"pip")` → ask host to switch
+  surfaces; always feature-detect and degrade gracefully when unsupported
 
 ### In-place multi-state pattern
 A single widget instance re-renders through states (e.g. catalog-browse:

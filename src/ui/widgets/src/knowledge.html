@@ -38,6 +38,10 @@
   .source-label { font-weight: 600; color: var(--fg); }
   .article { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
   .content { font-size: 13px; line-height: 1.55; }
+  html[data-display-mode="fullscreen"] .article { padding: 20px; }
+  html[data-display-mode="fullscreen"] .content { font-size: 14px; line-height: 1.65; }
+  html[data-display-mode="fullscreen"] .content h2 { font-size: 15px; }
+  html[data-display-mode="fullscreen"] .content h3 { font-size: 14px; }
   .content h2 { margin: 18px 0 6px; font-size: 14px; }
   .content h2:first-child { margin-top: 0; }
   .content h3 { margin: 14px 0 6px; font-size: 13px; }
@@ -92,6 +96,11 @@
   function host() { return (typeof window !== "undefined" && window.mcpHost) || null; }
   function getData() { var h = host(); return h ? h.getData() : null; }
   function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
+  function applyDisplayMode(mode) { if (mode === "fullscreen") document.documentElement.setAttribute("data-display-mode", "fullscreen"); else document.documentElement.removeAttribute("data-display-mode"); }
+  function syncDisplayMode() { var h = host(); if (h && h.getDisplayMode) applyDisplayMode(h.getDisplayMode()); else applyDisplayMode(""); }
+  function getAvailableDisplayModes() { var h = host(); if (h && h.getAvailableDisplayModes) return h.getAvailableDisplayModes() || []; return []; }
+  function supportsFullscreenExpand() { return getAvailableDisplayModes().indexOf("fullscreen") !== -1; }
+  function requestDisplayMode(mode) { var h = host(); if (h && h.requestDisplayMode) return h.requestDisplayMode(mode); return Promise.reject(new Error("Display mode requests are unavailable")); }
   function callTool(name, args) { var h = host(); return h && h.callTool ? h.callTool(name, args || {}) : Promise.reject(new Error("Host bridge unavailable")); }
   function sendFollowUp(text) { var h = host(); if (h && h.sendFollowUp) { try { return h.sendFollowUp(text); } catch (error) { return Promise.reject(error); } } return false; }
   function openExternal(url) { var h = host(); if (h && h.openExternal) { try { return h.openExternal(url) !== false; } catch (_) {} } return false; }
@@ -496,6 +505,18 @@
     }
     var actions = make("div", "actions");
     root.appendChild(make("div", "feedback-disclosure", "Feedback is saved to ServiceNow Knowledge."));
+    if (supportsFullscreenExpand()) actions.appendChild(actionButton("Expand", false, function (event) {
+      var button = event.currentTarget;
+      var originalLabel = button.textContent;
+      button.disabled = true; button.textContent = "Opening...";
+      requestDisplayMode("fullscreen").then(function (result) {
+        applyDisplayMode(result && result.mode);
+      }).catch(function () {
+        showStatus("This host cannot expand the article view right now.", true);
+      }).finally(function () {
+        button.disabled = false; button.textContent = originalLabel || "Expand";
+      });
+    }));
     actions.appendChild(actionButton("Give feedback", true, function () { showFeedbackPanel(data); }));
     var openSource = sourceLink(article, mediaHandoff ? "Open complete article in ServiceNow" : "Open in ServiceNow", true); if (openSource) actions.appendChild(openSource);
     root.appendChild(actions);
@@ -517,6 +538,7 @@
 
   function render(data) {
     data = data || {}; lastData = data; root.innerHTML = "";
+    syncDisplayMode();
     if (window.mcpHost && window.mcpHost.markRendered) window.mcpHost.markRendered();
     if (data.success === false || data.mode === "error") return renderError(data);
     if (data.mode === "detail") return renderDetail(data);
