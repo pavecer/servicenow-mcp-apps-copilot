@@ -363,6 +363,77 @@ describe("Knowledge MCP App", () => {
     expect(events).toEqual(["tool:submit_knowledge_feedback:no:3", "follow-up"]);
   });
 
+  it("includes trimmed comment in not-helpful feedback when provided", async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async (name, args) => { calls.push({ name, args }); return { success: true }; },
+      sendFollowUp: async () => {}
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
+    useful[1].checked = true;
+    const reasons = root.querySelectorAll("input").filter(input => input.name === "feedback-reason");
+    reasons[0].checked = true;
+    const textarea = root.querySelector<HTMLTextAreaElement>(".feedback-comment");
+    expect(textarea).not.toBeNull();
+    textarea!.value = "  extra detail  ";
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args.comments).toBe("extra detail");
+  });
+
+  it("omits comment from not-helpful feedback when textarea is blank", async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async (name, args) => { calls.push({ name, args }); return { success: true }; },
+      sendFollowUp: async () => {}
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
+    useful[1].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(calls).toHaveLength(1);
+    expect(Object.prototype.hasOwnProperty.call(calls[0].args, "comments")).toBe(false);
+  });
+
+  it("includes trimmed comment in fallback args when not-helpful feedback is gated", async () => {
+    const followUps: string[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async () => { throw new Error("blocked"); },
+      sendFollowUp: async (msg: string) => { followUps.push(msg); }
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
+    useful[1].checked = true;
+    const textarea = root.querySelector<HTMLTextAreaElement>(".feedback-comment");
+    textarea!.value = "  missing steps  ";
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    root.querySelectorAll("button").find(button => button.textContent === "Save via Copilot")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(followUps).toHaveLength(1);
+    expect(followUps[0]).toContain('"comments":"missing steps"');
+  });
+
+
   it("keeps explicit continuation available when not-helpful feedback cannot be saved", async () => {
     const events: string[] = [];
     const root = mountWidget({

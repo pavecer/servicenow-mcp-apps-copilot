@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Knowledge not-helpful feedback now accepts an optional free-text comment (trimmed, up to 1000 characters), surfaced as a textarea in the Knowledge widget and passed to `submit_knowledge_feedback` as `comments`.
+<!-- release-impact: patch -->
+
 ### Changed
 
 ### Fixed
