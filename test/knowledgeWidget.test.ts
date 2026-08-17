@@ -363,6 +363,21 @@ describe("Knowledge MCP App", () => {
     expect(events).toEqual(["tool:submit_knowledge_feedback:no:3", "follow-up"]);
   });
 
+  it("renders a visible label and 1,000-character limit for feedback detail", () => {
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+
+    const textarea = root.querySelector<HTMLTextAreaElement>(".feedback-comment");
+    expect(textarea).not.toBeNull();
+    expect(textarea!.maxLength).toBe(1000);
+    expect(root.querySelectorAll("label").find(label => label.htmlFor === "feedback-comment")?.textContent)
+      .toBe("What should this article improve? (optional)");
+  });
+
   it("includes trimmed comment in not-helpful feedback when provided", async () => {
     const calls: { name: string; args: Record<string, unknown> }[] = [];
     const root = mountWidget({
@@ -379,9 +394,6 @@ describe("Knowledge MCP App", () => {
     const reasons = root.querySelectorAll("input").filter(input => input.name === "feedback-reason");
     reasons[0].checked = true;
     const textarea = root.querySelector<HTMLTextAreaElement>(".feedback-comment");
-    expect(textarea).not.toBeNull();
-    expect(textarea!.maxLength).toBe(1000);
-    expect(root.querySelectorAll("label").find(label => label.htmlFor === "feedback-comment")?.textContent).toContain("What should this article improve?");
     textarea!.value = "  extra detail  ";
     root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
     await Promise.resolve(); await Promise.resolve();
@@ -410,7 +422,7 @@ describe("Knowledge MCP App", () => {
     expect(Object.prototype.hasOwnProperty.call(calls[0].args, "comments")).toBe(false);
   });
 
-  it("omits comment from helpful feedback", async () => {
+  it("never sends an earlier feedback detail with helpful feedback", async () => {
     const calls: { name: string; args: Record<string, unknown> }[] = [];
     const root = mountWidget({
       mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
@@ -422,8 +434,10 @@ describe("Knowledge MCP App", () => {
 
     root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
     const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
-    useful[0].checked = true;
+    useful[1].checked = true;
     root.querySelector<HTMLTextAreaElement>(".feedback-comment")!.value = "Not sent";
+    useful[1].checked = false;
+    useful[0].checked = true;
     root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
     await Promise.resolve(); await Promise.resolve();
 
