@@ -9,6 +9,7 @@ const templatePath = path.join(
   root,
   ".github/skills/release-communications/assets/linkedin-announcement.md"
 );
+const workflowPath = path.join(root, ".github/workflows/release-communications.yml");
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -19,6 +20,7 @@ describe("release communications customization", () => {
     expect(fs.existsSync(skillPath)).toBe(true);
     expect(fs.existsSync(agentPath)).toBe(true);
     expect(fs.existsSync(templatePath)).toBe(true);
+    expect(fs.existsSync(workflowPath)).toBe(true);
 
     const skill = fs.readFileSync(skillPath, "utf8");
     const agent = fs.readFileSync(agentPath, "utf8");
@@ -67,5 +69,20 @@ describe("release communications customization", () => {
       `https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/${releaseVersion}`
     );
     expect(draft).toContain("https://pavecer.github.io/servicenow-mcp-apps-copilot/");
+  });
+
+  it("creates one cloud communications work item after a successful release", () => {
+    const workflow = fs.readFileSync(workflowPath, "utf8");
+
+    expect(workflow).toContain("workflow_run:");
+    expect(workflow).toContain("workflows: [release]");
+    expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
+    expect(workflow).toContain("issues: write");
+    expect(workflow).toContain("actions/github-script@v8");
+    expect(workflow).toContain("Release communications: ${version}");
+    expect(workflow).toContain("Communications issue already exists");
+    expect(workflow).toContain("Release Communications");
+    expect(workflow).toContain("never publish or schedule LinkedIn content");
+    expect(workflow).not.toContain("pages: write");
   });
 });
