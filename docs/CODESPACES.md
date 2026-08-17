@@ -199,16 +199,20 @@ Every user-facing PR must contain a completed **Human test plan** before review.
 The agent writes exact prompts/clicks and expected widget states, identifies the
 test personas and fixtures, lists ServiceNow record/attribution/ACL checks, and
 provides cleanup steps. The approver follows that script and records `PASS` or
-the failed step in the PR. An independent collaborator submits an approving
-review; in a sole-maintainer repository, the maintainer's explicit merge
-instruction after recording `PASS` is the approval record.
+the failed step in the PR. Follow
+[the human approval protocol](HUMAN_APPROVAL.md) for the exact, SHA-bound
+validation and authorization comments. An independent collaborator submits an
+approving review; in a sole-maintainer repository, the maintainer's separate
+`HUMAN APPROVAL: MERGE` comment after recording `PASS` is the approval record.
 
 Branch protection must require the `Build and test` status check and resolved
 conversations. Require one approving review when an independent reviewer is
 available. GitHub cannot accept an author's approval of their own PR, so a
 sole-maintainer repository instead keeps the review count at zero and relies on
-the recorded Human result plus explicit merge instruction. A push after either
-form of approval invalidates the evidence and requires the final gate again.
+the recorded Human result plus the exact merge instruction. A vague approval,
+comment-only review, reaction, or `@copilot` mention is not merge authority. A
+push after validation or either form of approval invalidates both records and
+requires the final gate again.
 
 GitHub's hosted Copilot coding agent uses
 `.github/workflows/copilot-setup-steps.yml` to pin Node 20, install locked

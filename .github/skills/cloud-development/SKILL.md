@@ -128,21 +128,28 @@ all automated and agent-owned work is finished.
 
 ### 6. Single human gate
 
+Follow `docs/HUMAN_APPROVAL.md`; do not infer approval from conversational text.
+Human validation and permission to merge are separate records bound to the same
+full 40-character candidate SHA.
+
 Request one final human action:
 
 1. Follow the PR's prepared Human test plan exactly in the Microsoft 365 test
   tenant; record deviations or failures instead of improvising around them.
 2. Confirm the listed effects, caller attribution, and ACL behavior in the
   ServiceNow test environment, then run the listed cleanup.
-3. Set the Human result to `PASS` with concise observed evidence and submit the
-  final approval: an approving review from an independent reviewer, or an
-  explicit merge instruction from the sole maintainer. Any failed step keeps
-  the PR unapproved and returns it to the agent for repair.
+3. Post the exact `HUMAN VALIDATION: PASS` record with concise observed evidence.
+4. Submit the separate merge authorization: an **Approve** review from an
+  independent reviewer, or the exact `HUMAN APPROVAL: MERGE` comment from the
+  sole maintainer. Any failed step keeps the PR unapproved and returns it to
+  the agent for repair.
 
 After approval, do not push another commit. Any new push invalidates the Human
-result and independent review, if present, and requires the final gate again.
-Agents may merge only when CI, conversations, repository checks, and the
-applicable approval record are complete.
+result and the applicable independent-review or sole-maintainer approval record,
+and requires the final gate again.
+Agents may merge only when CI, conversations, repository checks, and both
+SHA-bound human records are complete. A comment-only review, vague approval,
+reaction, or `@copilot` mention is not merge authority.
 
 ## Hard stops
 
@@ -168,6 +175,7 @@ Use this concise block in the PR:
 - ServiceNow verification: `<record, attribution, ACL expectations>`
 - Cleanup: `<cleanup/reset procedure>`
 - Human result: PENDING
+- Approval record: PENDING
 
 ### Candidate evidence
 - Exact SHA: `<sha>`
@@ -176,5 +184,5 @@ Use this concise block in the PR:
 - ServiceNow test environment: PASS/PENDING - `<scenario and observed result>`
 - M365 test tenant click-through: PASS/PENDING - `<agent, prompts, widget result>`
 - Fixture cleanup and storage security restoration: PASS
-- Final approving review: PENDING/PASS
+- Final human approval: PENDING/PASS
 ```

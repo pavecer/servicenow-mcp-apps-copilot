@@ -64,9 +64,12 @@ user-facing PR is approved and merged:
   instance.
   Release/CI tooling that cannot affect the deployed application instead uses
   **Completed maintainer workflow review** with executable evidence.
-3. Record the exact SHA and non-secret evidence in the PR, then obtain one final
-  approving PR review. Do not push another commit after approval; stale review
-  dismissal intentionally requires the gate again after any change.
+3. Record the exact SHA and non-secret evidence in the PR, then follow
+  [the human approval protocol](HUMAN_APPROVAL.md). Human validation and merge
+  authorization are separate, SHA-bound records. Use an approving review from
+  an independent reviewer, or the exact merge-instruction comment documented
+  there for a sole maintainer. Do not push another commit after validation or
+  approval; any change requires the gate again.
 4. Add one concise user-facing sentence to `CHANGELOG.md` under `Unreleased`.
   Add `<!-- release-impact: patch|minor|major -->` beside that entry so the
   highest queued impact remains machine-readable after merge.
