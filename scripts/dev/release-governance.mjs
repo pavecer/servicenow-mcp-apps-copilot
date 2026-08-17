@@ -251,8 +251,7 @@ function versionImpact(fromVersion, toVersion) {
 function inferDependabotDevelopmentPlan(args, event, body, files) {
   if (event.pull_request?.user?.login !== "dependabot[bot]") return null;
   const hasTemplateSelection = selectedOptions(body, [
-    "None", "Patch", "Minor", "Major", "Regular change",
-    "Version release", "Version baseline alignment"
+    "None", "Patch", "Minor", "Major", "Regular change", "Version release"
   ]).length > 0;
   if (hasTemplateSelection) return null;
   if (!files.length || !files.every(file => file === "package.json" || file === "package-lock.json")) {
@@ -283,8 +282,8 @@ function validatePr(args) {
 
   const impacts = selectedOptions(body, ["None", "Patch", "Minor", "Major"]);
   if (impacts.length !== 1) fail("Select exactly one release impact: None, Patch, Minor, or Major.");
-  const prKinds = selectedOptions(body, ["Regular change", "Version release", "Version baseline alignment"]);
-  if (prKinds.length !== 1) fail("Select exactly one PR kind: Regular change, Version release, or Version baseline alignment.");
+  const prKinds = selectedOptions(body, ["Regular change", "Version release"]);
+  if (prKinds.length !== 1) fail("Select exactly one PR kind: Regular change or Version release.");
   const validations = selectedOptions(body, ["Not required", "Completed maintainer workflow review", "Completed in test tenant"]);
   if (validations.length !== 1) {
     fail("Select exactly one human-validation state: Not required, Completed maintainer workflow review, or Completed in test tenant.");
@@ -294,32 +293,8 @@ function validatePr(args) {
   const releaseNote = meaningfulSection(getSection(body, "Release note"));
   const validationEvidence = meaningfulSection(getSection(body, "Human validation evidence"));
   const isVersionRelease = prKinds[0] === "Version release";
-  const isBaselineAlignment = prKinds[0] === "Version baseline alignment";
   const baseVersion = JSON.parse(baseFile(args, event, "package.json")).version;
   const currentVersion = getCanonicalVersion();
-
-  if (isBaselineAlignment) {
-    if (baseVersion !== "1.0.0" || currentVersion !== "1.1.6") {
-      fail("Version baseline alignment is restricted to the one-time 1.0.0 -> 1.1.6 reconciliation.");
-    }
-    if (impact !== "minor") fail("Version baseline alignment must select Minor impact.");
-    if (validations[0] !== "Completed maintainer workflow review") {
-      fail("Version baseline alignment requires completed maintainer workflow review.");
-    }
-    if (requiresTenantValidation(files, args, event)) {
-      fail("Version baseline alignment cannot include runtime or deployment changes.");
-    }
-    const currentUnreleased = getSection(fs.readFileSync(changelogPath, "utf8"), "[Unreleased]");
-    const baseUnreleased = getSection(baseChangelog(args, event), "[Unreleased]");
-    if (!normalizedText(currentUnreleased).includes(normalizedText(releaseNote))
-      || normalizedText(baseUnreleased).includes(normalizedText(releaseNote))) {
-      fail("Baseline release note must be newly added to CHANGELOG.md under Unreleased.");
-    }
-    if (markerCount(currentUnreleased, impact) <= markerCount(baseUnreleased, impact)) {
-      fail(`Add a new '<!-- release-impact: ${impact} -->' marker beside the baseline PR note.`);
-    }
-    return { impact, prKind: prKinds[0], humanValidation: validations[0], releaseNote, changedFiles: files };
-  }
 
   if (isVersionRelease) {
     if (impact === "none") fail("A Version release PR must select Patch, Minor, or Major.");
@@ -352,7 +327,7 @@ function validatePr(args) {
   }
 
   if (baseVersion !== currentVersion) {
-    fail("Regular change PRs cannot change the canonical version; use Version release or Version baseline alignment.");
+    fail("Regular change PRs cannot change the canonical version; use Version release.");
   }
 
   if (impact === "none") {

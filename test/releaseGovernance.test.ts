@@ -33,7 +33,6 @@ function prBody(
     "## PR kind",
     `${prKind === "Regular change" ? "- [x]" : "- [ ]"} Regular change`,
     `${prKind === "Version release" ? "- [x]" : "- [ ]"} Version release — generated with npm run release:prepare`,
-    `${prKind === "Version baseline alignment" ? "- [x]" : "- [ ]"} Version baseline alignment — one-time reconciliation`,
     "",
     "## Release note",
     releaseNote,
@@ -468,36 +467,5 @@ describe("release governance", () => {
     expect(currentVersion).toBe(patchVersion);
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/understates minor changes/i);
-  });
-
-  it("allows only the one-time version baseline alignment", () => {
-    const fixture = governanceFixture({ version: "1.1.6" });
-    const releaseNote = GOVERNANCE_NOTE;
-    const body = temporaryFile(prBody(releaseNote, "Completed maintainer workflow review", "Minor", "Version baseline alignment"));
-    const changed = temporaryFile("CHANGELOG.md\npackage.json\npackage-lock.json\n");
-    const baseChangelog = temporaryFile("# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [1.0.0] - 2026-01-01\n\nBaseline.\n");
-    const output = execFileSync("node", [
-      fixture.fixtureScript, "pr-check", "--body-file", body, "--changed-files", changed,
-      "--base-changelog", baseChangelog, "--base-package", basePackage("1.0.0"),
-      "--base-lock", baseLock("1.0.0"), "--json"
-    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
-    expect(JSON.parse(output)).toMatchObject({ impact: "minor", prKind: "Version baseline alignment" });
-
-    const invalid = spawnSync("node", [
-      fixture.fixtureScript, "pr-check", "--body-file", body, "--changed-files", changed,
-      "--base-changelog", baseChangelog, "--base-package", basePackage("1.1.5"),
-      "--base-lock", baseLock("1.1.5")
-    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
-    expect(invalid.status).toBe(1);
-    expect(invalid.stderr).toMatch(/restricted to the one-time 1\.0\.0 -> 1\.1\.6/i);
-
-    const runtime = spawnSync("node", [
-      fixture.fixtureScript, "pr-check", "--body-file", body,
-      "--changed-files", temporaryFile("CHANGELOG.md\npackage.json\npackage-lock.json\nsrc/server.ts\n"),
-      "--base-changelog", baseChangelog, "--base-package", basePackage("1.0.0"),
-      "--base-lock", baseLock("1.0.0")
-    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
-    expect(runtime.status).toBe(1);
-    expect(runtime.stderr).toMatch(/cannot include runtime or deployment changes/i);
   });
 });

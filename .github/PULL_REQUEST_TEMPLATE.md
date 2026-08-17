@@ -32,7 +32,6 @@ Select exactly one.
 
 - [ ] Regular change
 - [ ] Version release — generated with `npm run release:prepare`
-- [ ] Version baseline alignment — one-time `1.0.0` → `1.1.6` reconciliation
 
 ## Release note
 

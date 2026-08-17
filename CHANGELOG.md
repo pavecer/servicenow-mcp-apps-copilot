@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Unpinned the model from all specialist chatmodes so they inherit the
+  session's selected model, documented CodeQL as GitHub default setup rather
+  than a workflow file, removed the closed one-time "Version baseline
+  alignment" PR kind from the release governance tooling, and closed a
+  command-line secret exposure in the optional container-deploy chatmode.
+<!-- release-impact: patch -->
+
 ### Fixed
 
 ## [1.2.0] - 2026-08-10

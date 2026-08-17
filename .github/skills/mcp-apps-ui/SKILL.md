@@ -251,12 +251,15 @@ cold-start/tests throw (see `/memories/repo/widget-and-tool-invariants.md`):
 2. Tool Zod schema must match the minimal manifest (same property names +
    required set; no oneOf/anyOf/format/negative bounds).
 3. `registerTools()` registers the tool.
-4. `test/toolManifest.test.ts` exact tool-name list + count.
-5. `test/widgetResources.test.ts` EXACT `ui://` resource count.
-6. `m365-agent/appPackage/ai-plugin.json` remains configured for dynamic tool
+4. `src/ui/widgets.ts` `WIDGETS` registry (for widgets); set
+   `permissions`/`frameDomains` on the resource only.
+5. `test/toolManifest.test.ts` exact tool-name list + count.
+6. `test/widgetResources.test.ts` EXACT `ui://` resource count.
+7. `m365-agent/appPackage/ai-plugin.json` remains configured for dynamic tool
   discovery (`functions: []`, `run_for_functions: ["*"]`); the live MCP
   `tools/list` response is the package's tool source.
-7. Tool `content` must never carry verbose JSON or Adaptive Card payloads.
+8. `scripts/agent365-mcp-registration.template.json` exact tool inventory.
+9. Tool `content` must never carry verbose JSON or Adaptive Card payloads.
 
 ### Build + verify
 - `npm run build` runs `build-widgets.mjs` then `tsc` (generated widgets must
