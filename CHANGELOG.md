@@ -11,13 +11,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Knowledge not-helpful feedback now accepts an optional free-text comment (trimmed, up to 1000 characters), surfaced as a textarea in the Knowledge widget and passed to `submit_knowledge_feedback` as `comments`.
-<!-- release-impact: patch -->
-
 ### Changed
 
 ### Fixed
 
+## [1.2.0] - 2026-08-10
+
+### Added
+
+- Add enforceable release planning and version checks for contributors.
+<!-- release-impact: minor -->
+- Add ranked, caller-visible ServiceNow Knowledge retrieval with a three-attempt resolution journey and consent-based incident escalation.
+<!-- release-impact: minor -->
+- Knowledge not-helpful feedback now accepts an optional free-text comment
+  (trimmed, up to 1000 characters), surfaced as a textarea in the Knowledge
+  widget and passed to `submit_knowledge_feedback` as `comments`.
+<!-- release-impact: patch -->
+
+### Changed
+
+- Update Azure Functions and HTTP runtime dependencies while grouping and
+  auditing future dependency maintenance.
+<!-- release-impact: patch -->
+
+### Fixed
+
+- Require Entra authentication for test deployments and authenticate live MCP
+  validation instead of relying on unauthenticated discovery.
+<!-- release-impact: patch -->
 - Keep Knowledge article actions visible with compact ranked previews, format
   category metadata clearly, decode rich-text entities, and preserve bounded
   ServiceNow heading, nested-list, emphasis, code, and block structure through
@@ -28,19 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and consented incidents best-effort link attempted articles through
   `m2m_kb_task` without compromising truthful incident success.
 <!-- release-impact: patch -->
-
-## [1.2.0] - 2026-08-10
-
-### Added
-
-- Add enforceable release planning and version checks for contributors.
-<!-- release-impact: minor -->
-- Add ranked, caller-visible ServiceNow Knowledge retrieval with a three-attempt resolution journey and consent-based incident escalation.
-<!-- release-impact: minor -->
-
-### Changed
-
-### Fixed
 
 ## [1.1.6] - 2026-08-10
 

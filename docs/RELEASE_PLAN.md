@@ -8,8 +8,9 @@ contributors, and automation.
 
 - Every pull request states whether it has no release impact or is a patch,
   minor, or major change.
-- User-facing behavior is tested in the test tenant and explicitly approved
-  before a public pull request is opened.
+- Agents prepare user-facing changes and exact-commit test evidence in a draft
+  pull request; one final human PR approval follows click-through validation in
+  the ServiceNow and Microsoft 365 test environments.
 - `package.json`, `package-lock.json`, and the Microsoft 365 app manifest always
   carry the same semantic version.
 - `CHANGELOG.md` is the source for curated user-facing release notes.
@@ -53,14 +54,22 @@ it for any other version pair.
 
 ## Pull Request Contract
 
-Before a public PR is opened:
+Agents may open or update a draft PR while validation is in progress. Before a
+user-facing PR is approved and merged:
 
 1. Build and test locally.
 2. For user-facing behavior, deploy the exact commit to `snowmcpwidg-dev` and
-   complete hands-on testing in the developer/test Microsoft 365 agent.
+  complete hands-on testing in the developer/test Microsoft 365 agent, then
+  verify the corresponding result or side effect in the ServiceNow test
+  instance.
   Release/CI tooling that cannot affect the deployed application instead uses
   **Completed maintainer workflow review** with executable evidence.
-3. Obtain explicit human approval of the observed behavior.
+3. Record the exact SHA and non-secret evidence in the PR, then follow
+  [the human approval protocol](HUMAN_APPROVAL.md). Human validation and merge
+  authorization are separate, SHA-bound records. Use an approving review from
+  an independent reviewer, or the exact merge-instruction comment documented
+  there for a sole maintainer. Do not push another commit after validation or
+  approval; any change requires the gate again.
 4. Add one concise user-facing sentence to `CHANGELOG.md` under `Unreleased`.
   Add `<!-- release-impact: patch|minor|major -->` beside that entry so the
   highest queued impact remains machine-readable after merge.
@@ -68,6 +77,12 @@ Before a public PR is opened:
 6. Select one release impact and one human-validation state.
 7. Include validation evidence or explain why no user-facing validation was
    required.
+
+This is the single development approval gate. Agents own implementation,
+automated checks, test deployment, evidence preparation, and draft PR updates.
+Tenant admin consent, organizational catalog approval, production deployment,
+and public communications remain separate privileged operations and are never
+automatic consequences of this gate.
 
 CI runs `release:check` and `release:pr-check`. It rejects ambiguous impact,
 missing evidence, version drift, a missing changelog update, or release-note

@@ -197,7 +197,8 @@ This creates marked, reusable requests and pending approvals for Alex Baker and
 admin in the configured ServiceNow development instance. See
 [docs/DEMO_APPROVAL_FLOW.md](docs/DEMO_APPROVAL_FLOW.md).
 
-**See also:** [Local Development Guide](docs/LOCAL_DEVELOPMENT.md)
+**See also:** [Local Development Guide](docs/LOCAL_DEVELOPMENT.md) and
+[GitHub Codespaces Development](docs/CODESPACES.md)
 
 ---
 
@@ -210,7 +211,7 @@ admin in the configured ServiceNow development instance. See
 | **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
 | **Operations** | [Environment Variables](docs/CONFIG_REFERENCE.md) • [Troubleshooting](docs/TROUBLESHOOTING.md) • [Cost Model](docs/COST_ESTIMATION.md) |
 | **Advanced** | [Agent 365 Publishing & Governance](docs/AGENT_365_PUBLISHING.md) • [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO.md) • [Agent 365 MCP Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
-| **Development** | [Contributing](CONTRIBUTING.md) • [Engineering Guardrails](docs/ENGINEERING_GUARDRAILS.md) • [Build/Test Commands](AGENTS.md) |
+| **Development** | [Codespaces](docs/CODESPACES.md) • [Contributing](CONTRIBUTING.md) • [Engineering Guardrails](docs/ENGINEERING_GUARDRAILS.md) • [Build/Test Commands](AGENTS.md) |
 | **Security** | [Security Guidelines](SECURITY.md) • [Code of Conduct](CODE_OF_CONDUCT.md) |
 
 ---

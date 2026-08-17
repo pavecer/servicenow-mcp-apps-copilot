@@ -1,5 +1,7 @@
 {
   "recommendations": [
+    "GitHub.codespaces",
+    "ms-vscode-remote.remote-containers",
     "ms-azuretools.vscode-azurefunctions",
     "ms-vscode.powershell",
     "TeamsDevApp.ms-teams-vscode-extension"

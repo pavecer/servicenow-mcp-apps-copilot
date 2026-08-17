@@ -248,12 +248,37 @@ function versionImpact(fromVersion, toVersion) {
   fail(`Version change ${fromVersion} -> ${toVersion} is not one valid SemVer increment.`);
 }
 
+function inferDependabotDevelopmentPlan(args, event, body, files) {
+  if (event.pull_request?.user?.login !== "dependabot[bot]") return null;
+  const hasTemplateSelection = selectedOptions(body, [
+    "None", "Patch", "Minor", "Major", "Regular change",
+    "Version release", "Version baseline alignment"
+  ]).length > 0;
+  if (hasTemplateSelection) return null;
+  if (!files.length || !files.every(file => file === "package.json" || file === "package-lock.json")) {
+    fail("Dependabot automation without the PR template is limited to npm dependency files.");
+  }
+  if (productionDependenciesChanged(args, event, files)) {
+    fail("Production Dependabot updates require reviewed Patch metadata, a changelog entry, and applicable human validation.");
+  }
+  return {
+    impact: "none",
+    prKind: "Regular change",
+    humanValidation: "Not required",
+    releaseNote: "N/A",
+    changedFiles: files
+  };
+}
+
 function validatePr(args) {
   const eventPath = args.event || process.env.GITHUB_EVENT_PATH;
   const event = eventPath ? readJson(path.resolve(eventPath)) : {};
   const body = args["body-file"]
     ? fs.readFileSync(path.resolve(args["body-file"]), "utf8")
     : event.pull_request?.body ?? "";
+  const files = changedFiles(args, event);
+  const dependabotPlan = inferDependabotDevelopmentPlan(args, event, body, files);
+  if (dependabotPlan) return dependabotPlan;
   if (!body.trim()) fail("Pull request body is empty. Use the repository PR template.");
 
   const impacts = selectedOptions(body, ["None", "Patch", "Minor", "Major"]);
@@ -268,7 +293,6 @@ function validatePr(args) {
   const impact = impacts[0].toLowerCase();
   const releaseNote = meaningfulSection(getSection(body, "Release note"));
   const validationEvidence = meaningfulSection(getSection(body, "Human validation evidence"));
-  const files = changedFiles(args, event);
   const isVersionRelease = prKinds[0] === "Version release";
   const isBaselineAlignment = prKinds[0] === "Version baseline alignment";
   const baseVersion = JSON.parse(baseFile(args, event, "package.json")).version;

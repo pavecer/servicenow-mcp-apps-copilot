@@ -25,6 +25,7 @@ incident workflows to **Microsoft 365 Copilot / Cowork** via **MCP Apps
 
 ```bash
 npm install            # install deps
+npm run cloud:check    # verify Codespaces tools, identities, Azure access, and endpoint
 npm run build          # build-widgets.mjs (regenerates generated/) THEN tsc
 npm test               # vitest — full suite (exact-count manifest/widget tests)
 npm run release:auto -- --environment snowmcpwidg-dev # deploy through M365 prompt-test readiness
@@ -66,8 +67,9 @@ m365-agent/               Declarative-agent package (manifest, ai-plugin, tools)
 scripts/                  deploy/setup PowerShell + dev/ helper scripts
 docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy)
 .github/
-  agents/*.{agent,chatmode}.md  Custom VS Code agents (release, deploy, UI, communications)
-  skills/                 MCP Apps UI and release-communications workflows
+  copilot-instructions.md      Always-on repository agent and single-gate policy
+  agents/*.{agent,chatmode}.md Custom agents (cloud, release, deploy, UI, communications)
+  skills/                      Cloud, MCP Apps UI, and release communications workflows
 ```
 
 - `release:auto` stops at the human test boundary: build, tests, policy-aware
@@ -81,10 +83,33 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
   submitting another one.
 - Public releases follow [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md). Every PR
   selects one release impact and human-validation state; user-facing behavior
-  must be approved in the test tenant before the public PR is opened.
+  is prepared in a draft PR and receives one final human approval after
+  Microsoft 365 click-through and ServiceNow test-environment verification.
+  Follow [docs/HUMAN_APPROVAL.md](docs/HUMAN_APPROVAL.md) for the exact
+  SHA-bound validation and merge-authorization records.
 - After a GitHub Release exists, use the **Release Communications** agent or
   `.github/skills/release-communications/` to update GitHub Pages and prepare an
   approval-gated LinkedIn draft. Never announce `Unreleased` or test-only state.
+
+## Agent portfolio
+
+- **Cloud Development** plus `.github/skills/cloud-development/`: primary
+  Codespaces workflow from implementation through exact-commit test deployment,
+  two-environment evidence, and approval-ready draft PR.
+- **mcp-apps-ui** plus `.github/skills/mcp-apps-ui/`: widget UX, host bridge,
+  protocol metadata, visual states, and widget/tool lockstep.
+- **copilot-ready-release**: build, tests, policy-aware Azure deployment, live
+  tools, and existing M365 developer package update.
+- **deploy-mcp-server**: Azure Functions provisioning and deployment repair.
+- **deploy-mcp-container**: optional Container Apps deployment path only.
+- **Release Communications** plus `.github/skills/release-communications/`:
+  post-release site updates and approval-gated public announcement drafts.
+
+GitHub's hosted Copilot coding agent uses
+`.github/workflows/copilot-setup-steps.yml` for Node 20, locked dependencies,
+build output, and contract tests. It has no tenant secrets. Live ServiceNow,
+Azure test deployment, and M365 work run from the Codespace agent after
+`npm run cloud:check`.
 
 ## Critical invariants (violating these breaks cold start or tests)
 
