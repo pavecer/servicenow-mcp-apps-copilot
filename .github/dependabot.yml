@@ -8,6 +8,13 @@ updates:
       day: "monday"
       time: "06:00"
     open-pull-requests-limit: 5
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+      production-dependencies:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
     reviewers:
       - "pavecer"
     commit-message:
@@ -35,6 +42,9 @@ updates:
       day: "monday"
       time: "06:00"
     open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns: ["*"]
     reviewers:
       - "pavecer"
     commit-message:
@@ -48,6 +58,9 @@ updates:
       day: "monday"
       time: "06:00"
     open-pull-requests-limit: 3
+    groups:
+      docker-images:
+        patterns: ["*"]
     reviewers:
       - "pavecer"
     commit-message:
