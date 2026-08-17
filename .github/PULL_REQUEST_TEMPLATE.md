@@ -70,7 +70,7 @@ environments and the human records final approval.
 - ServiceNow verification: <!-- table/record state, caller attribution, ACL expectation -->
 - Cleanup: <!-- exact cleanup command or records to remove/reset -->
 - Human result: PENDING
-- Approval record: PENDING <!-- independent approving review, or sole-maintainer merge instruction -->
+- Approval record: PENDING <!-- follow docs/HUMAN_APPROVAL.md; bind both records to the full SHA -->
 
 ### Candidate evidence
 
@@ -80,7 +80,7 @@ environments and the human records final approval.
 - ServiceNow test environment:
 - M365 test tenant click-through:
 - Fixture cleanup and storage security restoration:
-- Final human approval:
+- Final human approval: PENDING <!-- independent Approve review, or exact sole-maintainer HUMAN APPROVAL: MERGE comment -->
 
 ## Checklist
 

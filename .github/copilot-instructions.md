@@ -35,8 +35,9 @@ Agents prepare the prompts, deploy the candidate, collect non-secret evidence,
 and update the PR. The human records `PASS` and explicitly authorizes merge. If
 an independent reviewer exists, use one approving GitHub review as that record;
 in a sole-maintainer repository, use the PR evidence plus an explicit merge
-instruction. Any push after approval invalidates it and requires the same final
-gate again.
+instruction. Follow [docs/HUMAN_APPROVAL.md](../docs/HUMAN_APPROVAL.md) for the
+exact SHA-bound comment formats. Any push after validation or approval
+invalidates both records and requires the same final gate again.
 
 Tenant admin consent, organizational catalog approval, production deployment,
 and public communications are privileged operational actions outside this

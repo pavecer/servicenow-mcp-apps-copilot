@@ -84,6 +84,8 @@ docs/                     Deep-dive docs (auth, MCP Apps, cost, container deploy
   selects one release impact and human-validation state; user-facing behavior
   is prepared in a draft PR and receives one final human approval after
   Microsoft 365 click-through and ServiceNow test-environment verification.
+  Follow [docs/HUMAN_APPROVAL.md](docs/HUMAN_APPROVAL.md) for the exact
+  SHA-bound validation and merge-authorization records.
 
 ## Agent portfolio
 
