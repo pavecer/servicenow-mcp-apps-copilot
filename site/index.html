@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#f7f4ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#3d3b3a" media="(prefers-color-scheme: dark)">
   <meta property="og:title" content="ServiceNow MCP Apps for Microsoft 365 Copilot">
-  <meta property="og:description" content="A stateless Azure Functions MCP server with 23 ServiceNow tools and 8 interactive MCP Apps widgets.">
+  <meta property="og:description" content="A stateless Azure Functions MCP server with 27 ServiceNow tools and 9 interactive MCP Apps widgets.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://pavecer.github.io/servicenow-mcp-apps-copilot/">
   <title>ServiceNow MCP Apps for Microsoft 365 Copilot</title>
@@ -400,7 +400,7 @@
     }
   </style>
 </head>
-<body>
+<body data-release-version="v1.2.0">
   <a class="skip-link" href="#content">Skip to content</a>
   <header class="topbar">
     <div class="topbar-inner">
@@ -422,10 +422,10 @@
       <div class="container">
         <p class="eyebrow">Open-source reference implementation</p>
         <h1>ServiceNow MCP Apps for Microsoft 365 Copilot</h1>
-        <p class="lede">A stateless TypeScript MCP server that turns ServiceNow catalog ordering, request approvals, and incident management into secure, interactive experiences inside Copilot.</p>
+        <p class="lede">A stateless TypeScript MCP server that turns ServiceNow Knowledge, catalog ordering, request approvals, and incident management into secure, interactive experiences inside Copilot.</p>
         <div class="intro-actions">
           <a class="button" href="https://github.com/pavecer/servicenow-mcp-apps-copilot#quick-start">Deploy the solution</a>
-          <a class="button secondary" href="#architecture">Inspect the architecture</a>
+          <a class="button secondary" href="https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/v1.2.0">View the v1.2.0 release</a>
         </div>
 
         <figure class="architecture" id="architecture" aria-labelledby="architecture-title">
@@ -465,9 +465,9 @@
             </div>
           </div>
           <div class="metrics" aria-label="Project inventory">
-            <div class="metric"><strong>26</strong><span>MCP tools</span></div>
+            <div class="metric"><strong>27</strong><span>MCP tools</span></div>
             <div class="metric"><strong>9</strong><span>Interactive widgets</span></div>
-            <div class="metric"><strong>300+</strong><span>Automated tests</span></div>
+            <div class="metric"><strong>412</strong><span>Release tests</span></div>
             <div class="metric"><strong>2</strong><span>Identity boundaries</span></div>
           </div>
         </figure>
@@ -642,9 +642,9 @@ npm run demo:verify</pre>
               <pre><span class="prompt">npm run build</span>
 <span class="prompt">npm test</span>
 
-<span class="comment"># Knowledge feature branch result</span>
-41 test files
-395 tests passing
+<span class="comment"># v1.2.0 release validation</span>
+44 test files
+412 tests passing
 27 tools · 9 widgets</pre>
             </div>
           </article>

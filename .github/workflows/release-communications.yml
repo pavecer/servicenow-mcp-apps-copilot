@@ -1,0 +1,84 @@
+name: release-communications
+
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Released version to prepare, for example v1.2.0
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  create-work-item:
+    name: Create release communications work item
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Create deduplicated communications issue
+        uses: actions/github-script@v8
+        env:
+          REQUESTED_VERSION: ${{ github.event.inputs.version || '' }}
+        with:
+          script: |
+            const requestedVersion = process.env.REQUESTED_VERSION.trim();
+            const release = requestedVersion
+              ? await github.rest.repos.getReleaseByTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag: requestedVersion
+                })
+              : await github.rest.repos.getLatestRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo
+                });
+            const version = release.data.tag_name;
+            if (!/^v\d+\.\d+\.\d+$/.test(version)) {
+              core.setFailed(`Release tag '${version}' is not a semantic version.`);
+              return;
+            }
+
+            const title = `Release communications: ${version}`;
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              per_page: 100
+            });
+            const existing = issues.find(
+              issue => !issue.pull_request && issue.title === title
+            );
+            if (existing) {
+              core.info(`Communications issue already exists: ${existing.html_url}`);
+              return;
+            }
+
+            const body = [
+              `GitHub Release [${version}](${release.data.html_url}) is published.`,
+              '',
+              'Use the workspace **Release Communications** agent or the `release-communications` skill to:',
+              '',
+              '1. Ground public claims in the dated changelog and GitHub Release.',
+              '2. Update `site/index.html` to the released public baseline.',
+              `3. Create \`release-comms/${version}-linkedin.md\` as an unapproved draft.`,
+              '4. Validate build, tests, public links, desktop/mobile layouts, and dark mode.',
+              '5. Open a dedicated draft communications PR.',
+              '',
+              '**Hard stop:** never publish or schedule LinkedIn content until the exact current draft receives explicit human approval. Merging the Pages PR does not authorize LinkedIn publication.'
+            ].join('\n');
+
+            const created = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body
+            });
+            core.notice(`Created release communications work item: ${created.data.html_url}`);

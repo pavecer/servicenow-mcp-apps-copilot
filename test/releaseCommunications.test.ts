@@ -9,6 +9,7 @@ const templatePath = path.join(
   root,
   ".github/skills/release-communications/assets/linkedin-announcement.md"
 );
+const workflowPath = path.join(root, ".github/workflows/release-communications.yml");
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -19,6 +20,7 @@ describe("release communications customization", () => {
     expect(fs.existsSync(skillPath)).toBe(true);
     expect(fs.existsSync(agentPath)).toBe(true);
     expect(fs.existsSync(templatePath)).toBe(true);
+    expect(fs.existsSync(workflowPath)).toBe(true);
 
     const skill = fs.readFileSync(skillPath, "utf8");
     const agent = fs.readFileSync(agentPath, "utf8");
@@ -46,5 +48,41 @@ describe("release communications customization", () => {
     expect(read("docs/RELEASE_PLAN.md")).toContain("## Release Communications");
     expect(read("docs/RELEASE_PLAN.md")).toContain("release-comms/");
     expect(read("AGENTS.md")).toContain(".github/skills/release-communications/");
+  });
+
+  it("ties the public site to a released baseline and matching announcement draft", () => {
+    const site = read("site/index.html");
+    const releaseVersion = site.match(/<body data-release-version="(v\d+\.\d+\.\d+)">/)?.[1];
+
+    expect(releaseVersion).toBeDefined();
+    expect(read("CHANGELOG.md")).toMatch(
+      new RegExp(`## \\[${releaseVersion?.slice(1)}\\] - \\d{4}-\\d{2}-\\d{2}`)
+    );
+    expect(site).toContain(
+      `https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/${releaseVersion}`
+    );
+    expect(site).not.toMatch(/feature branch|test-only|test deployment|candidate/i);
+
+    const draft = read(`release-comms/${releaseVersion}-linkedin.md`);
+    expect(draft).toContain("Status: Draft - not approved for publication");
+    expect(draft).toContain(
+      `https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/${releaseVersion}`
+    );
+    expect(draft).toContain("https://pavecer.github.io/servicenow-mcp-apps-copilot/");
+  });
+
+  it("creates one cloud communications work item after a successful release", () => {
+    const workflow = fs.readFileSync(workflowPath, "utf8");
+
+    expect(workflow).toContain("workflow_run:");
+    expect(workflow).toContain("workflows: [release]");
+    expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
+    expect(workflow).toContain("issues: write");
+    expect(workflow).toContain("actions/github-script@v8");
+    expect(workflow).toContain("Release communications: ${version}");
+    expect(workflow).toContain("Communications issue already exists");
+    expect(workflow).toContain("Release Communications");
+    expect(workflow).toContain("never publish or schedule LinkedIn content");
+    expect(workflow).not.toContain("pages: write");
   });
 });
