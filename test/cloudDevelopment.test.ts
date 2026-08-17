@@ -134,6 +134,7 @@ describe("Codespaces cloud development", () => {
     expect(copilotSetup).toContain("copilot-setup-steps:");
     expect(copilotSetup).toContain("node-version: 20");
     expect(copilotSetup).toContain("run: npm ci");
+    expect(copilotSetup).toContain("if [[ -f test/cloudDevelopment.test.ts ]]");
     expect(copilotSetup).not.toContain("secrets.");
   });
 });
