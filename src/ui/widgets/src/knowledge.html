@@ -64,7 +64,8 @@
   .feedback-panel legend { padding: 0 4px; font-weight: 600; }
   .feedback-option { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-size: 13px; }
   .feedback-option input { margin-top: 3px; accent-color: var(--accent); }
-  .feedback-comment { width: 100%; margin-top: 12px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; min-height: 60px; box-sizing: border-box; }
+  .feedback-comment-label { display: block; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--fg); }
+  .feedback-comment { width: 100%; margin-top: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; resize: vertical; min-height: 60px; box-sizing: border-box; }
   .feedback-comment::placeholder { color: var(--muted); }
   .notice { margin-top: 14px; padding: 12px; border: 1px solid var(--warning); border-radius: 8px; background: var(--warning-bg); font-size: 13px; line-height: 1.45; }
   .error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
@@ -374,7 +375,7 @@
     });
     root.appendChild(panel);
     var commentLabel = make("label", "feedback-comment-label", "What should this article improve? (optional)"); commentLabel.htmlFor = "feedback-comment"; root.appendChild(commentLabel);
-    var commentBox = document.createElement("textarea"); commentBox.className = "feedback-comment"; commentBox.placeholder = "Additional comments (optional)"; commentBox.rows = 3; commentBox.maxLength = 1000; commentBox.id = "feedback-comment"; commentBox.value = text(data.feedbackCommentsPending); root.appendChild(commentBox);
+    var commentBox = document.createElement("textarea"); commentBox.className = "feedback-comment"; commentBox.placeholder = "Additional comments (optional)"; commentBox.rows = 3; commentBox.maxLength = 1000; commentBox.setAttribute("maxlength", "1000"); commentBox.id = "feedback-comment"; commentBox.value = text(data.feedbackCommentsPending); root.appendChild(commentBox);
     var actions = make("div", "actions");
     actions.appendChild(actionButton("Save feedback", true, function (event) {
       var inputs = Array.from(root.querySelectorAll("input"));

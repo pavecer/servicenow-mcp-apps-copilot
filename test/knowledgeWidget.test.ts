@@ -374,8 +374,11 @@ describe("Knowledge MCP App", () => {
     const textarea = root.querySelector<HTMLTextAreaElement>(".feedback-comment");
     expect(textarea).not.toBeNull();
     expect(textarea!.maxLength).toBe(1000);
-    expect(root.querySelectorAll("label").find(label => label.htmlFor === "feedback-comment")?.textContent)
-      .toBe("What should this article improve? (optional)");
+    expect(textarea!.getAttribute("maxlength")).toBe("1000");
+    const label = root.querySelectorAll("label").find(item => item.htmlFor === "feedback-comment");
+    expect(label?.textContent).toBe("What should this article improve? (optional)");
+    expect(label?.className).toBe("feedback-comment-label");
+    expect(textarea!.id).toBe("feedback-comment");
   });
 
   it("includes trimmed comment in not-helpful feedback when provided", async () => {
@@ -442,6 +445,7 @@ describe("Knowledge MCP App", () => {
     await Promise.resolve(); await Promise.resolve();
 
     expect(calls).toHaveLength(1);
+    expect(calls[0].args.useful).toBe("yes");
     expect(Object.prototype.hasOwnProperty.call(calls[0].args, "comments")).toBe(false);
   });
 
