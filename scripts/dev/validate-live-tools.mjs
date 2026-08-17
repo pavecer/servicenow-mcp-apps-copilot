@@ -8,6 +8,7 @@
  *
  * Optional:
  *   --function-key <key>
+ *   ENTRA_BEARER_TOKEN=<access token> (environment only; never pass tokens on the command line)
  */
 
 const REQUIRED_TOOLS = [
@@ -26,6 +27,7 @@ function getArg(name) {
 
 const endpointBase = getArg("--endpoint") || process.env.MCP_ENDPOINT_URL || "";
 const functionKey = getArg("--function-key") || process.env.FUNCTION_KEY || "";
+const entraBearerToken = process.env.ENTRA_BEARER_TOKEN || "";
 
 if (!endpointBase) {
   console.error("Missing endpoint. Provide --endpoint or MCP_ENDPOINT_URL.");
@@ -40,12 +42,17 @@ if (functionKey) {
 let nextId = 1;
 
 async function postJson(payload) {
+  const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream"
+  };
+  if (entraBearerToken) {
+    headers.Authorization = `Bearer ${entraBearerToken}`;
+  }
+
   const response = await fetch(endpointUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json, text/event-stream"
-    },
+    headers,
     body: JSON.stringify(payload)
   });
 

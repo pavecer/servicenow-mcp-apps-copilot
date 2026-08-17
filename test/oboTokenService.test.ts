@@ -115,6 +115,7 @@ describe("oboTokenService", () => {
       expiresOn: new Date(Date.now() + 3600_000)
     });
     const svc = await loadFreshOboService();
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     const token = await svc.getDownstreamTokenForCaller({
       callerAccessToken: "user-jwt",
@@ -127,6 +128,7 @@ describe("oboTokenService", () => {
       oboAssertion: "user-jwt",
       scopes: ["api://server/ServiceNow.Use"]
     });
+    expect(logSpy.mock.calls.flat().join(" ")).not.toContain("oid-1");
   });
 
   it("caches the downstream token per user (second call does not hit MSAL)", async () => {
