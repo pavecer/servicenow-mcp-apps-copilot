@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than a workflow file, removed the closed one-time "Version baseline
   alignment" PR kind from the release governance tooling, and closed a
   command-line secret exposure in the optional container-deploy chatmode.
-<!-- release-impact: none -->
+<!-- release-impact: patch -->
 
 ### Fixed
 
