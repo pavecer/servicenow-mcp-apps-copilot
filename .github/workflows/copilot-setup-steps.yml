@@ -32,4 +32,10 @@ jobs:
         run: npm run build
 
       - name: Validate cloud development contract
-        run: npm exec -- vitest run test/cloudDevelopment.test.ts
+        shell: bash
+        run: |
+          if [[ -f test/cloudDevelopment.test.ts ]]; then
+            npm exec -- vitest run test/cloudDevelopment.test.ts
+          else
+            echo "Cloud development contract test is not present on this selected base; skipping compatibility check."
+          fi
