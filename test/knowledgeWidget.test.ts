@@ -380,6 +380,8 @@ describe("Knowledge MCP App", () => {
     reasons[0].checked = true;
     const textarea = root.querySelector<HTMLTextAreaElement>(".feedback-comment");
     expect(textarea).not.toBeNull();
+    expect(textarea!.maxLength).toBe(1000);
+    expect(root.querySelectorAll("label").find(label => label.htmlFor === "feedback-comment")?.textContent).toContain("What should this article improve?");
     textarea!.value = "  extra detail  ";
     root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
     await Promise.resolve(); await Promise.resolve();
@@ -401,6 +403,27 @@ describe("Knowledge MCP App", () => {
     root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
     const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
     useful[1].checked = true;
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(calls).toHaveLength(1);
+    expect(Object.prototype.hasOwnProperty.call(calls[0].args, "comments")).toBe(false);
+  });
+
+  it("omits comment from helpful feedback", async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async (name, args) => { calls.push({ name, args }); return { success: true }; },
+      sendFollowUp: async () => {}
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
+    useful[0].checked = true;
+    root.querySelector<HTMLTextAreaElement>(".feedback-comment")!.value = "Not sent";
     root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
     await Promise.resolve(); await Promise.resolve();
 
@@ -431,6 +454,32 @@ describe("Knowledge MCP App", () => {
 
     expect(followUps).toHaveLength(1);
     expect(followUps[0]).toContain('"comments":"missing steps"');
+  });
+
+  it("preserves trimmed comment when retrying not-helpful feedback", async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const root = mountWidget({
+      mode: "detail", attempt: 1, originalQuestion: "How do I configure VPN?", triedArticles: [],
+      article: { sysId: "a".repeat(32), number: "KB1", title: "VPN", content: "Steps", media: { imageCount: 0, attachments: [] } }
+    }, {
+      callTool: async (name, args) => {
+        calls.push({ name, args });
+        return calls.length === 1 ? { success: false, error: "Try again" } : { success: true };
+      },
+      sendFollowUp: async () => {}
+    });
+
+    root.querySelectorAll("button").find(button => button.textContent === "Give feedback")?.click();
+    const useful = root.querySelectorAll("input").filter(input => input.name === "feedback-useful");
+    useful[1].checked = true;
+    root.querySelector<HTMLTextAreaElement>(".feedback-comment")!.value = "  missing steps  ";
+    root.querySelectorAll("button").find(button => button.textContent === "Save feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+    root.querySelectorAll("button").find(button => button.textContent === "Retry feedback")?.click();
+    await Promise.resolve(); await Promise.resolve();
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1].args.comments).toBe("missing steps");
   });
 
 

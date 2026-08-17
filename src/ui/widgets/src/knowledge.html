@@ -340,7 +340,8 @@
     };
     if (useful === "no" && reason) args.reason = reason;
     var commentsEl = root.querySelector(".feedback-comment");
-    var comments = commentsEl ? commentsEl.value.trim() : "";
+    var comments = commentsEl ? commentsEl.value.trim() : text(data.feedbackCommentsPending).trim();
+    data.feedbackCommentsPending = useful === "no" ? comments : "";
     if (useful === "no" && comments) args.comments = comments;
     callTool("submit_knowledge_feedback", args).then(function (result) {
       var next = unwrap(result);
@@ -349,7 +350,7 @@
         data.feedbackFallbackArgs = null; data.feedbackError = next.error || "The feedback could not be saved in ServiceNow."; render(data);
         return;
       }
-      feedbackInFlight = false; data.feedbackReasonPending = false; data.feedbackSaved = useful; data.feedbackSaveFailed = ""; data.feedbackSkipped = ""; data.feedbackFallbackArgs = null;
+      feedbackInFlight = false; data.feedbackReasonPending = false; data.feedbackCommentsPending = ""; data.feedbackSaved = useful; data.feedbackSaveFailed = ""; data.feedbackSkipped = ""; data.feedbackFallbackArgs = null;
       if (useful === "yes") render({ mode: "feedback_confirmation", useful: "yes", originalQuestion: data.originalQuestion });
       else render(data);
     }).catch(function () {
@@ -372,7 +373,8 @@
       label.appendChild(radio); label.appendChild(document.createTextNode(entry[1])); panel.appendChild(label);
     });
     root.appendChild(panel);
-    var commentBox = document.createElement("textarea"); commentBox.className = "feedback-comment"; commentBox.placeholder = "Additional comments (optional)"; commentBox.rows = 3; commentBox.maxLength = 1000; commentBox.id = "feedback-comment"; commentBox.setAttribute("aria-label", "Additional comments for not-helpful feedback"); root.appendChild(commentBox);
+    var commentLabel = make("label", "feedback-comment-label", "What should this article improve? (optional)"); commentLabel.htmlFor = "feedback-comment"; root.appendChild(commentLabel);
+    var commentBox = document.createElement("textarea"); commentBox.className = "feedback-comment"; commentBox.placeholder = "Additional comments (optional)"; commentBox.rows = 3; commentBox.maxLength = 1000; commentBox.id = "feedback-comment"; commentBox.value = text(data.feedbackCommentsPending); root.appendChild(commentBox);
     var actions = make("div", "actions");
     actions.appendChild(actionButton("Save feedback", true, function (event) {
       var inputs = Array.from(root.querySelectorAll("input"));
