@@ -47,4 +47,25 @@ describe("release communications customization", () => {
     expect(read("docs/RELEASE_PLAN.md")).toContain("release-comms/");
     expect(read("AGENTS.md")).toContain(".github/skills/release-communications/");
   });
+
+  it("ties the public site to a released baseline and matching announcement draft", () => {
+    const site = read("site/index.html");
+    const releaseVersion = site.match(/<body data-release-version="(v\d+\.\d+\.\d+)">/)?.[1];
+
+    expect(releaseVersion).toBeDefined();
+    expect(read("CHANGELOG.md")).toMatch(
+      new RegExp(`## \\[${releaseVersion?.slice(1)}\\] - \\d{4}-\\d{2}-\\d{2}`)
+    );
+    expect(site).toContain(
+      `https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/${releaseVersion}`
+    );
+    expect(site).not.toMatch(/feature branch|test-only|test deployment|candidate/i);
+
+    const draft = read(`release-comms/${releaseVersion}-linkedin.md`);
+    expect(draft).toContain("Status: Draft - not approved for publication");
+    expect(draft).toContain(
+      `https://github.com/pavecer/servicenow-mcp-apps-copilot/releases/tag/${releaseVersion}`
+    );
+    expect(draft).toContain("https://pavecer.github.io/servicenow-mcp-apps-copilot/");
+  });
 });
