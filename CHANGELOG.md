@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Require Entra authentication for test deployments and authenticate live MCP
+  validation instead of relying on unauthenticated discovery.
+<!-- release-impact: patch -->
+
 ## [1.1.6] - 2026-08-10
 
 ### Added

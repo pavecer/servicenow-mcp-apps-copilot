@@ -66,6 +66,10 @@ jobs:
             echo "candidate_ref must be an exact 40-character lowercase commit SHA" >&2
             exit 1
           fi
+          if [[ "$ENTRA_AUTH_DISABLED" != "false" ]]; then
+            echo "ENTRA_AUTH_DISABLED must be false for test deployment" >&2
+            exit 1
+          fi
 
       - name: Checkout
         uses: actions/checkout@v7
@@ -106,6 +110,27 @@ jobs:
           ENTRA_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
           SERVICENOW_CLIENT_SECRET: ${{ secrets.SERVICENOW_CLIENT_SECRET }}
           SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
+
+      - name: Acquire MCP validation token
+        shell: bash
+        env:
+          ENTRA_CLIENT_SECRET: ${{ secrets.ENTRA_CLIENT_SECRET }}
+        run: |
+          response="$(curl --fail --silent --show-error \
+            --request POST \
+            --url "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/token" \
+            --header 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode "client_id=${ENTRA_CLIENT_ID}" \
+            --data-urlencode "client_secret=${ENTRA_CLIENT_SECRET}" \
+            --data-urlencode "scope=api://${ENTRA_CLIENT_ID}/.default" \
+            --data-urlencode 'grant_type=client_credentials')"
+          token="$(jq -r '.access_token // empty' <<<"$response")"
+          if [[ -z "$token" ]]; then
+            echo "Entra token endpoint returned no access token" >&2
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "ENTRA_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
 
       - name: Validate live MCP tools
         shell: bash
