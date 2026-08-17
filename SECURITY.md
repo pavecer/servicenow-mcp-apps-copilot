@@ -139,6 +139,26 @@ ServiceNow credentials must never appear in code:
 - **Instance URL** (`SERVICENOW_INSTANCE_URL`) → Can be in code/docs (semi-public)
 - **OAuth client ID** (`SERVICENOW_CLIENT_ID`) → Can be in code/docs (semi-public)
 
+## Automated Security Scanning
+
+This repository relies on scanning that is configured directly in GitHub
+repository settings rather than a committed workflow file, so verify it under
+**Settings → Code security** rather than looking for a `.yml` file:
+
+- **Code scanning (CodeQL)** — enabled via GitHub's **default setup**, not a
+  custom `.github/workflows/codeql*.yml`. Required before merge per
+  [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md)'s maintainer checklist. Do not
+  add a custom CodeQL workflow while default setup is enabled — GitHub does
+  not allow both for the same language and adding one would break the other.
+- **Secret scanning + push protection** — enabled via GitHub's built-in secret
+  scanning for public repositories.
+- **Dependency updates** — `.github/dependabot.yml` (weekly, grouped by
+  ecosystem) plus the scheduled `.github/workflows/dependency-health.yml`
+  (`npm audit --audit-level=high`, weekly and on-demand).
+
+If any of these are ever disabled or the repository is transferred/forked,
+re-enable them before treating the maintainer release checklist as satisfied.
+
 ## Reporting Security Issues
 
 If you discover a security vulnerability:

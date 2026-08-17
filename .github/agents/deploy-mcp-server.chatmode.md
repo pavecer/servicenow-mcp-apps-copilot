@@ -1,7 +1,6 @@
 ---
 description: Deploy the ServiceNow MCP Server to Azure. Handles login, environment setup, infrastructure provisioning, function deployment, and smoke test validation.
 tools: ["changes", "edit", "extensions", "fetch", "runCommands", "runTasks", "search", "problems", "azure-mcp/deploy", "azure-mcp/monitor", "azure-mcp/quota", "azure-mcp/get_bestpractices", "azure-mcp/documentation", "ms-azuretools.vscode-azure-github-copilot/azure_query_azure_resource_graph", "ms-azuretools.vscode-azure-github-copilot/azure_get_auth_context", "ms-azuretools.vscode-azure-github-copilot/azure_set_auth_context"]
-model: Claude Sonnet 4
 ---
 
 # ServiceNow MCP Server — Deploy to Azure

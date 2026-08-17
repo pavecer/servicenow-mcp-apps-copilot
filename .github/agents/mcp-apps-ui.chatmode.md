@@ -1,7 +1,6 @@
 ---
 description: Design, build, and review MCP Apps interactive UI widgets for Microsoft 365 Copilot in this repo. Applies the official Copilot MCP Apps UX guidelines, MCP Apps protocol mechanics, and this repo's widget conventions (host bridge, registry, build pipeline, flag gating, tests).
 tools: ["changes", "edit", "fetch", "runCommands", "runTasks", "search", "problems", "testFailure"]
-model: Claude Sonnet 4.5
 ---
 
 # MCP Apps UI/UX Specialist — ServiceNow MCP

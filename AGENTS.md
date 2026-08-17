@@ -15,6 +15,9 @@ incident workflows to **Microsoft 365 Copilot / Cowork** via **MCP Apps
 
 - For tracked continuity and the latest verified operational state, read
   [docs/REPO_STATE.md](docs/REPO_STATE.md) before broader exploration.
+- For an audit of the agentic development approach itself (agents, skills,
+  workflows, human-approval gate) and open decisions, read
+  [docs/AGENTIC_WORKFLOW_REVIEW.md](docs/AGENTIC_WORKFLOW_REVIEW.md).
 - For per-user attribution and OBO specifics, read
   [docs/AUTH_ENTRA_OBO.md](docs/AUTH_ENTRA_OBO.md).
 - For dev provisioning vs organizational publication, Agent 365 tool

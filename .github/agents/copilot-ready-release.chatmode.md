@@ -1,7 +1,6 @@
 ---
 description: Validate, deploy, and verify MCP server readiness up to M365 Copilot prompt testing (no post-chat E2E assertions).
 tools: ["changes", "runCommands", "runTasks", "search", "problems"]
-model: Claude Sonnet 4
 ---
 
 # Copilot-Ready Release

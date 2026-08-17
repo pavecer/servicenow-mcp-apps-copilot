@@ -1,7 +1,6 @@
 ---
 description: Deploy the ServiceNow MCP Server Docker image to Azure Container Apps with the required Azure, ServiceNow, and Entra configuration.
 tools: ["changes", "edit", "extensions", "fetch", "runCommands", "runTasks", "search", "problems", "azure-mcp/containerapps", "azure-mcp/acr", "azure-mcp/deploy", "azure-mcp/quota", "azure-mcp/get_bestpractices", "azure-mcp/documentation", "ms-azuretools.vscode-azure-github-copilot/azure_query_azure_resource_graph", "ms-azuretools.vscode-azure-github-copilot/azure_get_auth_context", "ms-azuretools.vscode-azure-github-copilot/azure_set_auth_context"]
-model: Claude Sonnet 4
 ---
 
 # ServiceNow MCP Server — Deploy Container to Azure
@@ -58,7 +57,10 @@ Before deploying, collect or confirm these values with the user.
 1. Verify Azure login and correct subscription before running deployment steps.
 2. Verify Docker is available locally before building the image.
 3. Build and test the Docker image locally first.
-4. Use Azure Container Apps secrets for secret values. Do not place secrets directly in command history unless the user explicitly accepts that tradeoff.
+4. Use Azure Container Apps secrets for secret values. Never type a real secret
+   value into a command yourself or ask the user to paste one into chat; have
+   the user export it into their own shell session first, then reference the
+   shell variable in the command (see Phase 5).
 5. Use a system-assigned managed identity on the Container App.
 6. Grant the Container App `AcrPull` on the target ACR before expecting the image pull to work.
 7. Ensure the application listens on port `8080` and Container Apps target port is also `8080`.
@@ -155,7 +157,19 @@ docker push <acr-name>.azurecr.io/mcp-server-servicenow:<tag>
 
 ### Phase 5 — Create the Container App
 
-Deploy with required secrets and environment variables:
+Before running this step, have the user export the three secret values into their
+**own** shell session (never ask them to paste the values into chat, and never
+type the values yourself):
+
+```bash
+export SERVICENOW_CLIENT_SECRET='<set this in your own shell, not in chat>'
+export SERVICENOW_PASSWORD='<set this in your own shell, not in chat>'
+export ENTRA_CLIENT_SECRET='<set this in your own shell, not in chat>'
+```
+
+Then deploy, referencing those shell variables instead of literal values so the
+resolved secret never appears in the command as typed (and so it never lands in
+shell history):
 
 ```bash
 az containerapp create \
@@ -170,9 +184,9 @@ az containerapp create \
   --registry-server <acr-name>.azurecr.io \
   --system-assigned \
   --secrets \
-    servicenow-client-secret=<value> \
-    servicenow-password=<value> \
-    entra-client-secret=<value> \
+    servicenow-client-secret="$SERVICENOW_CLIENT_SECRET" \
+    servicenow-password="$SERVICENOW_PASSWORD" \
+    entra-client-secret="$ENTRA_CLIENT_SECRET" \
   --env-vars \
     SERVICENOW_INSTANCE_URL=<value> \
     SERVICENOW_CLIENT_ID=<value> \
@@ -185,6 +199,16 @@ az containerapp create \
 ```
 
 If optional Entra values were provided, include them via `--env-vars` as well.
+
+This still leaves the resolved value briefly visible to anything that can read
+the live process list (`ps`) while the command executes. For a production
+deployment, prefer a Key Vault reference instead, which keeps the secret out of
+the CLI invocation entirely: enable managed identity, grant it the **Key Vault
+Secrets User** role on the vault, then use
+`--secrets "servicenow-client-secret=keyvaultref:<KEY_VAULT_SECRET_URI>,identityref:<IDENTITY_RESOURCE_ID>"`
+(a user-assigned identity is required at `create` time; a system-assigned
+identity can only be used with `az containerapp secret set` after creation). See
+[Manage secrets in Azure Container Apps](https://learn.microsoft.com/azure/container-apps/manage-secrets#reference-secret-from-key-vault).
 
 ### Phase 6 — Grant ACR Pull Permissions
 

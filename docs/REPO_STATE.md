@@ -1,10 +1,17 @@
 # Repository State
 
-Last updated: 2026-08-10
+Last updated: 2026-08-17
 
 This file is the tracked handover for future agents and cloud Copilot sessions.
 It records the latest verified runtime state, active deployment assumptions, and
 the shortest path to resume work safely.
+
+For a point-in-time audit of the agentic development approach itself (agents,
+skills, workflows, and the human-approval gate), see
+[AGENTIC_WORKFLOW_REVIEW.md](AGENTIC_WORKFLOW_REVIEW.md). It records what was
+already sound, two dangling-reference fixes applied directly, and four
+maintainer decisions (model-pin policy, CodeQL documentation, PR-template
+cleanup, container-deploy secret handling) resolved and applied on 2026-08-17.
 
 ## Current verified state
 
