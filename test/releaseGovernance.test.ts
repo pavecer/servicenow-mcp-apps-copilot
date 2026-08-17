@@ -221,6 +221,53 @@ describe("release governance", () => {
     expect(JSON.parse(output)).toMatchObject({ impact: "none", humanValidation: "Not required" });
   });
 
+  it("infers safe metadata only for development-only npm Dependabot updates", () => {
+    const basePackageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    basePackageJson.devDependencies.vitest = "0.0.1";
+    const baseLockJson = JSON.parse(fs.readFileSync(path.join(root, "package-lock.json"), "utf8"));
+    baseLockJson.packages[""].devDependencies.vitest = "0.0.1";
+    if (baseLockJson.packages["node_modules/vitest"]) {
+      baseLockJson.packages["node_modules/vitest"].version = "0.0.1";
+      baseLockJson.packages["node_modules/vitest"].dev = true;
+    }
+    const event = temporaryFile(JSON.stringify({
+      pull_request: {
+        user: { login: "dependabot[bot]" },
+        body: "Bumps a development dependency."
+      }
+    }));
+    const output = execFileSync("node", [
+      script, "pr-check", "--event", event,
+      "--changed-files", temporaryFile("package.json\npackage-lock.json\n"),
+      "--base-package", temporaryFile(`${JSON.stringify(basePackageJson, null, 2)}\n`),
+      "--base-lock", temporaryFile(`${JSON.stringify(baseLockJson, null, 2)}\n`),
+      "--json"
+    ], { cwd: root, encoding: "utf8" });
+    expect(JSON.parse(output)).toMatchObject({
+      impact: "none",
+      prKind: "Regular change",
+      humanValidation: "Not required"
+    });
+  });
+
+  it("keeps production Dependabot updates on the reviewed Patch path", () => {
+    const basePackageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    basePackageJson.dependencies.axios = "0.0.1";
+    const event = temporaryFile(JSON.stringify({
+      pull_request: {
+        user: { login: "dependabot[bot]" },
+        body: "Bumps a production dependency."
+      }
+    }));
+    const result = spawnSync("node", [
+      script, "pr-check", "--event", event,
+      "--changed-files", temporaryFile("package.json\npackage-lock.json\n"),
+      "--base-package", temporaryFile(`${JSON.stringify(basePackageJson, null, 2)}\n`)
+    ], { cwd: root, encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/Production Dependabot updates require reviewed Patch metadata/i);
+  });
+
   it("prepares a synchronized patch release and extracts its notes", () => {
     const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "release-prepare-"));
     temporaryDirectories.push(fixtureRoot);

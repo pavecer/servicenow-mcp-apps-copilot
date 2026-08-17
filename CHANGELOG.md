@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Update Azure Functions and HTTP runtime dependencies while grouping and
+  auditing future dependency maintenance.
+<!-- release-impact: patch -->
+
 ### Fixed
 
 - Require Entra authentication for test deployments and authenticate live MCP
