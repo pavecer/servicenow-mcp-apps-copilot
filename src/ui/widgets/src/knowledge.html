@@ -511,7 +511,8 @@
       button.disabled = true; button.textContent = "Opening...";
       requestDisplayMode("fullscreen").then(function (result) {
         applyDisplayMode(result && result.mode);
-      }).catch(function () {
+      }).catch(function (error) {
+        if (typeof console !== "undefined" && console.warn) console.warn("[knowledge widget] requestDisplayMode(\"fullscreen\") rejected:", error);
         showStatus("This host cannot expand the article view right now.", true);
       }).finally(function () {
         button.disabled = false; button.textContent = originalLabel || "Expand";
