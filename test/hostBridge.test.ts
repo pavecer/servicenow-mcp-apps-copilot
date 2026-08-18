@@ -80,6 +80,26 @@ describe("MCP host bridge display modes", () => {
     expect(app.requestDisplayMode).toHaveBeenCalledWith({ mode: "fullscreen" });
   });
 
+  it("calls app.requestDisplayMode with `this` bound to the App instance (regression)", async () => {
+    // The real @modelcontextprotocol/ext-apps App.requestDisplayMode does
+    // `this._assertInitialized(...)` before anything else. Extracting it as a
+    // detached reference (`const fn = app.requestDisplayMode; fn(args)`) loses
+    // `this`, which throws "Cannot read properties of undefined (reading
+    // '_assertInitialized')" against the real SDK — a bug that a plain vi.fn()
+    // mock (which ignores `this`) cannot catch on its own.
+    let capturedThis: unknown;
+    const app = createMockApp({
+      requestDisplayMode: vi.fn(function (this: unknown, args: { mode: string }) {
+        capturedThis = this;
+        return Promise.resolve({ mode: args.mode });
+      })
+    });
+    const window = await loadBridge({ app });
+
+    await expect(window.mcpHost.requestDisplayMode("fullscreen")).resolves.toEqual({ mode: "fullscreen" });
+    expect(capturedThis).toBe(app);
+  });
+
   it("prefers OpenAI requestDisplayMode when available", async () => {
     const openAiRequestDisplayMode = vi.fn().mockResolvedValue({ mode: "fullscreen" });
     const app = createMockApp({ requestDisplayMode: vi.fn().mockResolvedValue({ mode: "inline" }) });

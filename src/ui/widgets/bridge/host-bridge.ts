@@ -334,10 +334,16 @@ declare global {
         );
       }
       if (app && typeof (app as unknown as { requestDisplayMode?: unknown }).requestDisplayMode === "function") {
-        const request = (app as unknown as { requestDisplayMode: (a: { mode: DisplayMode }) => Promise<{ mode?: string } | string> })
-          .requestDisplayMode;
+        const appWithDisplayMode = app as unknown as {
+          requestDisplayMode: (a: { mode: DisplayMode }) => Promise<{ mode?: string } | string>;
+        };
         return withTimeout(
-          callSafely(() => request({ mode })),
+          // Call through appWithDisplayMode (not a detached method reference) so
+          // `this` inside App.requestDisplayMode stays bound to the App instance.
+          // A detached call loses `this`, and App.requestDisplayMode immediately
+          // does `this._assertInitialized(...)`, throwing
+          // "Cannot read properties of undefined (reading '_assertInitialized')".
+          callSafely(() => appWithDisplayMode.requestDisplayMode({ mode })),
           DISPLAY_MODE_REQUEST_TIMEOUT_MS,
           "Display mode request timed out."
         ).then(result => ({
