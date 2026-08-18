@@ -58,24 +58,29 @@ Agents may open or update a draft PR while validation is in progress. Before a
 user-facing PR is approved and merged:
 
 1. Build and test locally.
-2. For user-facing behavior, deploy the exact commit to `snowmcpwidg-dev` and
+2. For any change under `src/ui/` (widgets, host bridge, widget registry),
+  complete the **Interaction lifecycle self-review** in the PR template
+  before writing the Human test plan — CI (`release:pr-check`) rejects a
+  missing or incomplete one. See [HUMAN_APPROVAL.md](HUMAN_APPROVAL.md) and
+  the `mcp-apps-ui` skill §7.
+3. For user-facing behavior, deploy the exact commit to `snowmcpwidg-dev` and
   complete hands-on testing in the developer/test Microsoft 365 agent, then
   verify the corresponding result or side effect in the ServiceNow test
   instance.
   Release/CI tooling that cannot affect the deployed application instead uses
   **Completed maintainer workflow review** with executable evidence.
-3. Record the exact SHA and non-secret evidence in the PR, then follow
+4. Record the exact SHA and non-secret evidence in the PR, then follow
   [the human approval protocol](HUMAN_APPROVAL.md). Human validation and merge
   authorization are separate, SHA-bound records. Use an approving review from
   an independent reviewer, or the exact merge-instruction comment documented
   there for a sole maintainer. Do not push another commit after validation or
   approval; any change requires the gate again.
-4. Add one concise user-facing sentence to `CHANGELOG.md` under `Unreleased`.
+5. Add one concise user-facing sentence to `CHANGELOG.md` under `Unreleased`.
   Add `<!-- release-impact: patch|minor|major -->` beside that entry so the
   highest queued impact remains machine-readable after merge.
-5. Copy that sentence into the PR's **Release note** section.
-6. Select one release impact and one human-validation state.
-7. Include validation evidence or explain why no user-facing validation was
+6. Copy that sentence into the PR's **Release note** section.
+7. Select one release impact and one human-validation state.
+8. Include validation evidence or explain why no user-facing validation was
    required.
 
 This is the single development approval gate. Agents own implementation,

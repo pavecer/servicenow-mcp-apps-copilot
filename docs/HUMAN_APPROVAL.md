@@ -12,10 +12,19 @@ The agent keeps the PR in draft and completes all agent-owned work:
 
 1. Record the full candidate SHA in **Candidate evidence**.
 2. Complete build, test, release, Azure deployment, and live-tool checks.
-3. Replace every Human test plan placeholder with exact prompts, clicks,
+3. For any change under `src/ui/` (widgets, host bridge, widget registry),
+   complete the **Interaction lifecycle self-review** first: walk the full
+   interaction yourself — initial state, primary action, repeating the same
+   action, error/edge case, recovery, and reversibility — and record what you
+   found. This is CI-enforced (`release:pr-check` rejects a missing or
+   incomplete review for these changes) and exists specifically so obvious UX
+   problems (a dead affordance, a control that doesn't reflect the state it
+   just changed) are caught before the human clicks through the plan, not
+   after.
+4. Replace every Human test plan placeholder with exact prompts, clicks,
    expected widget states, ServiceNow verification, and cleanup instructions.
-4. Confirm that the deployed SHA equals the PR head SHA.
-5. Stop changing the branch while the human runs the plan.
+5. Confirm that the deployed SHA equals the PR head SHA.
+6. Stop changing the branch while the human runs the plan.
 
 The human must test the recorded SHA. A branch name, abbreviated SHA, deployment
 slot, or statement that "the latest version" was tested is not sufficient.
