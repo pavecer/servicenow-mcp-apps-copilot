@@ -208,6 +208,24 @@ must invoke it inside a thunk run through `callSafely()` (see
 `requestDisplayMode` in `host-bridge.ts` for the pattern) before applying a
 timeout — never call the host method directly as an argument expression.
 
+**Don't trust the MCP Apps `App.getHostContext()` capability fields blindly —
+check Microsoft's published support matrix first.**
+[Supported MCP Apps capabilities in Copilot](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-mcp-apps#supported-mcp-apps-capabilities-in-copilot)
+lists per-field support; as of this writing `app.requestDisplayMode({ mode })`
+is supported (fullscreen only) but `app.getHostContext()?.availableDisplayModes`
+is **not**. This repo currently only observes `fullscreen` availability through
+the OpenAI-shaped `displayMode` object
+(`getOpenAiDisplayModeContext()` reading `window.openai.displayMode` as an
+object carrying `availableDisplayModes`) — treat the MCP `App` path's
+`availableDisplayModes` as unreliable in Copilot until that matrix says
+otherwise, and re-check the matrix before assuming any other `app.*` field is
+populated. Requests that reject cleanly (not hang) can still be a real,
+specific host error, not proof the API is unsupported — see
+`docs/TROUBLESHOOTING.md` → "`requestDisplayMode` no longer hangs, but the
+host still rejects it" for how to actually diagnose that (the request never
+reaches this repo's backend, so Application Insights shows nothing; log to the
+browser console instead).
+
 ---
 
 ## 6. THIS REPO's widget conventions (follow exactly)
