@@ -1,6 +1,6 @@
 # Repository State
 
-Last updated: 2026-08-17
+Last updated: 2026-08-18
 
 This file is the tracked handover for future agents and cloud Copilot sessions.
 It records the latest verified runtime state, active deployment assumptions, and
@@ -26,6 +26,77 @@ cleanup, container-deploy secret handling) resolved and applied on 2026-08-17.
 - Current ServiceNow development instance:
   `https://dev351709.service-now.com`
 - Current integration identity: `mcp_integration`
+
+## Knowledge widget side-by-side (fullscreen) investigation — PR #73
+
+Branch `copilot/feature-knowledge-widget-side-by-side-display`,
+[issue #72](https://github.com/pavecer/servicenow-mcp-apps-copilot/issues/72) /
+[PR #73](https://github.com/pavecer/servicenow-mcp-apps-copilot/pull/73). Adds
+an additive `window.mcpHost.requestDisplayMode()` bridge capability and an
+**Expand** action on the Knowledge article-detail widget only. No tool/widget
+lockstep changes. Read this section fully before touching this feature again —
+it records three failed live-test rounds and the exact evidence, so the same
+debugging loop is not repeated.
+
+**Round 1 (SHA `d97c9dbd8`) FAILED:** Expand stuck on "Opening..." forever.
+No timeout existed on the bridge call yet.
+
+**Round 2 (SHA `c482e5d5`) FAILED despite adding a 5s timeout.** Root cause:
+`@modelcontextprotocol/ext-apps`' `App.requestDisplayMode` calls
+`this._assertInitialized(...)` via the comma operator **before returning
+anything**, so it can throw synchronously. `Promise.resolve(hostMethod(args))`
+does not catch a throw that happens while evaluating `hostMethod(args)` itself
+— the throw happens before `Promise.resolve` ever runs, so a promise-based
+timeout never gets a chance to fire. Confirmed by decompiling the actual
+minified bundle served by the deployed candidate at each round (not just
+trusting deploy logs) — round 1 and round 2's bundles were checked directly
+via `resources/read` against the live endpoint.
+
+**Round 3 (SHA `067209d258346a40cb717600303930324955a3ee`) fixed the hang.**
+Added `callSafely()` in `host-bridge.ts`, which invokes the host SDK call
+inside a thunk executed via `try/catch`, converting any synchronous throw into
+a rejected promise before the timeout wrapper runs. Verified live by
+decompiling the deployed bundle: `requestDisplayMode` now calls
+`l(m(()=>p.requestDisplayMode({mode:_})),pg,...)` — the thunk-wrapped pattern.
+Human tested in the M365 developer agent (`ServiceNow Assistantdev`, KB0005012):
+Expand no longer hangs; it resets cleanly to "Expand" and shows "This host
+cannot expand the article view right now." within a few seconds. This is a
+structurally correct, graceful-degradation outcome per the acceptance
+criteria — **but not yet the success path** (the article never actually
+expands to fullscreen/side-by-side).
+
+**Open question — why does the actual request get rejected?** Microsoft's own
+[MCP Apps support matrix for Copilot](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-mcp-apps#supported-mcp-apps-capabilities-in-copilot)
+states:
+- `app.requestDisplayMode({ mode })` → **✅ (full screen only)** — so this
+  should be able to succeed in principle, meaning the rejection observed live
+  is a specific, real error, not "the feature doesn't exist here."
+- `app.getHostContext()?.availableDisplayModes` → **❌ not supported.** Copilot
+  does not populate this field via the MCP Apps `App` path. The Expand button
+  rendering at all in live testing therefore most likely came through the
+  OpenAI-shaped `displayMode` object fallback
+  (`getOpenAiDisplayModeContext()` in `host-bridge.ts`, which reads
+  `window.openai.displayMode` as an object carrying `availableDisplayModes`),
+  not through `app.getHostContext()`. Do not assume `availableDisplayModes`
+  from the MCP `App` path is populated by Copilot; the OpenAI-shaped path is
+  currently the only one observed to work here.
+- This request/response happens **entirely client-side**, inside the browser
+  between the widget iframe and the Copilot host via `postMessage`. It never
+  reaches this repo's Azure Function backend, so **Application Insights cannot
+  show it** — there is no server-side telemetry option for this class of bug.
+
+**Diagnostic build deployed (SHA `f4558a00241be64a0ecf004491c2b75e77c8d3d8`),
+awaiting human console output.** Added a `console.warn` in the Expand click
+handler's `.catch()` (diagnostic only, no visible behavior change) logging the
+actual rejection reason. **Next step, do not skip:** open
+`https://m365.cloud.microsoft/chat` in a browser (not Teams desktop — DevTools
+console is required), start a **new chat** (MCP Apps widgets are fetched once
+per tool response and a continued thread will still run the pre-redeploy
+JavaScript), search Knowledge, open an article, click Expand, and read the
+exact `[knowledge widget] requestDisplayMode("fullscreen") rejected:` line from
+the browser console (F12 → Console). That message is the missing piece to
+determine whether this is a genuine current host limitation, a malformed
+request on our side, or something else — do not guess further without it.
 
 ## Human-validated order-detail release
 
