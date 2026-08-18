@@ -36,11 +36,16 @@ interface OpenAiGlobal {
   toolOutput?: unknown;
   toolInput?: unknown;
   theme?: string;
-  displayMode?: string;
+  displayMode?: string | { mode?: string; availableDisplayModes?: unknown };
+  availableDisplayModes?: unknown;
   callTool?: (name: string, args?: Record<string, unknown>) => Promise<unknown>;
   sendFollowUpMessage?: (args: { prompt: string }) => unknown;
   openExternal?: (args: { href: string }) => unknown;
+  requestDisplayMode?: (args: { mode: DisplayMode }) => Promise<{ mode?: string } | string>;
 }
+
+type DisplayMode = "inline" | "fullscreen" | "pip";
+const DISPLAY_MODE_REQUEST_TIMEOUT_MS = 5000;
 
 interface McpHost {
   onData(cb: DataListener): void;
@@ -50,6 +55,9 @@ interface McpHost {
   callTool(name: string, args?: Record<string, unknown>): Promise<unknown>;
   sendFollowUp(text: string): Promise<unknown> | void;
   openExternal(url: string): boolean;
+  requestDisplayMode(mode: DisplayMode): Promise<{ mode: string }>;
+  getDisplayMode(): string;
+  getAvailableDisplayModes(): string[];
   diagnostics(): string;
   readonly theme: string;
 }
@@ -104,8 +112,73 @@ declare global {
     }
   }
 
+  function normalizeDisplayMode(mode: unknown): string | undefined {
+    if (mode === "inline" || mode === "fullscreen" || mode === "pip") return mode;
+    return undefined;
+  }
+
+  function normalizeAvailableDisplayModes(modes: unknown): string[] {
+    if (!Array.isArray(modes)) return [];
+    return modes.filter((mode): mode is string => normalizeDisplayMode(mode) !== undefined);
+  }
+
+  function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = globalThis.setTimeout(() => reject(new Error(message)), timeoutMs);
+      promise.then(
+        value => {
+          globalThis.clearTimeout(timer);
+          resolve(value);
+        },
+        error => {
+          globalThis.clearTimeout(timer);
+          reject(error);
+        }
+      );
+    });
+  }
+
+  // Some host SDK methods (e.g. ext-apps' App.requestDisplayMode, which calls
+  // this._assertInitialized(...) before returning anything) can throw
+  // SYNCHRONOUSLY instead of returning a rejected promise. Promise.resolve(fn())
+  // does not catch that — the throw happens while evaluating fn() itself, before
+  // Promise.resolve ever sees a value. Without this guard a synchronous throw
+  // bypasses withTimeout entirely and leaves the caller's promise chain (and any
+  // UI waiting on it) hanging forever.
+  function callSafely<T>(fn: () => T | Promise<T>): Promise<T> {
+    try {
+      return Promise.resolve(fn());
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  function getOpenAiDisplayModeContext(globals?: OpenAiGlobal): { mode?: string; availableDisplayModes: string[] } {
+    if (!globals) return { mode: undefined, availableDisplayModes: [] };
+    const fromDisplayMode =
+      globals.displayMode && typeof globals.displayMode === "object"
+        ? globals.displayMode
+        : undefined;
+    const modeCandidate = typeof globals.displayMode === "string" ? globals.displayMode : fromDisplayMode?.mode;
+    const availableCandidate =
+      globals.availableDisplayModes !== undefined ? globals.availableDisplayModes : fromDisplayMode?.availableDisplayModes;
+    return {
+      mode: normalizeDisplayMode(modeCandidate),
+      availableDisplayModes: normalizeAvailableDisplayModes(availableCandidate)
+    };
+  }
+
+  function getMcpDisplayModeContext(): { mode?: string; availableDisplayModes: string[] } {
+    const ctx = app && app.getHostContext ? app.getHostContext() : undefined;
+    return {
+      mode: normalizeDisplayMode(ctx && typeof ctx.displayMode === "string" ? ctx.displayMode : undefined),
+      availableDisplayModes: normalizeAvailableDisplayModes(ctx && typeof ctx === "object" ? ctx.availableDisplayModes : undefined)
+    };
+  }
+
   // --- Path A: OpenAI Apps SDK (window.openai) ------------------------------
   const oai = typeof window !== "undefined" ? window.openai : undefined;
+  let latestOpenAiGlobals: OpenAiGlobal | undefined = oai;
   if (oai) {
     status.openai = true;
     applyTheme(oai.theme);
@@ -116,6 +189,7 @@ declare global {
     window.addEventListener("openai:set_globals", (ev: Event) => {
       const detail = ((ev as CustomEvent).detail || {}) as Record<string, unknown>;
       const globals = (detail.globals || detail) as OpenAiGlobal;
+      latestOpenAiGlobals = { ...(latestOpenAiGlobals || {}), ...globals };
       if (globals.theme) applyTheme(globals.theme);
       if (globals.toolOutput !== undefined && globals.toolOutput !== null) {
         emit(globals.toolOutput, "openai:set_globals");
@@ -163,9 +237,21 @@ declare global {
   }
 
   function currentTheme(): string | undefined {
-    if (oai && typeof oai.theme === "string") return oai.theme;
+    if (latestOpenAiGlobals && typeof latestOpenAiGlobals.theme === "string") return latestOpenAiGlobals.theme;
     const ctx = app && app.getHostContext ? app.getHostContext() : undefined;
     return ctx && typeof ctx.theme === "string" ? ctx.theme : undefined;
+  }
+
+  function currentDisplayMode(): string {
+    const openAiContext = getOpenAiDisplayModeContext(latestOpenAiGlobals);
+    if (openAiContext.mode) return openAiContext.mode;
+    return getMcpDisplayModeContext().mode || "inline";
+  }
+
+  function availableDisplayModes(): string[] {
+    const openAiContext = getOpenAiDisplayModeContext(latestOpenAiGlobals);
+    if (openAiContext.availableDisplayModes.length > 0) return openAiContext.availableDisplayModes;
+    return getMcpDisplayModeContext().availableDisplayModes;
   }
 
   const host: McpHost = {
@@ -232,6 +318,49 @@ declare global {
         /* fall through to window.open */
       }
       return false;
+    },
+    requestDisplayMode(mode: DisplayMode): Promise<{ mode: string }> {
+      if (oai && typeof oai.requestDisplayMode === "function") {
+        return withTimeout(
+          callSafely(() => oai.requestDisplayMode!({ mode })),
+          DISPLAY_MODE_REQUEST_TIMEOUT_MS,
+          "Display mode request timed out."
+        ).then(result => ({
+          mode:
+            normalizeDisplayMode(
+              result && typeof result === "object" ? (result as { mode?: unknown }).mode : result
+            ) || mode
+          })
+        );
+      }
+      if (app && typeof (app as unknown as { requestDisplayMode?: unknown }).requestDisplayMode === "function") {
+        const appWithDisplayMode = app as unknown as {
+          requestDisplayMode: (a: { mode: DisplayMode }) => Promise<{ mode?: string } | string>;
+        };
+        return withTimeout(
+          // Call through appWithDisplayMode (not a detached method reference) so
+          // `this` inside App.requestDisplayMode stays bound to the App instance.
+          // A detached call loses `this`, and App.requestDisplayMode immediately
+          // does `this._assertInitialized(...)`, throwing
+          // "Cannot read properties of undefined (reading '_assertInitialized')".
+          callSafely(() => appWithDisplayMode.requestDisplayMode({ mode })),
+          DISPLAY_MODE_REQUEST_TIMEOUT_MS,
+          "Display mode request timed out."
+        ).then(result => ({
+          mode:
+            normalizeDisplayMode(
+              result && typeof result === "object" ? (result as { mode?: unknown }).mode : result
+            ) || mode
+          })
+        );
+      }
+      return Promise.reject(new Error("Host does not support display mode requests."));
+    },
+    getDisplayMode(): string {
+      return currentDisplayMode();
+    },
+    getAvailableDisplayModes(): string[] {
+      return availableDisplayModes();
     },
     diagnostics,
     get theme(): string {

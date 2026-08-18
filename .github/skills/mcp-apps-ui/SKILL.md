@@ -175,7 +175,9 @@ How a widget actually renders and talks to the host:
    need `_meta.ui.permissions` **on the resource, not the tool**.
 4. **Bidirectional comms** — app ↔ host speak a JSON-RPC dialect over
    `postMessage`. The app receives the tool result, can `callServerTool` /
-   `tools/call`, send follow-up messages, open links, and push context updates.
+   `tools/call`, send follow-up messages, open links, push context updates, and
+   request a display mode change (for example inline → side-by-side/fullscreen)
+   when the host advertises that capability.
 
 Server registration (canonical `ext-apps` shape):
 - `registerAppTool(server, name, { …, _meta: { ui: { resourceUri } } }, handler)`
@@ -192,6 +194,37 @@ Client (inside the widget):
 > `csp.frameDomains` (NOT `connectDomains`/`resourceDomains`) and camelCase
 > permissions only. This repo's bridge also supports the OpenAI Apps SDK
 > (`window.openai.*`) host shape — see §6.
+
+**Guard every host SDK call against synchronous throws, not just rejections.**
+Host SDK methods (`App.*` from `@modelcontextprotocol/ext-apps`, and
+`window.openai.*`) can throw **synchronously** before ever returning a promise
+— confirmed for `App.requestDisplayMode`, which calls
+`this._assertInitialized(...)` via the comma operator before doing anything
+else. `Promise.resolve(hostMethod(args))` does **not** catch that: the throw
+happens while evaluating `hostMethod(args)`, before `Promise.resolve` runs, so
+a promise-based timeout never gets a chance to fire and the caller's UI hangs
+forever. Any new `window.mcpHost` method that calls into a host SDK method
+must invoke it inside a thunk run through `callSafely()` (see
+`requestDisplayMode` in `host-bridge.ts` for the pattern) before applying a
+timeout — never call the host method directly as an argument expression.
+
+**Don't trust the MCP Apps `App.getHostContext()` capability fields blindly —
+check Microsoft's published support matrix first.**
+[Supported MCP Apps capabilities in Copilot](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-mcp-apps#supported-mcp-apps-capabilities-in-copilot)
+lists per-field support; as of this writing `app.requestDisplayMode({ mode })`
+is supported (fullscreen only) but `app.getHostContext()?.availableDisplayModes`
+is **not**. This repo currently only observes `fullscreen` availability through
+the OpenAI-shaped `displayMode` object
+(`getOpenAiDisplayModeContext()` reading `window.openai.displayMode` as an
+object carrying `availableDisplayModes`) — treat the MCP `App` path's
+`availableDisplayModes` as unreliable in Copilot until that matrix says
+otherwise, and re-check the matrix before assuming any other `app.*` field is
+populated. Requests that reject cleanly (not hang) can still be a real,
+specific host error, not proof the API is unsupported — see
+`docs/TROUBLESHOOTING.md` → "`requestDisplayMode` no longer hangs, but the
+host still rejects it" for how to actually diagnose that (the request never
+reaches this repo's backend, so Application Insights shows nothing; log to the
+browser console instead).
 
 ---
 
@@ -225,6 +258,10 @@ Consume only this facade from widget JS:
 - `openExternal(url)` → open a URL (the sandbox blocks `window.open` /
   `target=_blank`)
 - `applyTheme()` → sync `<html data-theme>` with host theme
+- `getDisplayMode()` / `getAvailableDisplayModes()` → read host display-mode
+  context (for conditional inline affordances such as Expand)
+- `requestDisplayMode("inline"|"fullscreen"|"pip")` → ask host to switch
+  surfaces; always feature-detect and degrade gracefully when unsupported
 
 ### In-place multi-state pattern
 A single widget instance re-renders through states (e.g. catalog-browse:
