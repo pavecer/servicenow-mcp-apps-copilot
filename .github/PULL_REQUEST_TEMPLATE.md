@@ -55,6 +55,27 @@ environments and the human records final approval.
 <!-- For user-facing changes include the exact SHA, M365 agent prompts/widget -->
 <!-- result, corresponding ServiceNow record/ACL result, and cleanup outcome. -->
 
+## Interaction lifecycle self-review
+
+<!-- REQUIRED whenever this PR changes anything under src/ui/ (widgets, host -->
+<!-- bridge, widget registry). N/A otherwise. This is a review artifact, not a -->
+<!-- formality: walk the full interaction yourself and record what you found -->
+<!-- BEFORE writing the Human test plan below. Its purpose is to catch obvious -->
+<!-- UX problems (a "second click" away) before asking a human to find them. -->
+<!-- See .github/skills/mcp-apps-ui/SKILL.md \u00a77 for the full checklist. -->
+
+- Initial/idle state: <!-- what the user sees before any action -->
+- Primary action → result: <!-- exact outcome of the first click -->
+- Repeat the same action → result: <!-- what happens on the 2nd/Nth click; if -->
+  <!-- state changed, does the control now reflect it, or is it a dead/duplicate -->
+  <!-- affordance that silently does nothing useful? -->
+- Error / unsupported / edge case → result: <!-- what happens when it fails, -->
+  <!-- times out, or the host doesn't support it -->
+- Recovery: <!-- can the user get back to a sane state without reloading? -->
+- Reversibility: <!-- if this action changes a durable/visible state, is there -->
+  <!-- a way to undo/reverse it, and does the control's label/affordance -->
+  <!-- reflect the current state? -->
+
 ### Human test plan
 
 <!-- Required for user-facing changes. The agent preparing this PR must replace -->
@@ -89,6 +110,8 @@ environments and the human records final approval.
       final human approval.
 - [ ] For user-facing changes, the human test plan has no placeholders and its
       result is PASS before approval.
+- [ ] For changes under `src/ui/`, the Interaction lifecycle self-review above
+      is completed (not N/A) and was done before the Human test plan was written.
 - [ ] Tests added or updated where practical.
 - [ ] If a tool/widget was added or renamed, **all** lockstep locations were
       updated together (tool file + Zod schema, `src/tools/index.ts`,

@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   alignment" PR kind from the release governance tooling, and closed a
   command-line secret exposure in the optional container-deploy chatmode.
 <!-- release-impact: patch -->
+- Added an enforced "Interaction lifecycle self-review" requirement for any PR
+  touching `src/ui/` (widgets, host bridge, widget registry): `release:pr-check`
+  now rejects a missing or incomplete review, so an obvious UX problem (a dead
+  toggle affordance, a control that doesn't reflect the state it just changed)
+  is caught before a human clicks through the test plan.
+<!-- release-impact: patch -->
 
 ### Fixed
 

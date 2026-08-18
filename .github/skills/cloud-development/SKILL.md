@@ -96,6 +96,18 @@ not claim click-through success from API/unit tests.
 
 ### 4. Prepare two-environment evidence
 
+For any change under `src/ui/` (widgets, host bridge, widget registry),
+complete the **Interaction lifecycle self-review first** — before writing the
+Human test plan, not after. Walk the full interaction yourself: initial state,
+primary action, repeating the exact same action, error/edge case, recovery,
+and reversibility. If an action toggles or changes visible state, confirm the
+control's label reflects the new state and a second click does something
+meaningful. This is CI-enforced (`release:pr-check` rejects a missing or
+incomplete review) precisely so a human doesn't discover an obvious UX problem
+by clicking twice — see the `mcp-apps-ui` skill §7 for the full checklist and
+`docs/REPO_STATE.md`'s Knowledge side-by-side investigation for why this rule
+exists.
+
 Before requesting human approval, add a reproducible **Human test plan** to the
 PR. Never ask the approver to infer what to test. The plan must identify the
 test agent/environment, personas, fixture preconditions, exact prompts and

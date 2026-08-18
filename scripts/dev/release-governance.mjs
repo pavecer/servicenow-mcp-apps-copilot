@@ -188,6 +188,34 @@ function requiresTenantValidation(files, args, event) {
   return productionDependenciesChanged(args, event, files);
 }
 
+// Widget/host-bridge changes are where "obvious on the second click" UX bugs
+// live (dead affordances, non-reversible toggles, silent no-ops on repeat).
+// Require the PR to record an explicit interaction-lifecycle self-review
+// before a human is asked to click through it. See
+// .github/skills/mcp-apps-ui/SKILL.md \u00a77 for the review methodology this
+// checks the PR actually followed.
+function requiresInteractionLifecycleReview(files) {
+  return files.some(file => /^src\/ui\//.test(file));
+}
+
+function validateInteractionLifecycleReview(body) {
+  const section = meaningfulSection(getSection(body, "Interaction lifecycle self-review"));
+  if (section.length < 60) {
+    fail(
+      "This PR changes src/ui/ but the 'Interaction lifecycle self-review' section is missing or too thin. " +
+      "Walk the full interaction (initial state, primary action, repeat the same action, error/edge case, " +
+      "recovery, reversibility) yourself and record it BEFORE writing the Human test plan."
+    );
+  }
+  const requiredLabels = ["initial", "primary action", "repeat", "error", "recovery", "reversib"];
+  const normalized = section.toLowerCase();
+  const missing = requiredLabels.filter(label => !normalized.includes(label));
+  if (missing.length > 0) {
+    fail(`Interaction lifecycle self-review is missing required point(s): ${missing.join(", ")}.`);
+  }
+}
+
+
 function selectedOptions(body, labels) {
   return labels.filter(label => new RegExp(`^- \\[x\\] ${label}(?:\\s|$)`, "im").test(body));
 }
@@ -295,6 +323,10 @@ function validatePr(args) {
   const isVersionRelease = prKinds[0] === "Version release";
   const baseVersion = JSON.parse(baseFile(args, event, "package.json")).version;
   const currentVersion = getCanonicalVersion();
+
+  if (!isVersionRelease && requiresInteractionLifecycleReview(files)) {
+    validateInteractionLifecycleReview(body);
+  }
 
   if (isVersionRelease) {
     if (impact === "none") fail("A Version release PR must select Patch, Minor, or Major.");

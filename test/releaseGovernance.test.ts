@@ -21,7 +21,8 @@ function prBody(
   releaseNote: string,
   validation = "Completed maintainer workflow review",
   impact = "Minor",
-  prKind = "Regular change"
+  prKind = "Regular change",
+  interactionLifecycleReview?: string
 ): string {
   return [
     "## Release impact",
@@ -43,7 +44,10 @@ function prBody(
     `${validation === "Completed in test tenant" ? "- [x]" : "- [ ]"} Completed in test tenant`,
     "",
     "## Human validation evidence",
-    "No runtime behavior changed; this is repository governance only."
+    "No runtime behavior changed; this is repository governance only.",
+    ...(interactionLifecycleReview !== undefined
+      ? ["", "## Interaction lifecycle self-review", interactionLifecycleReview]
+      : [])
   ].join("\n");
 }
 
@@ -211,6 +215,52 @@ describe("release governance", () => {
     ], { cwd: root, encoding: "utf8" });
     expect(noneResult.status).toBe(1);
     expect(noneResult.stderr).toMatch(/None cannot be used for runtime/i);
+  });
+
+  it("requires a filled-in interaction lifecycle self-review for src/ui/ changes", () => {
+    const releaseNote = "Add a widget capability that needs a lifecycle review.";
+    const base = temporaryFile("# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [1.1.6]\n\nBaseline.\n");
+    const uiFiles = temporaryFile("CHANGELOG.md\nsrc/ui/widgets/src/knowledge.html\n");
+    const commonArgs = ["--changed-files", uiFiles, "--base-changelog", base, "--base-package", basePackage()];
+
+    const missingSection = spawnSync("node", [
+      script, "pr-check", "--body-file", temporaryFile(prBody(releaseNote, "Completed in test tenant")),
+      ...commonArgs
+    ], { cwd: root, encoding: "utf8" });
+    expect(missingSection.status).toBe(1);
+    expect(missingSection.stderr).toMatch(/Interaction lifecycle self-review.*missing or too thin/i);
+
+    const thinSection = spawnSync("node", [
+      script, "pr-check", "--body-file", temporaryFile(prBody(releaseNote, "Completed in test tenant", "Minor", "Regular change", "N/A")),
+      ...commonArgs
+    ], { cwd: root, encoding: "utf8" });
+    expect(thinSection.status).toBe(1);
+    expect(thinSection.stderr).toMatch(/missing or too thin/i);
+
+    const incompleteSection = spawnSync("node", [
+      script, "pr-check", "--body-file", temporaryFile(prBody(releaseNote, "Completed in test tenant", "Minor", "Regular change", [
+        "- Initial/idle state: the widget shows a collapsed card.",
+        "- Primary action -> result: clicking Expand opens the side-by-side panel."
+      ].join("\n"))),
+      ...commonArgs
+    ], { cwd: root, encoding: "utf8" });
+    expect(incompleteSection.status).toBe(1);
+    expect(incompleteSection.stderr).toMatch(/missing required point\(s\).*repeat.*error.*recovery.*reversib/i);
+
+    const fixture = governanceFixture({ releaseNote, impact: "minor" });
+    const completeSection = spawnSync("node", [
+      fixture.fixtureScript, "pr-check", "--body-file", temporaryFile(prBody(releaseNote, "Completed in test tenant", "Minor", "Regular change", [
+        "- Initial/idle state: the widget shows a collapsed card with an Expand button.",
+        "- Primary action -> result: clicking Expand opens the side-by-side panel and the button now reads Shrink.",
+        "- Repeat the same action -> result: clicking Shrink returns to inline and the button reads Expand again.",
+        "- Error / unsupported / edge case -> result: if the host rejects the request, the button resets with a fallback message.",
+        "- Recovery: the widget remains usable without reloading in every case.",
+        "- Reversibility: the toggle is fully reversible and the label always reflects the current state."
+      ].join("\n"))),
+      "--changed-files", uiFiles, "--base-changelog", base, "--base-package", basePackage(fixture.version)
+    ], { cwd: fixture.fixtureRoot, encoding: "utf8" });
+    expect(completeSection.stderr).toBe("");
+    expect(completeSection.status).toBe(0);
   });
 
   it("treats M365 Markdown as docs and requires workflow review for CI changes", () => {

@@ -274,6 +274,26 @@ cold-start/tests throw (see `/memories/repo/widget-and-tool-invariants.md`):
 
 For each widget under `src/ui/widgets/src/`:
 
+**Interaction lifecycle (do this BEFORE requesting human validation — CI-enforced)**
+- [ ] Walked the full lifecycle yourself: initial/idle state → primary action
+      → success → **repeat the exact same action** → error/edge case →
+      recovery. Do not stop at the first click; a control that only makes
+      sense the first time is an incomplete design.
+- [ ] If an action toggles or changes a durable/visible state (expand/collapse,
+      enable/disable, mode switch), the control's **label reflects the current
+      state** after it changes, and clicking it again does something
+      meaningful (never a silent no-op / dead repeat click).
+- [ ] If the action is reversible in principle (e.g. expand → collapse), the
+      widget actually offers the reverse action, not just the forward one.
+- [ ] Recorded this walkthrough in the PR's **Interaction lifecycle
+      self-review** section (required for any `src/ui/` change;
+      `release:pr-check` rejects a missing/thin one — see
+      `docs/HUMAN_APPROVAL.md`). This was learned the hard way: an Expand
+      button shipped without a Shrink/collapse counterpart, so once expanded
+      it stayed labeled "Expand" and did nothing useful on a second click — a
+      human found it, not this review. See `docs/REPO_STATE.md`'s Knowledge
+      side-by-side investigation for the full story.
+
 **Density & surface**
 - [ ] Inline content is glanceable and fits ~one scroll; no app-shell chrome.
 - [ ] ≤ 2 primary actions, at the bottom of the card.
