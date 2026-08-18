@@ -121,4 +121,22 @@ describe("MCP host bridge display modes", () => {
       vi.useRealTimers();
     }
   });
+
+  it("rejects instead of hanging when the host method throws synchronously", async () => {
+    // Mirrors @modelcontextprotocol/ext-apps' App.requestDisplayMode, which calls
+    // this._assertInitialized(...) via the comma operator BEFORE returning
+    // anything — so it can throw synchronously instead of returning a rejected
+    // promise. A caller relying only on a promise-based timeout would hang
+    // forever; the bridge must catch this and settle immediately.
+    const app = createMockApp({
+      requestDisplayMode: vi.fn(() => {
+        throw new Error("App not initialized: requestDisplayMode");
+      })
+    });
+    const window = await loadBridge({ app });
+
+    await expect(window.mcpHost.requestDisplayMode("fullscreen")).rejects.toThrow(
+      "App not initialized: requestDisplayMode"
+    );
+  });
 });

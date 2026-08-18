@@ -138,6 +138,21 @@ declare global {
     });
   }
 
+  // Some host SDK methods (e.g. ext-apps' App.requestDisplayMode, which calls
+  // this._assertInitialized(...) before returning anything) can throw
+  // SYNCHRONOUSLY instead of returning a rejected promise. Promise.resolve(fn())
+  // does not catch that — the throw happens while evaluating fn() itself, before
+  // Promise.resolve ever sees a value. Without this guard a synchronous throw
+  // bypasses withTimeout entirely and leaves the caller's promise chain (and any
+  // UI waiting on it) hanging forever.
+  function callSafely<T>(fn: () => T | Promise<T>): Promise<T> {
+    try {
+      return Promise.resolve(fn());
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
   function getOpenAiDisplayModeContext(globals?: OpenAiGlobal): { mode?: string; availableDisplayModes: string[] } {
     if (!globals) return { mode: undefined, availableDisplayModes: [] };
     const fromDisplayMode =
@@ -307,7 +322,7 @@ declare global {
     requestDisplayMode(mode: DisplayMode): Promise<{ mode: string }> {
       if (oai && typeof oai.requestDisplayMode === "function") {
         return withTimeout(
-          Promise.resolve(oai.requestDisplayMode({ mode })),
+          callSafely(() => oai.requestDisplayMode!({ mode })),
           DISPLAY_MODE_REQUEST_TIMEOUT_MS,
           "Display mode request timed out."
         ).then(result => ({
@@ -322,7 +337,7 @@ declare global {
         const request = (app as unknown as { requestDisplayMode: (a: { mode: DisplayMode }) => Promise<{ mode?: string } | string> })
           .requestDisplayMode;
         return withTimeout(
-          Promise.resolve(request({ mode })),
+          callSafely(() => request({ mode })),
           DISPLAY_MODE_REQUEST_TIMEOUT_MS,
           "Display mode request timed out."
         ).then(result => ({
