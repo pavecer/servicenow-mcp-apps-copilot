@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const widgetPath = path.join(process.cwd(), "src/ui/widgets/src/knowledge.html");
 const html = fs.readFileSync(widgetPath, "utf8");
@@ -259,6 +259,42 @@ describe("Knowledge MCP App", () => {
       { getAvailableDisplayModes: () => ["inline", "fullscreen"], getDisplayMode: () => "inline" }
     );
     expect(searchWithFullscreen.querySelectorAll("button").map(button => button.textContent)).not.toContain("Expand");
+  });
+
+  it("resets Expand when a stalled display-mode request eventually fails", async () => {
+    vi.useFakeTimers();
+    try {
+      const root = mountWidget(
+        {
+          mode: "detail",
+          attempt: 1,
+          originalQuestion: "Long article",
+          triedArticles: [],
+          article: { title: "Long article", content: "content", sourceLink: "https://example.service-now.com/kb" }
+        },
+        {
+          getAvailableDisplayModes: () => ["inline", "fullscreen"],
+          getDisplayMode: () => "inline",
+          requestDisplayMode: () => new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 50))
+        }
+      );
+      const expand = root.querySelectorAll("button").find(button => button.textContent === "Expand");
+      expect(expand).toBeDefined();
+      expect(expand?.disabled).toBe(false);
+
+      expand?.click();
+      expect(expand?.disabled).toBe(true);
+      expect(expand?.textContent).toBe("Opening...");
+
+      await vi.advanceTimersByTimeAsync(50);
+      await Promise.resolve();
+
+      expect(expand?.disabled).toBe(false);
+      expect(expand?.textContent).toBe("Expand");
+      expect(root.textContent).toContain("This host cannot expand the article view right now.");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("bounds structured previews and ignores inherited or unknown tag names", () => {

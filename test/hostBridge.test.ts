@@ -106,4 +106,19 @@ describe("MCP host bridge display modes", () => {
       "Host does not support display mode requests."
     );
   });
+
+  it("times out display mode requests when the host never responds", async () => {
+    vi.useFakeTimers();
+    try {
+      const app = createMockApp({ requestDisplayMode: vi.fn(() => new Promise(() => {})) });
+      const window = await loadBridge({ app, openai: { theme: "light", displayMode: "inline" } });
+      const pending = window.mcpHost.requestDisplayMode("fullscreen");
+      const rejection = expect(pending).rejects.toThrow("Display mode request timed out.");
+
+      await vi.advanceTimersByTimeAsync(5000);
+      await rejection;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

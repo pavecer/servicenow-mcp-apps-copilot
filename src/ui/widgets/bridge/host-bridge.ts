@@ -45,6 +45,7 @@ interface OpenAiGlobal {
 }
 
 type DisplayMode = "inline" | "fullscreen" | "pip";
+const DISPLAY_MODE_REQUEST_TIMEOUT_MS = 5000;
 
 interface McpHost {
   onData(cb: DataListener): void;
@@ -119,6 +120,22 @@ declare global {
   function normalizeAvailableDisplayModes(modes: unknown): string[] {
     if (!Array.isArray(modes)) return [];
     return modes.filter((mode): mode is string => normalizeDisplayMode(mode) !== undefined);
+  }
+
+  function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = globalThis.setTimeout(() => reject(new Error(message)), timeoutMs);
+      promise.then(
+        value => {
+          globalThis.clearTimeout(timer);
+          resolve(value);
+        },
+        error => {
+          globalThis.clearTimeout(timer);
+          reject(error);
+        }
+      );
+    });
   }
 
   function getOpenAiDisplayModeContext(globals?: OpenAiGlobal): { mode?: string; availableDisplayModes: string[] } {
@@ -289,22 +306,32 @@ declare global {
     },
     requestDisplayMode(mode: DisplayMode): Promise<{ mode: string }> {
       if (oai && typeof oai.requestDisplayMode === "function") {
-        return Promise.resolve(oai.requestDisplayMode({ mode })).then(result => ({
+        return withTimeout(
+          Promise.resolve(oai.requestDisplayMode({ mode })),
+          DISPLAY_MODE_REQUEST_TIMEOUT_MS,
+          "Display mode request timed out."
+        ).then(result => ({
           mode:
             normalizeDisplayMode(
               result && typeof result === "object" ? (result as { mode?: unknown }).mode : result
             ) || mode
-        }));
+          })
+        );
       }
       if (app && typeof (app as unknown as { requestDisplayMode?: unknown }).requestDisplayMode === "function") {
         const request = (app as unknown as { requestDisplayMode: (a: { mode: DisplayMode }) => Promise<{ mode?: string } | string> })
           .requestDisplayMode;
-        return Promise.resolve(request({ mode })).then(result => ({
+        return withTimeout(
+          Promise.resolve(request({ mode })),
+          DISPLAY_MODE_REQUEST_TIMEOUT_MS,
+          "Display mode request timed out."
+        ).then(result => ({
           mode:
             normalizeDisplayMode(
               result && typeof result === "object" ? (result as { mode?: unknown }).mode : result
             ) || mode
-        }));
+          })
+        );
       }
       return Promise.reject(new Error("Host does not support display mode requests."));
     },
