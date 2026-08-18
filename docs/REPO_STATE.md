@@ -85,18 +85,45 @@ states:
   reaches this repo's Azure Function backend, so **Application Insights cannot
   show it** — there is no server-side telemetry option for this class of bug.
 
-**Diagnostic build deployed (SHA `f4558a00241be64a0ecf004491c2b75e77c8d3d8`),
-awaiting human console output.** Added a `console.warn` in the Expand click
-handler's `.catch()` (diagnostic only, no visible behavior change) logging the
-actual rejection reason. **Next step, do not skip:** open
-`https://m365.cloud.microsoft/chat` in a browser (not Teams desktop — DevTools
-console is required), start a **new chat** (MCP Apps widgets are fetched once
-per tool response and a continued thread will still run the pre-redeploy
-JavaScript), search Knowledge, open an article, click Expand, and read the
-exact `[knowledge widget] requestDisplayMode("fullscreen") rejected:` line from
-the browser console (F12 → Console). That message is the missing piece to
-determine whether this is a genuine current host limitation, a malformed
-request on our side, or something else — do not guess further without it.
+**Diagnostic build (SHA `f4558a00241be64a0ecf004491c2b75e77c8d3d8`)** added a
+`console.warn` in the Expand click handler's `.catch()` logging the actual
+rejection reason (this class of request is invisible to Application Insights
+— see above). The human ran it in a fresh chat and reported the exact console
+output.
+
+**Round 4 (SHA `fa29d3800ac7abb341aae8550cef1353ced09e51`) found and fixed the
+real root cause — it was our own bug, not a Copilot host limitation.** The
+captured browser console trace was:
+```
+TypeError: Cannot read properties of undefined (reading '_assertInitialized')
+    at requestDisplayMode (VM8 about:srcdoc:103:10668)
+```
+`App.requestDisplayMode` does `this._assertInitialized(...)` as its first
+statement. The bridge's `app` branch had extracted the method into a detached
+local variable (`const request = app.requestDisplayMode; ... request({mode})`)
+instead of calling it as `app.requestDisplayMode({mode})` — a classic
+lost-`this` bug: calling a detached method reference makes `this` become
+`undefined` inside it. `callSafely()` (round 3) correctly caught the resulting
+throw and turned it into a clean rejection — that part worked exactly as
+designed — but the *reason* for the rejection was this bug, not the host
+declining a supported request.
+
+**Fix:** call `requestDisplayMode` as a proper method on the `App` instance
+(preserving `this`), not through a detached reference. Added a regression test
+whose mock `requestDisplayMode` implementation actually depends on `this`
+(captures it and asserts it equals the `app` instance) — a plain `vi.fn()`
+mock does not reference `this` at all, which is exactly why this bug slipped
+through rounds 2 and 3 undetected. Verified live: decompiled the redeployed
+bundle and confirmed the call site changed from the detached `request({mode:_})`
+pattern to a proper method call, `z.requestDisplayMode({mode:_})` where
+`z` is the `App` instance.
+
+**Status: awaiting the human's fresh-chat re-test of SHA `fa29d380`.** Expected
+outcomes this time: either the article actually expands to fullscreen/side-by-
+side, or — if it still can't — the console should show a *different*,
+legitimate rejection reason from Copilot itself, not the same `_assertInitialized`
+`TypeError`. If the same TypeError reappears, the redeploy did not take effect;
+do not reinterpret it as a new finding.
 
 ## Human-validated order-detail release
 
