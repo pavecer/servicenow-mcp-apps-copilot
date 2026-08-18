@@ -261,6 +261,37 @@ describe("Knowledge MCP App", () => {
     expect(searchWithFullscreen.querySelectorAll("button").map(button => button.textContent)).not.toContain("Expand");
   });
 
+  it("toggles between Expand and Shrink after a successful display-mode switch", async () => {
+    const requestDisplayMode = vi.fn((mode: string) => Promise.resolve({ mode }));
+    const root = mountWidget(
+      {
+        mode: "detail",
+        attempt: 1,
+        originalQuestion: "Long article",
+        triedArticles: [],
+        article: { title: "Long article", content: "content", sourceLink: "https://example.service-now.com/kb" }
+      },
+      { getAvailableDisplayModes: () => ["inline", "fullscreen"], getDisplayMode: () => "inline", requestDisplayMode }
+    );
+
+    const expand = root.querySelectorAll("button").find(button => button.textContent === "Expand");
+    expect(expand).toBeDefined();
+    expand?.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(requestDisplayMode).toHaveBeenCalledWith("fullscreen");
+    const shrink = root.querySelectorAll("button").find(button => button.textContent === "Shrink");
+    expect(shrink).toBeDefined();
+    expect(root.querySelectorAll("button").map(button => button.textContent)).not.toContain("Expand");
+
+    shrink?.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(requestDisplayMode).toHaveBeenCalledWith("inline");
+    expect(root.querySelectorAll("button").map(button => button.textContent)).toContain("Expand");
+    expect(root.querySelectorAll("button").map(button => button.textContent)).not.toContain("Shrink");
+  });
+
   it("resets Expand when a stalled display-mode request eventually fails", async () => {
     vi.useFakeTimers();
     try {

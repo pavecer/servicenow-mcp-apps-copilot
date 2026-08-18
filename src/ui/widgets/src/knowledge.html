@@ -97,6 +97,7 @@
   function getData() { var h = host(); return h ? h.getData() : null; }
   function applyTheme() { var h = host(); if (h && h.applyTheme) h.applyTheme(); }
   function applyDisplayMode(mode) { if (mode === "fullscreen") document.documentElement.setAttribute("data-display-mode", "fullscreen"); else document.documentElement.removeAttribute("data-display-mode"); }
+  function isExpandedMode() { return document.documentElement.getAttribute("data-display-mode") === "fullscreen"; }
   function syncDisplayMode() { var h = host(); if (h && h.getDisplayMode) applyDisplayMode(h.getDisplayMode()); else applyDisplayMode(""); }
   function getAvailableDisplayModes() { var h = host(); if (h && h.getAvailableDisplayModes) return h.getAvailableDisplayModes() || []; return []; }
   function supportsFullscreenExpand() { return getAvailableDisplayModes().indexOf("fullscreen") !== -1; }
@@ -505,17 +506,25 @@
     }
     var actions = make("div", "actions");
     root.appendChild(make("div", "feedback-disclosure", "Feedback is saved to ServiceNow Knowledge."));
-    if (supportsFullscreenExpand()) actions.appendChild(actionButton("Expand", false, function (event) {
+    var expanded = isExpandedMode();
+    if (expanded || supportsFullscreenExpand()) actions.appendChild(actionButton(expanded ? "Shrink" : "Expand", false, function (event) {
       var button = event.currentTarget;
       var originalLabel = button.textContent;
-      button.disabled = true; button.textContent = "Opening...";
-      requestDisplayMode("fullscreen").then(function (result) {
+      var targetMode = expanded ? "inline" : "fullscreen";
+      button.disabled = true; button.textContent = expanded ? "Shrinking..." : "Opening...";
+      requestDisplayMode(targetMode).then(function (result) {
+        // Use the confirmed mode from the request result, not a fresh host
+        // read, then re-render just this state so the button label reflects
+        // it immediately (skip the bridge round-trip that render()'s own
+        // syncDisplayMode() would otherwise race against).
         applyDisplayMode(result && result.mode);
+        root.innerHTML = "";
+        renderDetail(data);
       }).catch(function (error) {
-        if (typeof console !== "undefined" && console.warn) console.warn("[knowledge widget] requestDisplayMode(\"fullscreen\") rejected:", error);
-        showStatus("This host cannot expand the article view right now.", true);
+        if (typeof console !== "undefined" && console.warn) console.warn("[knowledge widget] requestDisplayMode(\"" + targetMode + "\") rejected:", error);
+        showStatus("This host cannot " + (expanded ? "shrink" : "expand") + " the article view right now.", true);
       }).finally(function () {
-        button.disabled = false; button.textContent = originalLabel || "Expand";
+        button.disabled = false; button.textContent = originalLabel;
       });
     }));
     actions.appendChild(actionButton("Give feedback", true, function () { showFeedbackPanel(data); }));
