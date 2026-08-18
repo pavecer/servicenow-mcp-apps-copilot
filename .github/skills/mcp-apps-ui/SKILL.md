@@ -195,6 +195,19 @@ Client (inside the widget):
 > permissions only. This repo's bridge also supports the OpenAI Apps SDK
 > (`window.openai.*`) host shape — see §6.
 
+**Guard every host SDK call against synchronous throws, not just rejections.**
+Host SDK methods (`App.*` from `@modelcontextprotocol/ext-apps`, and
+`window.openai.*`) can throw **synchronously** before ever returning a promise
+— confirmed for `App.requestDisplayMode`, which calls
+`this._assertInitialized(...)` via the comma operator before doing anything
+else. `Promise.resolve(hostMethod(args))` does **not** catch that: the throw
+happens while evaluating `hostMethod(args)`, before `Promise.resolve` runs, so
+a promise-based timeout never gets a chance to fire and the caller's UI hangs
+forever. Any new `window.mcpHost` method that calls into a host SDK method
+must invoke it inside a thunk run through `callSafely()` (see
+`requestDisplayMode` in `host-bridge.ts` for the pattern) before applying a
+timeout — never call the host method directly as an argument expression.
+
 ---
 
 ## 6. THIS REPO's widget conventions (follow exactly)
