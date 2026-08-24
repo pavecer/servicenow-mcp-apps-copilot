@@ -62,7 +62,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.43",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "archiver": "^8.0.0",
     "cross-spawn": "^7.0.6",
     "esbuild": "^0.28.2",
