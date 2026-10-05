@@ -1,6 +1,6 @@
 # Repository State
 
-Last updated: 2026-08-18
+Last updated: 2026-10-05
 
 This file is the tracked handover for future agents and cloud Copilot sessions.
 It records the latest verified runtime state, active deployment assumptions, and
@@ -16,16 +16,64 @@ cleanup, container-deploy secret handling) resolved and applied on 2026-08-17.
 ## Current verified state
 
 - Repo: `servicenow-mcp-apps-copilot`; public baseline is branch `main`, while
-  the active local candidate is on `feat/knowledge-retrieval`.
+  the active local checkout is on `main`.
 - Surface: MCP Apps only.
-- Public inventory: 23 tools, 8 widgets. The test-only deployment currently
-  exposes the Knowledge candidate with 27 tools and 9 widgets.
+- Public inventory: 27 tools, 9 widgets.
+- The test deployment currently runs the 27-tool/9-widget candidate from draft
+  PR #73, not the tip of `main`.
 - Primary deployed endpoint:
   `https://func-yj453fjwuhph4.azurewebsites.net/mcp`
 - Primary Azure resource group: `rg-snowmcpwidg-dev`
 - Current ServiceNow development instance:
   `https://dev351709.service-now.com`
 - Current integration identity: `mcp_integration`
+
+## Tenant migration checkpoint — 2026-10-05
+
+- Migration work is tracked in issue #100.
+- The previous Microsoft 365/runtime test tenant is retired. The replacement
+  tenant and licensed developer identity are available for interactive sign-in,
+  but replacement Entra app registrations, client secrets, OAuth-vault
+  registration, and M365 developer-agent identifiers have not yet been
+  provisioned.
+- The Azure management subscription remains associated with the previous
+  management tenant and has not been migrated. Do not change
+  `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, or the GitHub OIDC variables until
+  the subscription transfer and replacement federated identity are complete.
+- Do not partially replace only `ENTRA_TENANT_ID` or
+  `TEAMS_APP_TENANT_ID`: the existing app IDs and secrets belong to the retired
+  tenant. Retarget local, Codespaces, and Actions configuration atomically after
+  the replacement registrations exist.
+- Local authenticated runtime/M365 testing and cloud deployment validation are
+  therefore intentionally blocked. Build, unit tests, package validation, and
+  direct ServiceNow integration checks remain available. The ServiceNow
+  instance remains unchanged.
+
+## Open-work audit — 2026-10-05
+
+- **Tenant migration:** issue #100 tracks the blocked runtime/M365 migration,
+  ServiceNow identity remapping, local/Codespaces/Actions configuration, and
+  post-migration validation while Azure management remains unchanged.
+- **Unfinished feature:** issue #72 and draft PR #73 remain open. PR #73 is
+  mergeable and its checks pass, but it is behind `main`. Its final commit
+  changes the interaction from one-way Expand to an Expand/Shrink toggle, so
+  the earlier human success report does not satisfy the exact-SHA gate. The
+  final candidate still needs a fresh-chat M365 click-through in the replacement
+  tenant, a SHA-bound `HUMAN VALIDATION: PASS`, and separate merge approval.
+- **Dependency maintenance:** PR #99 (grouped development dependencies) passed
+  CI and merged on 2026-10-05. Superseded PRs #80, #84, #94, and #95 were
+  closed. PRs #77, #96, #97, and #98 remain open: the production updates are
+  blocked by the repository's release-governance check, while the action and
+  major test-runner updates remain distinct maintenance work.
+- **Release/publication:** GitHub Release `v1.2.0` is published, its tag points
+  to the merged release commit, and the GitHub Pages release communication is
+  deployed. The tracked evidence proves only the earlier `1.1.6`
+  organizational-catalog submission; there is no evidence that `1.2.0` was
+  submitted or approved in an organizational catalog. Any new catalog
+  submission must target the replacement tenant and remains a separate
+  privileged operation.
+- **Branches:** every remote branch not merged into `main` corresponds to one of
+  the open PRs above. No additional untracked remote feature branch was found.
 
 ## Knowledge widget side-by-side (fullscreen) investigation — PR #73
 
@@ -168,11 +216,10 @@ do not reinterpret it as a new finding.
 - The first CodeQL run found three parsing/escaping alerts; these were fixed
   before merge with linear parsing and hostile-input tests.
 
-## Active Knowledge retrieval branch
+## Knowledge retrieval release history
 
-- Branch `feat/knowledge-retrieval` adds four tools and one shared MCP App,
-  moving the local and test-deployed inventory to 27 tools / 9 widgets. Public
-  `main` remains 23 / 8.
+- PR #60 merged the Knowledge retrieval release into `main` and published it as
+  `v1.2.0`, moving the public inventory to 27 tools / 9 widgets.
 - Implemented locally: deterministic native-score/lexical ranking, one-call
   Knowledge API search, one-call article detail, executable-block stripping,
   attempt/history state, third-attempt incident offer, explicit-consent incident
@@ -248,16 +295,14 @@ do not reinterpret it as a new finding.
   excludes the tried article and offers an incident without creating one. The
   demo fallback setting is enabled, storage public access is `Disabled`, and no
   temporary exemption remains.
-- No public push or PR has occurred. Next: deploy the exact 27-tool candidate to
-  `snowmcpwidg-dev`, verify live native
-  records as admin/Alex, then finish the three-attempt and consented-incident
-  human journey before opening a Version release PR.
+- The release candidate completed live ServiceNow and M365 validation, merged
+  through PR #60, and was published as GitHub Release `v1.2.0`.
 
-## Operational checkpoint
+## Historical operational checkpoint
 
 - As of 2026-08-11, Function App `func-yj453fjwuhph4` is running and the Azure
-  subscription is enabled. The test endpoint exposes all 27 candidate tools;
-  public `main` remains at 23 tools.
+  subscription is enabled. The test endpoint and current `main` both expose 27
+  tools.
 - Local ServiceNow validation is passing with current `local.settings.json`
   values (`npm run sn:local -- validate`).
 - Deployed Function App has been migrated to `dev351709` and validated live.
@@ -437,9 +482,8 @@ do not reinterpret it as a new finding.
   - incident `INC0010012` was created through deployed `/mcp`
   - a comment was added through deployed `/mcp`
   - latest comment author was `System Administrator`
-  - this matched the Entra caller
-    `admin@D365DemoTSCE54115347.onmicrosoft.com`, which ServiceNow maps to user
-    `admin`
+  - this matched the retired test tenant's admin persona, which ServiceNow maps
+    to user `admin`
 
 ## Important behavior
 
@@ -453,6 +497,10 @@ do not reinterpret it as a new finding.
 
 ## Resume checklist
 
+- Complete the runtime/M365 tenant migration procedure in
+  [CODESPACES.md](CODESPACES.md) before any authenticated local test, cloud
+  deployment, or M365 click-through. Keep Azure management on its current
+  tenant until the subscription transfer is complete.
 - Read [AUTH_ENTRA_OBO.md](AUTH_ENTRA_OBO.md) before changing any OBO or
   attribution behavior.
 - Read [TROUBLESHOOTING.md](TROUBLESHOOTING.md) before rotating secrets or
