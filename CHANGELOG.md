@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+<!-- release-impact: patch -->
+- Updated vulnerable dependencies to close all open Dependabot security alerts:
+  axios 1.20.0, fast-uri 3.1.8, hono 4.13.7+, ip-address 10.7.1+, qs 6.16.0 and
+  vitest 4.1.11.
+
 - Unpinned the model from all specialist chatmodes so they inherit the
   session's selected model, documented CodeQL as GitHub default setup rather
   than a workflow file, removed the closed one-time "Version baseline
