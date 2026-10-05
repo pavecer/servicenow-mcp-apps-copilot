@@ -60,12 +60,11 @@ cleanup, container-deploy secret handling) resolved and applied on 2026-08-17.
   the earlier human success report does not satisfy the exact-SHA gate. The
   final candidate still needs a fresh-chat M365 click-through in the replacement
   tenant, a SHA-bound `HUMAN VALIDATION: PASS`, and separate merge approval.
-- **Dependency maintenance:** PR #99 (grouped development dependencies) is open
-  with passing CI. PRs #77, #80, #84, and #94-#98 are open but blocked by the
-  repository's production-dependency release-governance check. PR #80 is
-  superseded by #97, and the individual production dependency PRs overlap the
-  grouped PR #98; review and close superseded PRs before preparing one
-  governed Patch update.
+- **Dependency maintenance:** PR #99 (grouped development dependencies) passed
+  CI and merged on 2026-10-05. Superseded PRs #80, #84, #94, and #95 were
+  closed. PRs #77, #96, #97, and #98 remain open: the production updates are
+  blocked by the repository's release-governance check, while the action and
+  major test-runner updates remain distinct maintenance work.
 - **Release/publication:** GitHub Release `v1.2.0` is published, its tag points
   to the merged release commit, and the GitHub Pages release communication is
   deployed. The tracked evidence proves only the earlier `1.1.6`
