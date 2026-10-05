@@ -32,6 +32,37 @@ Keep these identities separate:
 The Azure management tenant can differ from the runtime/Microsoft 365 test
 tenant. Never replace one with the other to make a login check pass.
 
+### Migrating only the runtime and Microsoft 365 tenant
+
+When the M365/runtime test tenant changes before the Azure subscription moves,
+keep `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, the existing resource group,
+and the GitHub OIDC identity unchanged. A sign-in account and tenant ID are not
+enough to retarget the application safely: tenant-bound app registrations and
+their credentials must be replaced together.
+
+Provision or identify all of the following in the replacement tenant before
+changing local or cloud configuration:
+
+- the MCP runtime/OBO app registration and its client secret, audience, scopes,
+  and downstream ServiceNow OBO registration;
+- the Agents Toolkit developer app/title and OAuth-vault registration;
+- the licensed M365 developer identity used for delegated Toolkit sign-in.
+
+Then update the ignored runtime and M365 files as one change:
+
+- `local.settings.json`: `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`,
+  `ENTRA_CLIENT_SECRET`, audiences/scopes, and downstream OBO scope;
+- `m365-agent/env/.env.dev` and `.env.dev.user`: `TEAMS_APP_TENANT_ID`, the
+  replacement app/title/OAuth identifiers, and the replacement OAuth secret;
+- the active azd environment: runtime `ENTRA_*` values only. Do not change its
+  `AZURE_*` values while Azure management remains in the old tenant.
+
+After local validation succeeds, update the matching repository Codespaces
+secrets and Actions variables/secrets in one maintenance window. Restart
+existing Codespaces, sign in to M365 interactively with the licensed
+replacement-tenant identity, and run the readiness commands below. Do not copy
+human passwords or delegated login tokens into GitHub secrets.
+
 ## One-time secret migration
 
 Codespaces does not receive ignored workstation files such as
