@@ -62,9 +62,12 @@ cleanup, container-deploy secret handling) resolved and applied on 2026-08-17.
   tenant, a SHA-bound `HUMAN VALIDATION: PASS`, and separate merge approval.
 - **Dependency maintenance:** PR #99 (grouped development dependencies) passed
   CI and merged on 2026-10-05. Superseded PRs #80, #84, #94, and #95 were
-  closed. PRs #77, #96, #97, and #98 remain open: the production updates are
-  blocked by the repository's release-governance check, while the action and
-  major test-runner updates remain distinct maintenance work.
+  closed, as were regenerated individual PRs already covered by a newer update
+  or group. PR #98 remains the grouped production update; separate action,
+  security, and major test-runner updates remain distinct maintenance work.
+  Dependabot may regenerate individual PRs after lockfile changes, so reconcile
+  them against the current groups before review rather than relying on a fixed
+  PR-number list.
 - **Release/publication:** GitHub Release `v1.2.0` is published, its tag points
   to the merged release commit, and the GitHub Pages release communication is
   deployed. The tracked evidence proves only the earlier `1.1.6`
