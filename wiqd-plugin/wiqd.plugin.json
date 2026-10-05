@@ -1,0 +1,14 @@
+{
+  "manifestVersion": "1.29",
+  "name": "ServiceNow Assistant",
+  "description": "ServiceNow self-service tools for Microsoft 365 Copilot through Work IQ Developer Tools.",
+  "agentSkills": [
+    "servicenow-self-service"
+  ],
+  "agentConnectors": [
+    {
+      "name": "ServiceNow MCP",
+      "url": "https://example.invalid/mcp"
+    }
+  ]
+}
