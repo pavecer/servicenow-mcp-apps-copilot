@@ -1,0 +1,45 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.29/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.29",
+  "version": "1.0.0",
+  "id": "4d0e4d8b-4ef6-4a04-9d9d-1a0c1ee8b3d6",
+  "developer": {
+    "name": "Pavel Vecer",
+    "websiteUrl": "https://github.com/pavecer/servicenow-mcp-apps-copilot",
+    "privacyUrl": "https://github.com/pavecer/servicenow-mcp-apps-copilot/blob/main/README.md",
+    "termsOfUseUrl": "https://github.com/pavecer/servicenow-mcp-apps-copilot/blob/main/LICENSE"
+  },
+  "name": {
+    "short": "ServiceNow Assistant",
+    "full": "ServiceNow Assistant for Microsoft 365 Copilot"
+  },
+  "description": {
+    "short": "Use ServiceNow self-service tools in Microsoft 365 Copilot.",
+    "full": "Connect Microsoft 365 Copilot to the ServiceNow MCP server for Knowledge, catalog, request, approval, and incident workflows. User actions remain protected by the MCP server's Entra OAuth and ServiceNow authorization checks."
+  },
+  "accentColor": "#0F6CBD",
+  "agentConnectors": [
+    {
+      "id": "servicenow-mcp",
+      "displayName": "ServiceNow MCP",
+      "description": "ServiceNow Knowledge, catalog, request, approval, and incident tools.",
+      "toolSource": {
+        "remoteMcpServer": {
+          "mcpServerUrl": "https://example.invalid/mcp",
+          "mcpToolDescription": {
+            "file": "mcp-tool-description.json"
+          },
+          "authorization": {
+            "type": "OAuthPluginVault",
+            "referenceId": "REPLACE_WITH_OAUTH_PLUGIN_VAULT_REFERENCE_ID"
+          }
+        }
+      }
+    }
+  ],
+  "agentSkills": [
+    {
+      "folder": "skills/servicenow-self-service"
+    }
+  ]
+}

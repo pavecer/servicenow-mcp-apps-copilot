@@ -78,6 +78,7 @@ npm run deploy:azure
 - [ServiceNow Setup](docs/SERVICENOW_SETUP.md)
 - [Entra ID Configuration](docs/AUTH_ENTRA_OBO.md)
 - [M365 Copilot Integration](docs/M365_COPILOT_MCP_APPS.md)
+- [Work IQ Developer Tools plugin (Alternative)](docs/WIQD_PLUGIN.md)
 - [Container Deployment (Optional)](docs/DEPLOY_CONTAINER_AZURE.md)
 - [Agent 365 Registration (Optional)](docs/AGENT_365_BYO_MCP.md)
 
@@ -208,7 +209,7 @@ admin in the configured ServiceNow development instance. See
 |-------|------|
 | **Getting Started** | [ServiceNow Setup](docs/SERVICENOW_SETUP.md) • [Deployment](#quick-start) |
 | **Demo** | [Approval Demo Data and Prompts](docs/DEMO_APPROVAL_FLOW.md) |
-| **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) |
+| **Architecture** | [Auth Flows](docs/AUTH_ENTRA_OBO.md) • [Scenario Flows](docs/SERVICENOW_SCENARIO_FLOWS.md) • [MCP Apps Integration](docs/M365_COPILOT_MCP_APPS.md) • [WIQD plugin](docs/WIQD_PLUGIN.md) |
 | **Operations** | [Environment Variables](docs/CONFIG_REFERENCE.md) • [Troubleshooting](docs/TROUBLESHOOTING.md) • [Cost Model](docs/COST_ESTIMATION.md) |
 | **Advanced** | [Agent 365 Publishing & Governance](docs/AGENT_365_PUBLISHING.md) • [Per-User ACLs / OBO](docs/AUTH_ENTRA_OBO.md) • [Agent 365 MCP Registration](docs/AGENT_365_BYO_MCP.md) • [Container Deployment](docs/DEPLOY_CONTAINER_AZURE.md) |
 | **Development** | [Codespaces](docs/CODESPACES.md) • [Contributing](CONTRIBUTING.md) • [Engineering Guardrails](docs/ENGINEERING_GUARDRAILS.md) • [Build/Test Commands](AGENTS.md) |
@@ -274,4 +275,3 @@ Release notes are tracked in [CHANGELOG.md](CHANGELOG.md).
 Released under the [MIT License](LICENSE) — © 2026 Pavel Vecer. You are free to
 use, fork, modify, and deploy this project; see the license text for the full
 terms and the "no warranty" clause.
-

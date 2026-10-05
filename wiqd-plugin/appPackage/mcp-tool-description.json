@@ -1,0 +1,112 @@
+{
+  "tools": [
+    {
+      "name": "search_catalog_items",
+      "description": "Search ServiceNow catalog items."
+    },
+    {
+      "name": "get_catalog_item_form",
+      "description": "Get the order form for a ServiceNow catalog item."
+    },
+    {
+      "name": "place_order",
+      "description": "Place a ServiceNow catalog order."
+    },
+    {
+      "name": "validate_servicenow_config",
+      "description": "Validate ServiceNow configuration."
+    },
+    {
+      "name": "list_user_orders",
+      "description": "List the current user's ServiceNow orders."
+    },
+    {
+      "name": "update_order",
+      "description": "Update a ServiceNow order."
+    },
+    {
+      "name": "get_order_detail",
+      "description": "Get details for a ServiceNow order."
+    },
+    {
+      "name": "add_to_cart",
+      "description": "Add a catalog item to the ServiceNow cart."
+    },
+    {
+      "name": "view_cart",
+      "description": "View the current user's ServiceNow cart."
+    },
+    {
+      "name": "update_cart_item",
+      "description": "Update a ServiceNow cart item."
+    },
+    {
+      "name": "remove_cart_item",
+      "description": "Remove an item from the ServiceNow cart."
+    },
+    {
+      "name": "submit_cart",
+      "description": "Submit the ServiceNow cart."
+    },
+    {
+      "name": "update_order_item",
+      "description": "Update a line item in a ServiceNow order."
+    },
+    {
+      "name": "remove_order_item",
+      "description": "Remove a line item from a ServiceNow order."
+    },
+    {
+      "name": "approve_order_approval",
+      "description": "Approve a ServiceNow order approval."
+    },
+    {
+      "name": "reject_order_approval",
+      "description": "Reject a ServiceNow order approval."
+    },
+    {
+      "name": "get_incident_form",
+      "description": "Get the ServiceNow incident form."
+    },
+    {
+      "name": "report_incident",
+      "description": "Report a ServiceNow incident."
+    },
+    {
+      "name": "list_user_incidents",
+      "description": "List the current user's ServiceNow incidents."
+    },
+    {
+      "name": "get_incident_detail",
+      "description": "Get details for a ServiceNow incident."
+    },
+    {
+      "name": "add_incident_comment",
+      "description": "Add a comment to a ServiceNow incident."
+    },
+    {
+      "name": "add_incident_attachment",
+      "description": "Add an attachment to a ServiceNow incident."
+    },
+    {
+      "name": "remove_incident_attachment",
+      "description": "Remove an attachment from a ServiceNow incident."
+    },
+    {
+      "name": "search_knowledge",
+      "description": "Search ServiceNow Knowledge articles."
+    },
+    {
+      "name": "get_knowledge_article",
+      "description": "Get a ServiceNow Knowledge article."
+    },
+    {
+      "name": "submit_knowledge_feedback",
+      "description": "Submit feedback for a ServiceNow Knowledge article."
+    },
+    {
+      "name": "create_incident_from_knowledge",
+      "description": "Create a ServiceNow incident from a Knowledge article."
+    }
+  ]
+}

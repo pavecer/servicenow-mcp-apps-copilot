@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<!-- release-impact: minor -->
+- Add a Work IQ Developer Tools plugin package for bringing the ServiceNow MCP
+  integration into Microsoft 365 Copilot through a validated, shareable
+  connector workflow.
+
 ### Added
 
 ### Changed

@@ -11,6 +11,11 @@ laptop" or "show my open ServiceNow orders", Copilot mounts a sandboxed
 HTML iframe right in the chat — backed by the same MCP tools any standard MCP
 client can call.
 
+For an alternative packaging path that brings the same deployed MCP server into
+Microsoft 365 Copilot through Work IQ Developer Tools, including OAuth,
+validation, provisioning, packaging, and sharing guidance, see
+[`WIQD_PLUGIN.md`](WIQD_PLUGIN.md).
+
 [sep-1865]: https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx
 
 ## Deployment reference
