@@ -309,6 +309,96 @@ mapping first; disabling OBO is only a temporary workaround.
 
 ---
 
+### A widget button hangs forever on a loading label (e.g. "Opening...", "Saving...")
+
+**Symptom:** clicking a widget action that calls a `window.mcpHost` method (e.g.
+`requestDisplayMode`, `callTool`) leaves the button disabled on its transient
+label permanently. No error, no recovery, nothing in the model response.
+
+**Root cause class (confirmed once, expect it again):** host SDK methods can
+throw **synchronously**, before ever returning a promise. For example,
+`@modelcontextprotocol/ext-apps`' `App.requestDisplayMode` calls
+`this._assertInitialized(...)` via the comma operator before doing anything
+else — if that assertion fails, the call throws immediately. Wrapping the call
+as `Promise.resolve(hostMethod(args))` does **not** catch this: the throw
+happens while evaluating `hostMethod(args)` itself, before `Promise.resolve`
+ever runs. A bounded timeout built only around the *returned* promise (like
+`withTimeout` in `host-bridge.ts`) never gets a chance to fire either, because
+no promise was ever created to time out.
+
+**Fix pattern (already applied for `requestDisplayMode`, reuse for any new
+host bridge method):** invoke the host SDK call inside a thunk executed by
+`callSafely()` in `src/ui/widgets/bridge/host-bridge.ts`, which try/catches the
+invocation itself and converts a synchronous throw into a rejected promise
+*before* any timeout wrapper runs. Never call a host SDK method directly as an
+argument to `Promise.resolve(...)`.
+
+**How to verify a fix is actually live (don't trust a green deploy/CI run
+alone):**
+1. Acquire a bearer token and call the deployed endpoint directly:
+   ```bash
+   curl -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+     -H "Accept: application/json, text/event-stream" \
+     https://<function-app>.azurewebsites.net/mcp -X POST \
+     -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2026-06-18","capabilities":{},"clientInfo":{"name":"diag","version":"1.0.0"}}}'
+   ```
+2. Read the `mcp-session-id` response header, then fetch the widget resource
+   itself (`resources/read` with the exact `ui://...` URI from
+   `resources/list`) and grep the **returned bytes** for the fix's structural
+   marker. A passing `validate:live` / deploy job only proves the server
+   started and the tool surface responds — it does not prove a specific
+   widget-behavior fix is the code actually being served.
+3. Retest in Microsoft 365 Copilot using a **brand-new chat**, not a
+   continuation of an earlier test thread. MCP Apps widgets are fetched and
+   mounted once per tool response; an already-rendered widget from before the
+   redeploy keeps running its old, already-loaded JavaScript and will not
+   pick up the fix mid-conversation.
+
+---
+
+### `requestDisplayMode` no longer hangs, but the host still rejects it (button resets with a fallback message)
+
+**Symptom:** the Expand/fullscreen button correctly shows a loading state,
+then correctly resets to enabled with a graceful fallback message (e.g. "This
+host cannot expand the article view right now.") — no hang, but the article
+never actually goes fullscreen/side-by-side.
+
+**This is not automatically the same bug as the hang above.** Once the
+synchronous-throw guard is in place (see above), a clean reset-with-message
+outcome is the *documented, acceptable* degraded path per the MCP Apps UX
+guidelines. Before treating it as broken, get the actual rejection reason —
+this class of request is invisible to normal diagnostics:
+
+- **It never reaches this repo's backend.** `requestDisplayMode` (and other
+  `window.mcpHost` calls that map to `app.*`/`window.openai.*`) is answered
+  entirely client-side, inside the browser, via `postMessage` between the
+  widget iframe and the Copilot host. It does **not** call this MCP server, so
+  Application Insights and server logs show nothing for it — there is no
+  server-side telemetry option here.
+- **Log the real reason to the browser console** instead: add a
+  `console.warn("...", error)` in the widget's `.catch()` handler (already
+  done for the Knowledge Expand button — see its rejection reason before
+  assuming a fix is needed), then reproduce with DevTools open
+  (`https://m365.cloud.microsoft/chat` in a browser, not Teams desktop — **F12
+  → Console**) in a fresh chat.
+- **Check Microsoft's own MCP Apps support matrix before assuming the API
+  isn't supported at all:**
+  [Supported MCP Apps capabilities in Copilot](https://learn.microsoft.com/microsoft-365/copilot/extensibility/plugin-mcp-apps#supported-mcp-apps-capabilities-in-copilot).
+  As of this writing it states `app.requestDisplayMode({ mode })` is
+  **✅ (full screen only)**, so a rejection is a specific, real error — not
+  proof the feature doesn't exist in this host. The same table also states
+  `app.getHostContext()?.availableDisplayModes` is **❌ not supported** by
+  Copilot: do not gate a feature on that field being populated via the MCP
+  Apps `App` path. This repo's bridge only manages to detect `fullscreen`
+  availability through the OpenAI-shaped `displayMode` object
+  (`window.openai.displayMode` as an object carrying `availableDisplayModes`,
+  handled by `getOpenAiDisplayModeContext()` in `host-bridge.ts`) — treat that
+  as the currently-working detection path, not `app.getHostContext()`.
+- See `docs/REPO_STATE.md` → "Knowledge widget side-by-side (fullscreen)
+  investigation" for this exact investigation's live status and next step.
+
+---
+
 ## Microsoft 365 Copilot Agent Issues
 
 ### Function endpoint returns `403 - This web app is stopped`

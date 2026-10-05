@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Knowledge article detail can now request fullscreen side-by-side display when
+  the MCP host advertises it, via a new additive widget bridge
+  `requestDisplayMode` capability.
+<!-- release-impact: minor -->
+
 ### Changed
 
 - Unpinned the model from all specialist chatmodes so they inherit the
