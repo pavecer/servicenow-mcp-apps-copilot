@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Create deduplicated communications issue
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           REQUESTED_VERSION: ${{ github.event.inputs.version || '' }}
         with:
