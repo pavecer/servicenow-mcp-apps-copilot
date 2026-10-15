@@ -103,6 +103,15 @@
     },
     "logIncludeErrorStack": {
       "value": "${LOG_INCLUDE_ERROR_STACK=false}"
+    },
+    "labRequestDiagnostics": {
+      "value": "${LAB_REQUEST_DIAGNOSTICS=false}"
+    },
+    "requireGatewayHeader": {
+      "value": "${REQUIRE_GATEWAY_HEADER=false}"
+    },
+    "gatewaySharedSecret": {
+      "value": "${GATEWAY_SHARED_SECRET=}"
     }
   }
 }

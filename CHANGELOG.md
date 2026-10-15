@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added an opt-in AI Gateway governance lab: redacted per-request diagnostics
+  and an optional gateway shared-header check (both off by default), an
+  experiment harness, runbooks, and findings for putting the MCP server behind
+  the Azure API Management AI Gateway tier.
+<!-- release-impact: patch -->
+
 ### Changed
 
 - Unpinned the model from all specialist chatmodes so they inherit the

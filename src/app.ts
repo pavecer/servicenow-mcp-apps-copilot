@@ -8,6 +8,7 @@ import { config } from "./config";
 import { entraAuthMiddleware } from "./utils/entraAuthMiddleware";
 import { sharedServiceNowClient, sharedTokenManager } from "./services/instances";
 import Logger from "./utils/logger";
+import { createGatewayHeaderMiddleware, createLabDiagnosticsMiddleware, readLabGatewaySettings } from "./utils/labGateway";
 
 const MCP_PATH = "/mcp";
 
@@ -165,6 +166,12 @@ export function createMcpExpressApp(): express.Express {
     });
     next();
   });
+
+  // Lab-only (docs/lab/ai-gateway): both default off. The gateway header check
+  // is additive and never replaces the Entra validation below.
+  const labSettings = readLabGatewaySettings();
+  expressApp.use(createLabDiagnosticsMiddleware(labSettings, MCP_PATH));
+  expressApp.use(createGatewayHeaderMiddleware(labSettings, MCP_PATH));
 
   // ---------------------------------------------------------------------------
   // Entra ID Bearer token validation

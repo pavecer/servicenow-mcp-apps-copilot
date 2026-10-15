@@ -19,14 +19,15 @@ describe("Azure secret delivery", () => {
 
   it("forces fresh secret versions while Function settings follow latest", () => {
     expect(bicep).toContain("param secretVersionRevision string = utcNow('yyyyMMddHHmmss')");
-    expect(bicep.match(/contentType: 'mcp-runtime-\$\{secretVersionRevision\}'/g)).toHaveLength(4);
+    expect(bicep.match(/contentType: 'mcp-runtime-\$\{secretVersionRevision\}'/g)).toHaveLength(5);
     expect(bicep).not.toContain("properties.secretUriWithVersion");
 
     for (const secretResource of [
       "serviceNowClientSecretKeyVaultSecret",
       "serviceNowPasswordKeyVaultSecret!",
       "entraClientSecretKeyVaultSecret!",
-      "entraDcrRegistrationTokenKeyVaultSecret!"
+      "entraDcrRegistrationTokenKeyVaultSecret!",
+      "gatewaySharedSecretKeyVaultSecret!"
     ]) {
       expect(bicep).toContain(
         `@Microsoft.KeyVault(SecretUri=\${keyVault.properties.vaultUri}secrets/\${${secretResource}.name})`

@@ -56,6 +56,18 @@ param entraAuthDisabled string = 'false'
 @description('Space-delimited Entra OAuth scopes advertised in OIDC discovery and DCR.')
 param entraOauthScopes string = ''
 
+@description('LAB ONLY (docs/lab/ai-gateway): log one redacted header-presence line per MCP POST.')
+@allowed([ 'true', 'false' ])
+param labRequestDiagnostics string = 'false'
+
+@description('LAB ONLY: additionally require X-Gateway-Key on MCP POSTs. Never replaces Entra validation.')
+@allowed([ 'true', 'false' ])
+param requireGatewayHeader string = 'false'
+
+@description('LAB ONLY: shared secret the gateway sends as X-Gateway-Key. Stored in Key Vault when set.')
+@secure()
+param gatewaySharedSecret string = ''
+
 @description('RFC 7591 initial access token required on POST /oauth/register. Stored in Key Vault when set.')
 @secure()
 param entraDcrRegistrationToken string = ''
@@ -208,6 +220,15 @@ resource entraClientSecretKeyVaultSecret 'Microsoft.KeyVault/vaults/secrets@2023
   name: 'entra-client-secret'
   properties: {
     value: entraClientSecret
+    contentType: 'mcp-runtime-${secretVersionRevision}'
+  }
+}
+
+resource gatewaySharedSecretKeyVaultSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(gatewaySharedSecret)) {
+  parent: keyVault
+  name: 'lab-gateway-shared-secret'
+  properties: {
+    value: gatewaySharedSecret
     contentType: 'mcp-runtime-${secretVersionRevision}'
   }
 }
@@ -494,6 +515,12 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'LOG_LEVEL', value: logLevel }
         { name: 'LOG_INCLUDE_CALLER_IDENTITY', value: logIncludeCallerIdentity }
         { name: 'LOG_INCLUDE_ERROR_STACK', value: logIncludeErrorStack }
+        { name: 'LAB_REQUEST_DIAGNOSTICS', value: labRequestDiagnostics }
+        { name: 'REQUIRE_GATEWAY_HEADER', value: requireGatewayHeader }
+        {
+          name: 'GATEWAY_SHARED_SECRET'
+          value: empty(gatewaySharedSecret) ? '' : '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/${gatewaySharedSecretKeyVaultSecret!.name})'
+        }
       ]
     }
     functionAppConfig: {
